@@ -1,13 +1,11 @@
 package org.drpowell.grandannotator;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 public class VCFVariant implements GenomicVariant {
 	public String id;
-	public String filter;
 	private Map<String, Object> info;
 	private String qual;
 	public String format;
@@ -96,5 +94,13 @@ public class VCFVariant implements GenomicVariant {
 	@Override
 	public String getAlt() {
 		return row[FIXED_COLUMNS.ALT.ordinal()];
+	}
+	
+	public String getFilter() {
+		return row[FIXED_COLUMNS.FILTER.ordinal()];
+	}
+	
+	public String getFormat() {
+		return row[FIXED_COLUMNS.FORMAT.ordinal()];		
 	}
 }

@@ -6,12 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.broad.tribble.readers.TabixIteratorLineReader;
 import org.broad.tribble.readers.TabixReader;
 
 public class TabixVCFAnnotator {
 	private final TabixReader tabix;
-	private final Map<String, Object> fieldMap = new HashMap<String, Object>();
+	private final Map<String, String> fieldMap = new HashMap<String, String>();
 	private String prefix = ""; // can be "chr" if we need to add a prefix for query purposes
 	private boolean requirePass;
 
@@ -56,15 +55,15 @@ public class TabixVCFAnnotator {
 				VCFVariant target = new VCFVariant(resultLine);
 				// check on position (1), ref (3) and alt (4)
 				if (target.getStart() == start && target.getRef().equals(ref) && target.getAlt().equals(alt)) {
-					if (requirePass && !target.filter.equals("PASS")) {
+					if (requirePass && !target.getFilter().equals("PASS")) {
 						continue;
 					}
 					// found a match!
 					Map<String, Object> targetInfo = target.getInfo();
-					for (Entry<String, Object> e: fieldMap.entrySet()) {
+					for (Entry<String, String> e: fieldMap.entrySet()) {
 						if (targetInfo.containsKey(e.getKey())) {
 							// FIXME- should check to prevent duplicates being overwritten
-							info.put(e.getValue().toString(), targetInfo.get(e.getKey()));
+							info.put(e.getValue(), targetInfo.get(e.getKey()));
 						}
 					}
 					break;
@@ -77,12 +76,14 @@ public class TabixVCFAnnotator {
 		return info;
 	}
 	
-	public void setAddChr(boolean addChr) {
+	public TabixVCFAnnotator setAddChr(boolean addChr) {
 		prefix = addChr? "chr" : "";
+		return this;
 	}
 
-	public void setRequirePass(boolean require) {
+	public TabixVCFAnnotator setRequirePass(boolean require) {
 		requirePass = require;
+		return this;
 	}
 
 }
