@@ -14,6 +14,7 @@ public class TabixVCFAnnotator {
 	private final TabixReader tabix;
 	private final HashMap<String, String> fieldMap = new HashMap<String, String>();
 	private String prefix = ""; // can be "chr" if we need to add a prefix for query purposes
+	private boolean requirePass;
 
 	public static final String stringJoin(String delimiter, String[] strings) {
 		StringBuilder sb = new StringBuilder();
@@ -52,6 +53,9 @@ public class TabixVCFAnnotator {
 				String [] targetRow = resultLine.split("\t");
 				// check on position (1), ref (3) and alt (4)
 				if (Integer.parseInt(targetRow[1]) == start && targetRow[3].equals(ref) && targetRow[4].equals(alt)) {
+					if (requirePass && targetRow[6] != "PASS") {
+						continue;
+					}
 					// found a match!
 					HashMap<String, String> targetInfo = splitInfoField(targetRow[7]);
 					for (Entry<String, String> e: fieldMap.entrySet()) {
@@ -128,6 +132,10 @@ public class TabixVCFAnnotator {
 
 	public void setAddChr(boolean addChr) {
 		prefix = addChr? "chr" : "";
+	}
+
+	public void setRequirePass(boolean require) {
+		requirePass = require;
 	}
 
 }

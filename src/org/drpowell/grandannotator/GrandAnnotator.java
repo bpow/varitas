@@ -26,13 +26,7 @@ public class GrandAnnotator {
 		annotators = readConfigFromJSON(jsonConfig);
 	}
 
-	public void readConfigFromJS(String s) throws ScriptException {
-		ScriptEngineManager sem = new ScriptEngineManager();
-		ScriptEngine engine = sem.getEngineByName("JavaScript");
-		engine.eval(s);
-		Object config = engine.get("config");
-	}
-	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private ArrayList<TabixVCFAnnotator> readConfigFromJSON(Reader jsonReader) throws IOException, ParseException {
 		ArrayList<TabixVCFAnnotator> annotators = new ArrayList<TabixVCFAnnotator>();
 		JSONObject config = (JSONObject) JSONValue.parseWithException(jsonReader);
@@ -42,8 +36,9 @@ public class GrandAnnotator {
 		return annotators;
 	}
 	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private TabixVCFAnnotator createAnnotatorFromConfig(String tabixFile, Map config) throws IOException {
-		LinkedHashMap fields = new LinkedHashMap<String, String>();
+		LinkedHashMap<String, String> fields = new LinkedHashMap<String, String>();
 		if (config.containsKey("fields")) {
 			List unchangedFields = (List) config.get("fields");
 			for (Object s : unchangedFields) {
@@ -51,12 +46,15 @@ public class GrandAnnotator {
 			}
 		}
 		if (config.containsKey("changedFields")) {
-			fields.putAll((Map) config.get("changedFields"));
+			fields.putAll((Map<String, String>) config.get("changedFields"));
 		}
 		TabixVCFAnnotator annotator = null;
 		annotator = new TabixVCFAnnotator(new TabixReader(tabixFile), fields);
 		if (config.containsKey("addChr")) {
 			annotator.setAddChr(true);
+		}
+		if (config.containsKey("requirePass")) {
+			annotator.setRequirePass(true);
 		}
 		// TODO handle VCF filters, rsIDs, INFO headers
 		return annotator;
