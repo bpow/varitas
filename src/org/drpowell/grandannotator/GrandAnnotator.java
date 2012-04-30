@@ -56,7 +56,7 @@ public class GrandAnnotator {
 		if (config.containsKey("requirePass")) {
 			annotator.setRequirePass(true);
 		}
-		// TODO handle VCF filters, rsIDs, INFO headers
+		// TODO handle rsIDs, INFO headers
 		return annotator;
 	}
 
@@ -72,12 +72,12 @@ public class GrandAnnotator {
 				String ref = row[3];
 				String alt = row[4];
 				int end = start+ref.length()-1;
-				HashMap<String, String> info = TabixVCFAnnotator.splitInfoField(row[7]);
+				HashMap<String, String> info = VCFVariant.splitInfoField(row[7]);
 				
 				for (TabixVCFAnnotator annotator: annotators) {
 					info = annotator.annotate(chromosome, start, end, ref, alt, info);
 				}
-				row[7] = TabixVCFAnnotator.joinInfo(info);
+				row[7] = VCFVariant.joinInfo(info);
 				System.out.println(TabixVCFAnnotator.stringJoin("\t", row));
 			}
 		}
