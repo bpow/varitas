@@ -5,35 +5,27 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class VCFVariant extends GenomicVariant {
+public class VCFVariant implements GenomicVariant {
 	public String id;
 	public String filter;
-	private HashMap<String, String> info;
+	private Map<String, Object> info;
 	private String qual;
 	public String format;
+	private String [] row;
+	private int start;
+	private int end;
 	
 	public enum FIXED_COLUMNS {CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT};
-
-	private VCFVariant(String sequence, int start, String ref, String alt) {
-		super(sequence, start, ref, alt);
-	}
 	
-	public static VCFVariant createFromLine(String line) {
-		String [] row = line.split("\t");
-		String sequence = row[FIXED_COLUMNS.CHROM.ordinal()];
-		int start = Integer.parseInt(row[FIXED_COLUMNS.POS.ordinal()]);
-		String ref = row[FIXED_COLUMNS.REF.ordinal()];
-		String alt = row[FIXED_COLUMNS.ALT.ordinal()];
-		VCFVariant v = new VCFVariant(sequence, start, ref, alt);
-		v.qual = row[FIXED_COLUMNS.QUAL.ordinal()];
-		v.filter = row[FIXED_COLUMNS.FILTER.ordinal()];
-		v.format = row[FIXED_COLUMNS.FORMAT.ordinal()];
-		v.info = splitInfoField(row[FIXED_COLUMNS.INFO.ordinal()]);
-		return v;
+	public VCFVariant(String line) {
+		row = line.split("\t");
+		start = Integer.parseInt(row[FIXED_COLUMNS.POS.ordinal()]);
+		end = start + getRef().length() - 1;
+		info = splitInfoField(row[FIXED_COLUMNS.INFO.ordinal()]);
 	}
 
-	public static HashMap<String, String> splitInfoField(String info) {
-		HashMap<String, String> map = new LinkedHashMap<String, String>();
+	public static Map<String, Object> splitInfoField(String info) {
+		Map<String, Object> map = new LinkedHashMap<String, Object>();
 		String [] entries = info.split(";");
 		for (String entry : entries) {
 			String [] keyvalue = entry.split("=",2);
@@ -52,19 +44,57 @@ public class VCFVariant extends GenomicVariant {
 		return map;
 	}
 
-	public static String joinInfo(HashMap<String, String> info) {
+	public static String joinInfo(Map<String, Object> info) {
 		StringBuilder sb = new StringBuilder();
-		for (Entry<String, String> e: info.entrySet()) {
+		for (Entry<String, Object> e: info.entrySet()) {
 			sb.append(e.getKey()).append("=").append(e.getValue()).append(";");
 		}
 		return sb.substring(0, sb.length()-1); // no need for the last semicolon
 	}
 
-	public Map<String, String> getInfo() {
+	public Map<String, Object> getInfo() {
 		return info;
 	}
 	
 	public Double getQual() {
 		return Double.valueOf(qual);
+	}
+	
+	private void updateInfo() {
+		row[FIXED_COLUMNS.INFO.ordinal()] = joinInfo(info);
+	}
+	
+	public String toString() {
+		updateInfo();
+		StringBuilder sb = new StringBuilder(row[0]);
+		for (int i = 1; i < row.length; i++) {
+			sb.append("\t").append(row[i]);
+		}
+		return sb.toString();
+	}
+
+	@Override
+	public String getSequence() {
+		return row[FIXED_COLUMNS.CHROM.ordinal()];
+	}
+
+	@Override
+	public int getStart() {
+		return start;
+	}
+
+	@Override
+	public int getEnd() {
+		return end;
+	}
+
+	@Override
+	public String getRef() {
+		return row[FIXED_COLUMNS.REF.ordinal()];
+	}
+
+	@Override
+	public String getAlt() {
+		return row[FIXED_COLUMNS.ALT.ordinal()];
 	}
 }

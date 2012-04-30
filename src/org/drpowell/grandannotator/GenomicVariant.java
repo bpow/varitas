@@ -1,26 +1,15 @@
 package org.drpowell.grandannotator;
 
-public class GenomicVariant {
-	public final String sequence;
-	public final int start;
-	public final int end;
-	public final String ref;
-	public final String alt;
+import java.util.Map;
+
+public interface GenomicVariant {
 	
-	public GenomicVariant(String _sequence, int _start, String _ref, String _alt) {
-		sequence = _sequence;
-		start = _start;
-		ref = _ref;
-		alt = _alt;
-		end = start + ref.length()-1;
-	}
+	public String getSequence();
+	public int getStart();
+	public int getEnd();
+	public String getRef();
+	public String getAlt();
 	
-	public GenomicVariant(String _sequence, int _start, int _end) {
-		sequence = _sequence;
-		start = _start;
-		end = _end;
-		ref = null;
-		alt = null;
-	}
+	public Map<String, Object> getInfo();
 
 }

@@ -65,20 +65,14 @@ public class GrandAnnotator {
 		while ((line = input.readLine()) != null) {
 			if (line.startsWith("#")) {
 				System.out.println(line);
+				// FIXME -- will need to add INFO header lines
 			} else {
-				String [] row = line.split("\t");
-				String chromosome = row[0];
-				int start = Integer.parseInt(row[1]);
-				String ref = row[3];
-				String alt = row[4];
-				int end = start+ref.length()-1;
-				HashMap<String, String> info = VCFVariant.splitInfoField(row[7]);
+				VCFVariant variant = new VCFVariant(line);
 				
 				for (TabixVCFAnnotator annotator: annotators) {
-					info = annotator.annotate(chromosome, start, end, ref, alt, info);
+					annotator.annotate(variant);
 				}
-				row[7] = VCFVariant.joinInfo(info);
-				System.out.println(TabixVCFAnnotator.stringJoin("\t", row));
+				System.out.println(variant);
 			}
 		}
 	}
