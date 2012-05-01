@@ -39,17 +39,11 @@ public class TabixVCFAnnotator implements Annotator {
 		}
 	}
 	
-	/* (non-Javadoc)
-	 * @see org.drpowell.grandannotator.Annotator#annotate(org.drpowell.grandannotator.VCFVariant)
-	 */
 	@Override
 	public Map<String, Object> annotate(VCFVariant var) {
 		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
 	}
 	
-	/* (non-Javadoc)
-	 * @see org.drpowell.grandannotator.Annotator#annotate(java.lang.String, int, int, java.lang.String, java.lang.String, java.util.Map)
-	 */
 	@Override
 	public Map<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, Map<String, Object> info) {
 		Integer tid = tabix.mChr2tid.get(prefix + chromosome);

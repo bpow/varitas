@@ -26,6 +26,7 @@ public class GrandAnnotator {
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
 		engine.put("ga", this);
 		engine.eval("addVCFAnnotator = function(file, fields) { return ga.addVCFAnnotator(file, fields); }");
+		engine.eval("addTSVAnnotator = function(file, fields) { return ga.addTSVAnnotator(file, fields); }");
 		engine.eval(jsReader);
 		return annotators;
 	}
@@ -38,6 +39,18 @@ public class GrandAnnotator {
 		} catch (IOException e) {
 			e.printStackTrace();
 			logger.severe(e.toString());
+		}
+		return null;
+	}
+	
+	public TabixTSVAnnotator addTSVAnnotator(String filename, String fieldString) {
+		try {
+			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(filename), fieldString);
+			annotators.add(annotator);
+			return annotator;
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			logger.severe(ioe.toString());
 		}
 		return null;
 	}
