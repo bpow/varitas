@@ -2,13 +2,12 @@ package org.drpowell.grandannotator;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.broad.tribble.readers.TabixReader;
 
-public class TabixVCFAnnotator {
+public class TabixVCFAnnotator implements Annotator {
 	private final TabixReader tabix;
 	private final Map<String, String> fieldMap = new HashMap<String, String>();
 	private String prefix = ""; // can be "chr" if we need to add a prefix for query purposes
@@ -40,10 +39,18 @@ public class TabixVCFAnnotator {
 		}
 	}
 	
+	/* (non-Javadoc)
+	 * @see org.drpowell.grandannotator.Annotator#annotate(org.drpowell.grandannotator.VCFVariant)
+	 */
+	@Override
 	public Map<String, Object> annotate(VCFVariant var) {
 		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
 	}
 	
+	/* (non-Javadoc)
+	 * @see org.drpowell.grandannotator.Annotator#annotate(java.lang.String, int, int, java.lang.String, java.lang.String, java.util.Map)
+	 */
+	@Override
 	public Map<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, Map<String, Object> info) {
 		Integer tid = tabix.mChr2tid.get(prefix + chromosome);
 		if (tid == null) {
@@ -82,12 +89,12 @@ public class TabixVCFAnnotator {
 		return info;
 	}
 	
-	public TabixVCFAnnotator setAddChr(boolean addChr) {
+	public Annotator setAddChr(boolean addChr) {
 		prefix = addChr? "chr" : "";
 		return this;
 	}
 
-	public TabixVCFAnnotator setRequirePass(boolean require) {
+	public Annotator setRequirePass(boolean require) {
 		requirePass = require;
 		return this;
 	}

@@ -5,8 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.script.ScriptEngine;
@@ -16,14 +14,14 @@ import javax.script.ScriptException;
 import org.broad.tribble.readers.TabixReader;
 
 public class GrandAnnotator {
-	private ArrayList<TabixVCFAnnotator> annotators = new ArrayList<TabixVCFAnnotator>();
+	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.grandannotator.GrandAnnotator");
 	
 	public GrandAnnotator(Reader config) throws IOException, ScriptException {
 		annotators = readConfigFromJS(config);
 	}
 	
-	private ArrayList<TabixVCFAnnotator> readConfigFromJS(Reader jsReader) throws ScriptException {
+	private ArrayList<Annotator> readConfigFromJS(Reader jsReader) throws ScriptException {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
 		engine.put("ga", this);
@@ -53,7 +51,7 @@ public class GrandAnnotator {
 			} else {
 				VCFVariant variant = new VCFVariant(line);
 				
-				for (TabixVCFAnnotator annotator: annotators) {
+				for (Annotator annotator: annotators) {
 					annotator.annotate(variant);
 				}
 				System.out.println(variant);
