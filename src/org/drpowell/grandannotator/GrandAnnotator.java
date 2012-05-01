@@ -33,25 +33,15 @@ public class GrandAnnotator {
 	}
 
 	public TabixVCFAnnotator addVCFAnnotator(String filename, String fieldString) {
-		String [] fields = fieldString.split(",");
-		Map<String, String> fieldMap = new LinkedHashMap<String, String>();
-		for (String field : fields) {
-			int eq = field.indexOf("=");
-			if (eq < 0) {
-				fieldMap.put(field, field);
-			} else {
-				fieldMap.put(field.substring(0, eq), field.substring(eq+1));
-			}
-		}
 		try {
-			TabixVCFAnnotator annotator =new TabixVCFAnnotator(new TabixReader(filename), fieldMap);
+			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(filename), fieldString);
 			annotators.add(annotator);
 			return annotator;
 		} catch (IOException e) {
 			e.printStackTrace();
 			logger.severe(e.toString());
-			return null;
 		}
+		return null;
 	}
 	
 	public void annotateVCFFile(BufferedReader input) throws IOException {

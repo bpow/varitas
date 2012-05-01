@@ -2,7 +2,7 @@ package org.drpowell.grandannotator;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -25,6 +25,19 @@ public class TabixVCFAnnotator {
 	public TabixVCFAnnotator(final TabixReader reader, final Map<String, String> fields) {
 		tabix = reader;
 		fieldMap.putAll(fields);
+	}
+	
+	public TabixVCFAnnotator(final TabixReader reader, String fieldString) {
+		this.tabix = reader;
+		String [] fields = fieldString.split(",");
+		for (String field : fields) {
+			int eq = field.indexOf("=");
+			if (eq < 0) {
+				fieldMap.put(field, field);
+			} else {
+				fieldMap.put(field.substring(0, eq), field.substring(eq+1));
+			}
+		}
 	}
 	
 	public Map<String, Object> annotate(VCFVariant var) {
