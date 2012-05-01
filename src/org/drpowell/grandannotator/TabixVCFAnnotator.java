@@ -21,13 +21,6 @@ public class TabixVCFAnnotator {
 		}
 		return sb.substring(0, sb.length() - delimiter.length());
 	}
-			
-	public TabixVCFAnnotator(final TabixReader reader, final List<String> fields) {
-		tabix = reader;
-		for (String field : fields) {
-			fieldMap.put(field, field);
-		}
-	}
 	
 	public TabixVCFAnnotator(final TabixReader reader, final Map<String, String> fields) {
 		tabix = reader;
