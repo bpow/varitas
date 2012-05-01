@@ -27,12 +27,12 @@ public class GrandAnnotator {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
 		engine.put("ga", this);
-		engine.eval("createAnnotator = function(file, fields) { return ga.createAnnotator(file, fields); }");
+		engine.eval("addVCFAnnotator = function(file, fields) { return ga.addVCFAnnotator(file, fields); }");
 		engine.eval(jsReader);
 		return annotators;
 	}
 
-	public TabixVCFAnnotator createAnnotator(String filename, String fieldString) {
+	public TabixVCFAnnotator addVCFAnnotator(String filename, String fieldString) {
 		String [] fields = fieldString.split(",");
 		Map<String, String> fieldMap = new LinkedHashMap<String, String>();
 		for (String field : fields) {
