@@ -35,5 +35,17 @@ niehs.95samples.polymorphic.filtered.indels.vcf.gz niehs.95samples.polymorphic.f
 	@echo --------------------------------------------------------------
 	@exit 1
 
+ESP5400: ESP5400.vcf.gz.tbi
+	date >> ESP5400
+
+ESP5400.vcf.gz:
+	curl -O http://evs.gs.washington.edu/esp5500_bulk_data/ESP5400.snps.vcf.tar.gz
+	TMPDIR := $(shell mktemp -d)
+	tar -C "$TMPDIR" xzf ESP5400.snps.vcf.tar.gz
+	for chrom in `seq 1 22` X ; do \
+		cat "$TMPDIR"/ESP5400.chr${chrom}.snps.vcf"; \
+	done | bgzip -c > $@
+	rm -rf "$TMPDIR"
+
 %.vcf.gz.tbi: %.vcf.gz
 	tabix -p vcf $<
