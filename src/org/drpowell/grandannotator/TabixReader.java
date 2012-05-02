@@ -354,6 +354,7 @@ public class TabixReader
 		if (offList.isEmpty()) return new Iterator(tid, beg, end, new TPair64[0]);
 		n_off = offList.size();
 		off = (TPair64 []) offList.toArray(new TPair64 [n_off]);
+		Arrays.sort(off);
 
 		// resolve completely contained adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {

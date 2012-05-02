@@ -9,6 +9,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 import javax.script.ScriptEngine;
@@ -57,21 +60,48 @@ public class GrandAnnotator {
 		return null;
 	}
 	
+	private class SingleVariantAnnotator implements Callable<Boolean> {
+		public final Annotator annotator;
+		public final VCFVariant variant;
+		
+		public SingleVariantAnnotator(Annotator ann, VCFVariant var) {
+			annotator = ann; variant = var;
+		}
+		@Override
+		public Boolean call() throws Exception {
+			annotator.annotate(variant);
+			return true;
+		}
+	}
+	
 	public void annotateVCFFile(BufferedReader input) throws IOException {
 		String line;
+		ExecutorService threads = Executors.newFixedThreadPool(5);
+		ArrayList<Callable<Boolean>> callables = new ArrayList<Callable<Boolean>>(annotators.size());
+		for (int i = 0; i < annotators.size(); i++) {
+			callables.add(null);
+		}
+		
 		while ((line = input.readLine()) != null) {
 			if (line.startsWith("#")) {
 				System.out.println(line);
 				// FIXME -- will need to add INFO header lines
 			} else {
 				VCFVariant variant = new VCFVariant(line);
-				
-				for (Annotator annotator: annotators) {
-					annotator.annotate(variant);
+				for (int i = 0; i < annotators.size(); i++) {
+					SingleVariantAnnotator sva = new SingleVariantAnnotator(annotators.get(i), variant);
+					callables.set(i, sva);
+				}
+				try {
+					threads.invokeAll(callables);
+				} catch (InterruptedException e) {
+					logger.severe("thread interrupted: " + e.getMessage());
+					e.printStackTrace();
 				}
 				System.out.println(variant);
 			}
 		}
+		threads.shutdown();
 	}
 
 	public static void main(String[] args) throws Exception {

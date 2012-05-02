@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 
 public class TabixVCFAnnotator implements Annotator {
 	private final TabixReader tabix;
@@ -38,12 +39,12 @@ public class TabixVCFAnnotator implements Annotator {
 	}
 	
 	@Override
-	public Map<String, Object> annotate(VCFVariant var) {
+	public ConcurrentMap<String, Object> annotate(VCFVariant var) {
 		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
 	}
 	
 	@Override
-	public Map<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, Map<String, Object> info) {
+	public ConcurrentMap<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, ConcurrentMap<String, Object> info) {
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
 			// may want to log this...

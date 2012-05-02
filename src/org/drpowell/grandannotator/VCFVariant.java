@@ -1,12 +1,13 @@
 package org.drpowell.grandannotator;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class VCFVariant implements GenomicVariant {
 	public String id;
-	private Map<String, Object> info;
+	private ConcurrentMap<String, Object> info;
 	private String qual;
 	public String format;
 	private String [] row;
@@ -26,8 +27,8 @@ public class VCFVariant implements GenomicVariant {
 		info = splitInfoField(row[FIXED_COLUMNS.INFO.ordinal()]);
 	}
 
-	public static Map<String, Object> splitInfoField(String info) {
-		Map<String, Object> map = new LinkedHashMap<String, Object>();
+	public static ConcurrentMap<String, Object> splitInfoField(String info) {
+		ConcurrentMap<String, Object> map = new ConcurrentHashMap<String, Object>();
 		String [] entries = info.split(";");
 		for (String entry : entries) {
 			String [] keyvalue = entry.split("=",2);
@@ -54,7 +55,7 @@ public class VCFVariant implements GenomicVariant {
 		return sb.substring(0, sb.length()-1); // no need for the last semicolon
 	}
 
-	public Map<String, Object> getInfo() {
+	public ConcurrentMap<String, Object> getInfo() {
 		return info;
 	}
 	

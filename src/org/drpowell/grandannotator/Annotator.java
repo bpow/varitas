@@ -1,13 +1,13 @@
 package org.drpowell.grandannotator;
 
-import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 public interface Annotator {
 
-	public abstract Map<String, Object> annotate(VCFVariant var);
+	public abstract ConcurrentMap<String, Object> annotate(VCFVariant var);
 
-	public abstract Map<String, Object> annotate(final String chromosome,
+	public abstract ConcurrentMap<String, Object> annotate(final String chromosome,
 			final int start, final int end, final String ref, final String alt,
-			Map<String, Object> info);
+			ConcurrentMap<String, Object> info);
 
 }
