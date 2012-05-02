@@ -63,9 +63,6 @@ public class TabixReader
 		public TPair64(final long _u, final long _v) {
 			u = _u; v = _v;
 		}
-		public TPair64(final TPair64 p) {
-			u = p.u; v = p.v;
-		}
 		public int compareTo(final TPair64 p) {
 			return u == p.u? 0 : ((u < p.u) ^ (u < 0) ^ (p.u < 0))? -1 : 1; // unsigned 64-bit comparison
 		}
@@ -165,7 +162,7 @@ public class TabixReader
 	 * 
 	 * Although this is an implementation detail, it may be more useful in general since the
 	 * same binning index is used elsewhere (in bam files, for instance). This method is expected
-	 * to be a good bit less efficient than the private reg2bins which operates on an int[] since
+	 * to be a bit less efficient than the private reg2bins which operates on an int[] since
 	 * this version will require allocation of Integer objects in an ArrayList. Then again, how
 	 * many regions do you expect to overlap?
 	 * 
@@ -175,7 +172,7 @@ public class TabixReader
 	 */
 	public static ArrayList<Integer> reg2bins(int beg, int end) {
 		if (beg >= end) { return new ArrayList<Integer>(0); }
-		ArrayList<Integer> bins = new ArrayList<Integer>();
+		ArrayList<Integer> bins = new ArrayList<Integer>(8);
 		int k;
 		if (end >= 1<<29) end = 1<<29;
 		--end;
@@ -214,20 +211,11 @@ public class TabixReader
 		return ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).getLong();
 	}
 
-	public static String readLine(final InputStream is) throws IOException {
-		StringBuffer buf = new StringBuffer();
-		int c;
-		while ((c = is.read()) >= 0 && c != '\n')
-			buf.append((char)c);
-		if (c < 0) return null;
-		return buf.toString();
-	}
-
 	/**
 	 * Read one line from the data file.
 	 */
 	public String readLine() throws IOException {
-		return readLine(mFp);
+		return mFp.readLine();
 	}
 
 	public Integer getIdForChromosome(final String chromosome) {
@@ -319,7 +307,7 @@ public class TabixReader
 					++i;
 				}
 				String s;
-				if ((s = readLine(mFp)) != null) {
+				if ((s = readLine()) != null) {
 					curr_off = mFp.getFilePointer();
 					if (s.length() == 0 || s.startsWith(meta)) continue;
 					String [] row = s.split("\t");
