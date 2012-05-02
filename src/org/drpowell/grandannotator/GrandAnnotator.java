@@ -1,8 +1,12 @@
 package org.drpowell.grandannotator;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -74,8 +78,15 @@ public class GrandAnnotator {
 
 	public static void main(String[] args) throws Exception {
 		GrandAnnotator annotator = new GrandAnnotator(new BufferedReader(new FileReader(args[0])));
+
+		FileOutputStream fdout = new FileOutputStream(FileDescriptor.out);
+		BufferedOutputStream bos = new BufferedOutputStream(fdout, 1024);
+		PrintStream ps = new PrintStream(bos, false);
+		System.setOut(ps);
+		
 		BufferedReader input = new BufferedReader(new FileReader(args[1]));
 		annotator.annotateVCFFile(input);
+		ps.close();
 	}
 
 
