@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -51,6 +52,7 @@ public class TabixReader
 	public final String meta;
 	public final int linesToSkip;
 	private final String[] mSeq;
+	private ArrayList<String> headers;
 
 	private final HashMap<String, Integer> mChr2tid;
 
@@ -269,6 +271,25 @@ public class TabixReader
 		return intv;
 	}
 
+	public List<String> readHeaders() throws IOException {
+		if (headers == null) {
+			ArrayList<String> tmpHeaders = new ArrayList<String>(linesToSkip);
+			int skiplinesRemaining = linesToSkip;
+			mFp.seek(0);
+			String line;
+			while ((line = mFp.readLine()) != null) {
+				skiplinesRemaining--;
+				if (skiplinesRemaining >= 0 || line.startsWith(meta)) {
+					tmpHeaders.add(line);
+				} else {
+					break;
+				}
+			}
+			headers = tmpHeaders;
+		}
+		return Collections.unmodifiableList(headers);
+	}
+	
 	public class Iterator {
 		private int i, n_seeks;
 		private int tid, beg, end;
