@@ -34,6 +34,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import net.sf.samtools.util.BlockCompressedInputStream;
 
@@ -161,10 +162,10 @@ public class TabixReader
 	 * Calculates the bins that overlap a given region.
 	 * 
 	 * Although this is an implementation detail, it may be more useful in general since the
-	 * same binning index is used elsewhere (in bam files, for instance). This method is expected
-	 * to be a bit less efficient than the private reg2bins which operates on an int[] since
-	 * this version will require allocation of Integer objects in an ArrayList. Then again, how
-	 * many regions do you expect to overlap?
+	 * same binning index is used elsewhere (in bam files, for instance). Heng Li's reg2bin had
+	 * used an int[37450] which was allocated for each query. While this results in more object
+	 * allocations (for the ArrayList and Integer objects), it actually works faster (with my
+	 * testing) for the common case where there are not many overlapped regions).
 	 * 
 	 * @param beg Start coordinate (0 based, inclusive)
 	 * @param end End coordinate (0 based, exclusive)
@@ -172,6 +173,7 @@ public class TabixReader
 	 */
 	public static ArrayList<Integer> reg2bins(int beg, int end) {
 		if (beg >= end) { return new ArrayList<Integer>(0); }
+		// any given point will overlap 6 regions, go ahead and allocate a few extra spots by default
 		ArrayList<Integer> bins = new ArrayList<Integer>(8);
 		int k;
 		if (end >= 1<<29) end = 1<<29;
@@ -185,20 +187,6 @@ public class TabixReader
 		return bins;
 	}
 	
-	public static int reg2bins(final int beg, final int _end, final int[] list) {
-		int i = 0, k, end = _end;
-		if (beg >= end) return 0;
-		if (end >= 1<<29) end = 1<<29;
-		--end;
-		list[i++] = 0;
-		for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) list[i++] = k;
-		for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) list[i++] = k;
-		for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) list[i++] = k;
-		for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) list[i++] = k;
-		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) list[i++] = k;
-		return i;
-	}
-
 	public static int readInt(final InputStream is) throws IOException {
 		byte[] buf = new byte[4];
 		is.read(buf);
@@ -326,14 +314,14 @@ public class TabixReader
 		TPair64[] off, chunks;
 		long min_off;
 		TIndex idx = mIndex[tid];
-		int[] bins = new int[MAX_BIN];
-		int i, l, n_off, n_bins = reg2bins(beg, end, bins);
+		List<Integer> bins = reg2bins(beg, end);
+		int i, l, n_off;
 		if (idx.l.length > 0)
 			min_off = (beg>>TAD_LIDX_SHIFT >= idx.l.length)? idx.l[idx.l.length-1] : idx.l[beg>>TAD_LIDX_SHIFT];
 		else min_off = 0;
 		ArrayList<TPair64> offList = new ArrayList<TPair64>();
-		for (i = 0; i < n_bins; ++i) {
-			if ((chunks = idx.b.get(bins[i])) != null) {
+		for (Integer bin : bins) {
+			if ((chunks = idx.b.get(bin)) != null ) {
 				for (TPair64 chunk : chunks) {
 					if (less64(min_off, chunk.v)) offList.add(chunk);
 				}
