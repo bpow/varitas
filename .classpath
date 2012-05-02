@@ -2,7 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/tribble"/>
-	<classpathentry kind="lib" path="/home/bpow/src/picard/dist/sam-1.67.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/picard"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
