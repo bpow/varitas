@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.broad.tribble.readers.TabixReader;
-
 public class TabixTSVAnnotator implements Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
@@ -34,20 +32,16 @@ public class TabixTSVAnnotator implements Annotator {
 	@Override
 	public Map<String, Object> annotate(String chromosome, int start, int end,
 			String ref, String alt, Map<String, Object> info) {
-		Integer tid = tabix.mChr2tid.get(prefix + chromosome);
+		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
 			// may want to log this...
 			return info;
 		}
-		String resultLine;
+		String [] row;
 		// when using this query form, tabix expects space-based (0-based) coordinates
 		TabixReader.Iterator iterator = tabix.query(tid, start-1, end);
-		if (iterator == null) {
-			return info;
-		}
 		try {
-			while ((resultLine = iterator.next()) != null) {
-				String [] row = resultLine.split("\t");
+			while ((row = iterator.next()) != null) {
 				// TODO - should we check start/stop to make sure exact? probably...
 				if ((refColumn < 0 || row[refColumn].equals(ref)) && (altColumn < 0 || row[altColumn].equals(alt))) {
 					// we have a match!

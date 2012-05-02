@@ -16,7 +16,11 @@ public class VCFVariant implements GenomicVariant {
 	public enum FIXED_COLUMNS {CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT};
 	
 	public VCFVariant(String line) {
-		row = line.split("\t");
+		this(line.split("\t"));
+	}
+	
+	public VCFVariant(String [] row) {
+		this.row = row; // FIXME - should defensive copy?
 		start = Integer.parseInt(row[FIXED_COLUMNS.POS.ordinal()]);
 		end = start + getRef().length() - 1;
 		info = splitInfoField(row[FIXED_COLUMNS.INFO.ordinal()]);

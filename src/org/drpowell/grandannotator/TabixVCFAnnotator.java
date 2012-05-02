@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.broad.tribble.readers.TabixReader;
-
 public class TabixVCFAnnotator implements Annotator {
 	private final TabixReader tabix;
 	private final Map<String, String> fieldMap = new HashMap<String, String>();
@@ -46,20 +44,17 @@ public class TabixVCFAnnotator implements Annotator {
 	
 	@Override
 	public Map<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, Map<String, Object> info) {
-		Integer tid = tabix.mChr2tid.get(prefix + chromosome);
+		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
 			// may want to log this...
 			return info;
 		}
-		String resultLine;
+		String [] resultRow;
 		// when using this query form, tabix expects space-based (0-based) coordinates
 		TabixReader.Iterator iterator = tabix.query(tid, start-1, end);
-		if (iterator == null) {
-			return info;
-		}
 		try {
-			while ((resultLine = iterator.next()) != null) {
-				VCFVariant target = new VCFVariant(resultLine);
+			while ((resultRow = iterator.next()) != null) {
+				VCFVariant target = new VCFVariant(resultRow);
 				// check on position (1), ref (3) and alt (4)
 				if (target.getStart() == start && target.getRef().equals(ref) && target.getAlt().equals(alt)) {
 					if (requirePass && !target.getFilter().equals("PASS")) {

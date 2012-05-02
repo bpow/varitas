@@ -15,8 +15,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.broad.tribble.readers.TabixReader;
-
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.grandannotator.GrandAnnotator");
