@@ -321,7 +321,13 @@ public class TabixReader
 					if (s.length() == 0 || s.startsWith(meta)) continue;
 					String [] row = s.split("\t");
 					TIntv intv;
-					intv = getIntv(row);
+					try {
+						intv = getIntv(row);
+					} catch (NumberFormatException nfe) {
+						nfe.printStackTrace();
+						System.err.println("Skipping...");
+						continue;
+					}
 					if (intv.tid != tid || intv.beg >= end) break; // no need to proceed
 					else if (intv.end > beg && intv.beg < end) return row; // overlap; return
 				} else break; // end of file
