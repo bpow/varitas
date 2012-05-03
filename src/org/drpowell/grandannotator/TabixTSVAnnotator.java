@@ -46,7 +46,10 @@ public class TabixTSVAnnotator implements Annotator {
 				if ((refColumn < 0 || row[refColumn].equals(ref)) && (altColumn < 0 || row[altColumn].equals(alt))) {
 					// we have a match!
 					for (Map.Entry<Integer, String> entry: fieldMap.entrySet()) {
-						info.put(entry.getValue(), row[entry.getKey()]);
+						String value = row[entry.getKey()];
+						if (value != "") {
+							info.put(entry.getValue(), row[entry.getKey()]);
+						}
 					}
 				}
 			}
