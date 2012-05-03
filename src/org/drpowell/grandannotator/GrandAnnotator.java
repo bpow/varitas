@@ -6,6 +6,7 @@ import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -91,7 +92,12 @@ public class GrandAnnotator {
 		PrintStream ps = new PrintStream(bos, false);
 		System.setOut(ps);
 		
-		BufferedReader input = new BufferedReader(new FileReader(args[1]));
+		BufferedReader input;
+		if (args.length > 1) {
+			input = new BufferedReader(new FileReader(args[1]));
+		} else {
+			input = new BufferedReader(new InputStreamReader(System.in));
+		}
 		annotator.annotateVCFFile(input);
 		ps.close();
 	}
