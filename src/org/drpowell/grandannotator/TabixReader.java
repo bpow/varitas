@@ -279,7 +279,7 @@ public class TabixReader
 			String line;
 			while ((line = mFp.readLine()) != null) {
 				skiplinesRemaining--;
-				if (skiplinesRemaining >= 0 || line.startsWith(meta)) {
+				if (skiplinesRemaining >= 0 || line.charAt(0) == metaCharacter) {
 					tmpHeaders.add(line);
 				} else {
 					break;

@@ -1,13 +1,15 @@
 package org.drpowell.grandannotator;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
 public class TabixVCFAnnotator implements Annotator {
 	private final TabixReader tabix;
-	private final Map<String, String> fieldMap = new HashMap<String, String>();
+	private final Map<String, String> fieldMap = new LinkedHashMap<String, String>();
 	private String prefix = ""; // can be "chr" if we need to add a prefix for query purposes
 	private boolean requirePass;
 
@@ -86,6 +88,32 @@ public class TabixVCFAnnotator implements Annotator {
 	public Annotator setRequirePass(boolean require) {
 		requirePass = require;
 		return this;
+	}
+
+	@Override
+	public Iterable<String> infoLines() {
+		ArrayList<String> infos = new ArrayList<String>();
+		HashMap<String, String> newInfos = new HashMap<String, String>();
+		try {
+			for (String metaLine : tabix.readHeaders()) {
+				String newId = null; 
+				VCFMeta meta = VCFMeta.fromLine(metaLine);
+				String oldId = meta.getValue("ID");
+				if ("INFO".equals(meta.getMetaType()) && (newId = fieldMap.get(oldId)) != null) {
+					meta.putValue("ID", newId);
+					newInfos.put(newId, meta.toString());
+				}
+			}
+			// looping twice so we can iterate through the LinkedHashMap in its order
+			for (String newId : fieldMap.values()) {
+				String info = newInfos.get(newId);
+				if (info != null) infos.add(info);
+			}
+		} catch (IOException e) {
+			// FIXME should probably log this
+			e.printStackTrace();
+		}
+		return infos;
 	}
 
 }

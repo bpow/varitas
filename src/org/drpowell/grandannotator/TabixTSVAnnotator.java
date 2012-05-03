@@ -1,6 +1,7 @@
 package org.drpowell.grandannotator;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -86,6 +87,20 @@ public class TabixTSVAnnotator implements Annotator {
 	public TabixTSVAnnotator checkAlt(int altColumn) {
 		this.altColumn = altColumn-1;
 		return this;
+	}
+
+	@Override
+	public Iterable<String> infoLines() {
+		ArrayList<String> infos = new ArrayList<String>();
+		for (Map.Entry<Integer, String> entry : fieldMap.entrySet()) {
+			LinkedHashMap<String, String> infoValues = new LinkedHashMap<String, String>();
+			infoValues.put("ID", entry.getValue());
+			infoValues.put("Number", "1");
+			infoValues.put("Type", "String");
+			infoValues.put("Description", "\"Column " + entry.getKey().toString() + " from " + tabix.filename + "\"");
+			infos.add(new VCFMeta("INFO", infoValues).toString());
+		}
+		return infos;
 	}
 	
 }

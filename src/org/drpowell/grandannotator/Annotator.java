@@ -10,4 +10,6 @@ public interface Annotator {
 			final int start, final int end, final String ref, final String alt,
 			Map<String, Object> info);
 
+	public abstract Iterable<String> infoLines();
+
 }

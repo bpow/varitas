@@ -18,11 +18,11 @@ import javax.script.ScriptException;
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.grandannotator.GrandAnnotator");
-	
+
 	public GrandAnnotator(Reader config) throws IOException, ScriptException {
 		annotators = readConfigFromJS(config);
 	}
-	
+
 	private ArrayList<Annotator> readConfigFromJS(Reader jsReader) throws ScriptException {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
@@ -44,7 +44,7 @@ public class GrandAnnotator {
 		}
 		return null;
 	}
-	
+
 	public TabixTSVAnnotator addTSVAnnotator(String filename, String fieldString) {
 		try {
 			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(filename), fieldString);
@@ -59,10 +59,19 @@ public class GrandAnnotator {
 	
 	public void annotateVCFFile(BufferedReader input) throws IOException {
 		String line;
+		boolean inHeader = true;
 		while ((line = input.readLine()) != null) {
-			if (line.startsWith("#")) {
+			if (inHeader && line.startsWith("##")) {
 				System.out.println(line);
-				// FIXME -- will need to add INFO header lines
+			} else if (inHeader && line.startsWith("#CHROM")) {
+				inHeader = false;
+				// add additional info lines
+				for (Annotator annotator: annotators) {
+					for (String infoLine: annotator.infoLines()) {
+						System.out.println(infoLine);
+					}
+				}
+				System.out.println(line);
 			} else {
 				VCFVariant variant = new VCFVariant(line);
 				
