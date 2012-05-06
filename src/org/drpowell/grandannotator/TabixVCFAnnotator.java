@@ -7,10 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class TabixVCFAnnotator implements Annotator {
+public class TabixVCFAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<String, String> fieldMap = new LinkedHashMap<String, String>();
-	private String prefix = ""; // can be "chr" if we need to add a prefix for query purposes
 	private boolean requirePass;
 
 	public static final String stringJoin(String delimiter, String[] strings) {
@@ -80,11 +79,6 @@ public class TabixVCFAnnotator implements Annotator {
 		return info;
 	}
 	
-	public Annotator setAddChr(boolean addChr) {
-		prefix = addChr? "chr" : "";
-		return this;
-	}
-
 	public Annotator setRequirePass(boolean require) {
 		requirePass = require;
 		return this;

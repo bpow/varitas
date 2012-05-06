@@ -5,12 +5,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class TabixTSVAnnotator implements Annotator {
+public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
 	private String prefix = "";
-	private int refColumn = -1;
-	private int altColumn = -1;
 	
 	public TabixTSVAnnotator(final TabixReader reader, String columns) {
 		tabix = reader;
@@ -59,34 +57,6 @@ public class TabixTSVAnnotator implements Annotator {
 		}
 		return info;
 		
-	}
-
-	/**
-	 * Provide a column number which is the "reference" call at a locus, for checking in the annotation process.
-	 * Coordinates are 1-based (i.e. the 1st column is column #1.
-	 * 
-	 * If the argument altColumn is less than or equal to 0, then no checking will be performed.
-	 * 
-	 * @param altColumn
-	 * @return this, so you can chain calls
-	 */
-	public TabixTSVAnnotator checkRef(int refColumn) {
-		this.refColumn = refColumn-1;
-		return this;
-	}
-
-	/**
-	 * Provide a column number which is the "alternate" call at a locus, for checking in the annotation process.
-	 * Coordinates are 1-based (i.e. the 1st column is column #1.
-	 * 
-	 * If the argument altColumn is less than or equal to 0, then no checking will be performed.
-	 * 
-	 * @param altColumn
-	 * @return this, so you can chain calls
-	 */
-	public TabixTSVAnnotator checkAlt(int altColumn) {
-		this.altColumn = altColumn-1;
-		return this;
 	}
 
 	@Override
