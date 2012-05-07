@@ -1,3 +1,7 @@
+.PHONY: all
+all: TGwMAF ncbiSNP135 CG54 ESP5400 dbNSFP2.0b1 dbNSFP1.3
+	@echo WARNING-- not making target niehs95 because it requires manual downloads
+
 TGwMAF: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz.tbi
 	date >> TGwMAF
 
