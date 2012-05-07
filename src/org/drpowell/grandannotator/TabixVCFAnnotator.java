@@ -107,4 +107,8 @@ public class TabixVCFAnnotator extends Annotator {
 		return infos;
 	}
 
+	@Override
+	public String toString() {
+		return "TabixVCFAnnotator: " + tabix.filename;
+	}
 }
