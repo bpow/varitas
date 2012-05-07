@@ -24,11 +24,6 @@ public class TabixTSVAnnotator extends Annotator {
 	}
 	
 	@Override
-	public Map<String, Object> annotate(VCFVariant var) {
-		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
-	}
-
-	@Override
 	public Map<String, Object> annotate(String chromosome, int start, int end,
 			String ref, String alt, Map<String, Object> info) {
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
@@ -42,7 +37,8 @@ public class TabixTSVAnnotator extends Annotator {
 		try {
 			while ((row = iterator.next()) != null) {
 				// TODO - should we check start/stop to make sure exact? probably...
-				if ((refColumn < 0 || row[refColumn].equals(ref)) && (altColumn < 0 || row[altColumn].equals(alt))) {
+				if ((refColumn < 0 || row[refColumn].equals(ref)) &&
+					(altColumn < 0 || row[altColumn].equals(alt))) {
 					// we have a match!
 					for (Map.Entry<Integer, String> entry: fieldMap.entrySet()) {
 						String value = row[entry.getKey()];
@@ -68,6 +64,7 @@ public class TabixTSVAnnotator extends Annotator {
 			infoValues.put("Number", "1");
 			infoValues.put("Type", "String");
 			infoValues.put("Description", "\"Column " + entry.getKey().toString() + " from " + tabix.filename + "\"");
+			// FIXME - can do better with the descriptions!
 			infos.add(new VCFMeta("INFO", infoValues).toString());
 		}
 		return infos;

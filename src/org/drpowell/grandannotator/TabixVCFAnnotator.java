@@ -39,11 +39,6 @@ public class TabixVCFAnnotator extends Annotator {
 	}
 	
 	@Override
-	public Map<String, Object> annotate(VCFVariant var) {
-		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
-	}
-	
-	@Override
 	public Map<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, Map<String, Object> info) {
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
@@ -57,7 +52,9 @@ public class TabixVCFAnnotator extends Annotator {
 			while ((resultRow = iterator.next()) != null) {
 				VCFVariant target = new VCFVariant(resultRow);
 				// check on position (1), ref (3) and alt (4)
-				if (target.getStart() == start && target.getRef().equals(ref) && target.getAlt().equals(alt)) {
+				if (target.getStart() == start &&
+					target.getRef().equals(ref) &&
+					target.getAlt().equals(alt)) {
 					if (requirePass && !target.getFilter().equals("PASS")) {
 						continue;
 					}

@@ -45,9 +45,11 @@ public abstract class Annotator {
 		prefix = addChr? "chr" : "";
 		return this;
 	}
-	
-	public abstract Map<String, Object> annotate(VCFVariant var);
 
+	public Map<String, Object> annotate(VCFVariant var) {
+		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
+	}
+		
 	public abstract Map<String, Object> annotate(final String chromosome,
 			final int start, final int end, final String ref, final String alt,
 			Map<String, Object> info);
