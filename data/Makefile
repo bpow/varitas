@@ -1,5 +1,5 @@
 TGwMAF: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz.tbi
-	date >> TGxMAF
+	date >> TGwMAF
 
 ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz:
 	curl -O ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz
@@ -46,6 +46,37 @@ ESP5400.vcf.gz:
 		cat "$TMPDIR"/ESP5400.chr${chrom}.snps.vcf"; \
 	done | bgzip -c > $@
 	rm -rf "$TMPDIR"
+
+dbNSFP2.0b1_variant.zip:
+	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b1_variant.zip
+
+dbNSFP2.0b1_variant.gz: dbNSFP2.0b1_variant.zip
+	TMPDIR := $(shell mktemp -d)
+	unzip -d "$TMPDIR" $<
+	for chrom in `seq 1 22` X Y; do \
+		cat "$TMPDIR"/*_variant.chr$i ; \
+	done | bgzip -c > $@
+	rm -rf "$TMPDIR"
+
+dbNSFP2.0b1: dbNSFP2.0b1_variant.gz
+	tabix -s1 -b2 -e2 $<
+	date >>dbNSFP2.0b1
+
+dbNSFP1.3.zip:
+	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP1.3.zip
+
+dbNSFP1.3.gz: dbNSFP1.3.zip
+	TMPDIR := $(shell mktemp -d)
+	echo $TMPDIR
+	unzip -d "$TMPDIR" $<
+	for chrom in `seq 1 22` X Y; do \
+		cat "$TMPDIR"/dbNSFP1.3.chr$i ; \
+	done | bgzip -c > $@
+	rm -rf "$TMPDIR"
+
+dbNSFP1.3: dbNSFP1.3.gz
+	tabix -s1 -b2 -e2 $<
+	date >>dbNSFP1.3
 
 %.vcf.gz.tbi: %.vcf.gz
 	tabix -p vcf $<
