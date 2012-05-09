@@ -47,7 +47,7 @@ ESP5400.vcf.gz:
 	TMPDIR=$(shell mktemp -d) && \
 	tar -C $$TMPDIR xzf ESP5400.snps.vcf.tar.gz && \
 	for chrom in `seq 1 22` X ; do \
-		cat $$TMPDIR/ESP5400.chr${chrom}.snps.vcf"; \
+		cat $$TMPDIR/ESP5400.chr$${chrom}.snps.vcf"; \
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 
@@ -56,9 +56,9 @@ dbNSFP2.0b1_variant.zip:
 
 dbNSFP2.0b1_variant.gz: dbNSFP2.0b1_variant.zip
 	TMPDIR=$(shell mktemp -d) && \
-	unzip -d $$TMPDIR $< && \
+	unzip -a -d $$TMPDIR $< && \
 	for chrom in `seq 1 22` X Y; do \
-		cat $$TMPDIR/*_variant.chr$i ; \
+		tr -d \\r <$$TMPDIR/dbNSFP2.0b1_variant.chr$$chrom ; \
 	done | bgzip -c > $@ && \
 	rm -rf $$$TMPDIR
 
@@ -71,9 +71,9 @@ dbNSFP1.3.zip:
 
 dbNSFP1.3.gz: dbNSFP1.3.zip
 	TMPDIR=$(shell mktemp -d) && \
-	unzip -d "$$TMPDIR" $< && \
+	unzip -a -d "$$TMPDIR" $< && \
 	for chrom in `seq 1 22` X Y; do \
-		cat $$TMPDIR/dbNSFP1.3.chr$i ; \
+		tr -d \\r <$$TMPDIR/dbNSFP1.3.chr$$chrom | sort -n -k2 -S1G ; \
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 
