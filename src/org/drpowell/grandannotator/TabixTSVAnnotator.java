@@ -70,4 +70,9 @@ public class TabixTSVAnnotator extends Annotator {
 		return infos;
 	}
 	
+	@Override
+	public String toString() {
+		return "TabixTSVannotator: " + tabix.filename;
+	}
+	
 }
