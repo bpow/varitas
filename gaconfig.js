@@ -1,5 +1,5 @@
-addVCFAnnotator("data/niehs95.indels.vcf.gz", "AF=NIEHSAF")
-addVCFAnnotator("data/niehs95.snps.vcf.gz", "AF=NIEHSIAF")
+addVCFAnnotator("data/niehs95.indels.vcf.gz", "AF=NIEHSIAF")
+addVCFAnnotator("data/niehs95.snps.vcf.gz", "AF=NIEHSAF")
 addVCFAnnotator("data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz",
     "AMR_AF,ASN_AF,AFR_AF,EUR_AF,AF=TGAF")
 addVCFAnnotator("data/ncbiSNP135.vcf.gz", 
