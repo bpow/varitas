@@ -28,11 +28,24 @@ public class GrandAnnotator {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
 		engine.put("ga", this);
-		engine.eval("addSnpEffSplitter = function(file, fields) { return ga.addSnpEffAnnotationSplitter(); }");
+		engine.eval("addGeneAnnotator = function(id, file) { return ga.addGeneAnnotator(id, file); }");
+		engine.eval("addSnpEffSplitter = function() { return ga.addSnpEffAnnotationSplitter(); }");
 		engine.eval("addVCFAnnotator = function(file, fields) { return ga.addVCFAnnotator(file, fields); }");
 		engine.eval("addTSVAnnotator = function(file, fields) { return ga.addTSVAnnotator(file, fields); }");
 		engine.eval(jsReader);
 		return annotators;
+	}
+	
+	public GeneAnnotator addGeneAnnotator(String id, String fileName) {
+		try {
+			GeneAnnotator annotator = new GeneAnnotator(id, fileName);
+			annotators.add(annotator);
+			return annotator;
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			logger.severe(ioe.toString());
+		}
+		return null;
 	}
 	
 	public SnpEffAnnotationSplitter addSnpEffAnnotationSplitter() {
