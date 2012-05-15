@@ -21,7 +21,7 @@ public class SnpEffAnnotationSplitter extends Annotator {
 	public static final String [] EXTRA_HEADERS = {
 		"##INFO=<ID=EFFECT,Number=.,Type=String,Description=\"Effect type of the change (from SnpEffect)\">",
 		"##INFO=<ID=Gene_name,Number=.,Type=String,Description=\"Name of affected gene (from SnpEffect)\">",
-		"##INFO=<ID=IMPACT,Number=.,Type=String,Description=\"Impact of change (HIGH|MODERATE|LOW|MODIFIER)\""
+		"##INFO=<ID=IMPACT,Number=.,Type=String,Description=\"Impact of change (HIGH|MODERATE|LOW|MODIFIER)\">"
 	};
 	
 	/**
