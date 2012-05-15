@@ -28,10 +28,18 @@ public class GrandAnnotator {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
 		engine.put("ga", this);
+		engine.eval("addSnpEffSplitter = function(file, fields) { return ga.addSnpEffAnnotationSplitter(); }");
 		engine.eval("addVCFAnnotator = function(file, fields) { return ga.addVCFAnnotator(file, fields); }");
 		engine.eval("addTSVAnnotator = function(file, fields) { return ga.addTSVAnnotator(file, fields); }");
 		engine.eval(jsReader);
 		return annotators;
+	}
+	
+	public SnpEffAnnotationSplitter addSnpEffAnnotationSplitter() {
+		// FIXME -- we really only need one of these
+		SnpEffAnnotationSplitter a = new SnpEffAnnotationSplitter();
+		annotators.add(0, a);
+		return a;
 	}
 
 	public TabixVCFAnnotator addVCFAnnotator(String filename, String fieldString) {
