@@ -24,16 +24,19 @@ public class TabixTSVAnnotator extends Annotator {
 	}
 	
 	@Override
-	public Map<String, Object> annotate(String chromosome, int start, int end,
-			String ref, String alt, Map<String, Object> info) {
+	public VCFVariant annotate(VCFVariant variant) {
+		String chromosome = variant.getSequence();
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
 			// may want to log this...
-			return info;
+			return variant;
 		}
 		String [] row;
+		String ref = variant.getRef();
+		String alt = variant.getAlt();
+		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
-		TabixReader.Iterator iterator = tabix.query(tid, start-1, end);
+		TabixReader.Iterator iterator = tabix.query(tid, variant.getStart()-1, variant.getEnd());
 		try {
 			while ((row = iterator.next()) != null) {
 				// TODO - should we check start/stop to make sure exact? probably...
@@ -51,7 +54,7 @@ public class TabixTSVAnnotator extends Annotator {
 		} catch (IOException ioe) {
 			System.err.println(ioe);
 		}
-		return info;
+		return variant;
 		
 	}
 

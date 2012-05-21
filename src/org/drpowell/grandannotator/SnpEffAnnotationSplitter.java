@@ -103,8 +103,8 @@ public class SnpEffAnnotationSplitter extends Annotator {
 	}
 
 	@Override
-	public Map<String, Object> annotate(String chromosome, int start, int end,
-			String ref, String alt, Map<String, Object> info) {
+	public VCFVariant annotate(VCFVariant variant) {
+		Map<String, Object> info = variant.getInfo();
 		String effects = (String) info.get(SNPEFF_INFO_TAG);
 		if (effects != null) {
 			ArrayList<SNPEffectVCFInfo> effList = new ArrayList<SNPEffectVCFInfo>();
@@ -117,7 +117,7 @@ public class SnpEffAnnotationSplitter extends Annotator {
 			info.put("IMPACT", effList.get(0).get(SnpEffAnnotationField.IMPACT));
 			// FIXME = include others in addition to the first...
 		}
-		return info;
+		return variant;
 	}
 
 	@Override

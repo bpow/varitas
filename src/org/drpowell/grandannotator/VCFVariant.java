@@ -5,12 +5,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 public class VCFVariant implements GenomicVariant {
-	public String id;
 	private Map<String, Object> info;
 	private String qual;
 	public String format;
 	private String [] row;
-	private int start;
+	private int start; // fixme should this be final?
 	private int end;
 	
 	public enum FIXED_COLUMNS {CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT};
@@ -90,6 +89,10 @@ public class VCFVariant implements GenomicVariant {
 		return end;
 	}
 
+	public String getID() {
+		return row[FIXED_COLUMNS.ID.ordinal()];
+	}
+
 	@Override
 	public String getRef() {
 		return row[FIXED_COLUMNS.REF.ordinal()];
@@ -106,5 +109,18 @@ public class VCFVariant implements GenomicVariant {
 	
 	public String getFormat() {
 		return row[FIXED_COLUMNS.FORMAT.ordinal()];		
+	}
+	
+	public VCFVariant mergeID(String newID) {
+		int idcol = FIXED_COLUMNS.ID.ordinal();
+		String oldID = row[idcol];
+		if (!".".equals(oldID)) {
+			if (oldID.equals(newID)) {
+				return this;
+			}
+			// should probably log this -- changing a previously-written rsID
+		}
+		row[idcol] = newID;
+		return this;
 	}
 }
