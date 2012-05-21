@@ -55,6 +55,7 @@ public class TabixVCFAnnotator extends Annotator {
 				if (target.getStart() == start &&
 					target.getRef().equals(ref) &&
 					target.getAlt().equals(alt)) {
+					// FIXME - some target files will have more than one variant per line
 					if (requirePass && !target.getFilter().equals("PASS")) {
 						continue;
 					}
