@@ -33,18 +33,17 @@ public class GeneAnnotator extends Annotator {
 	// FIXME - allow a different Gene_name title
 	
 	@Override
-	public Map<String, Object> annotate(String chromosome, int start, int end,
-			String ref, String alt, Map<String, Object> info) {
-		String varGenes = (String) info.get("Gene_name");
+	public VCFVariant annotate(VCFVariant variant) {
+		String varGenes = (String) variant.getInfo().get("Gene_name");
 		if (varGenes != null) {
 			for (String vg: varGenes.split(",")) {
 				if (geneNames.contains(vg)) {
 					// FIXME - handle multiple matches
-					info.put(annotatorName, vg);
+					variant.getInfo().put(annotatorName, vg);
 				}
 			}
 		}
-		return info;
+		return variant;
 	}
 
 	@Override

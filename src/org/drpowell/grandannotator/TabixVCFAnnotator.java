@@ -11,6 +11,7 @@ public class TabixVCFAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<String, String> fieldMap = new LinkedHashMap<String, String>();
 	private boolean requirePass;
+	private boolean copyID = false;
 
 	public static final String stringJoin(String delimiter, String[] strings) {
 		StringBuilder sb = new StringBuilder();
@@ -38,14 +39,24 @@ public class TabixVCFAnnotator extends Annotator {
 		}
 	}
 	
+	private final void handleID(VCFVariant v, String ID) {
+		
+	}
+	
 	@Override
-	public Map<String, Object> annotate(final String chromosome, final int start, final int end, final String ref, final String alt, Map<String, Object> info) {
+	public VCFVariant annotate(VCFVariant variant) {
+		String chromosome = variant.getSequence();
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
 			// may want to log this...
-			return info;
+			return variant;
 		}
 		String [] resultRow;
+		int start = variant.getStart();
+		int end = variant.getEnd();
+		String ref = variant.getRef();
+		String alt = variant.getAlt();
+		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
 		TabixReader.Iterator iterator = tabix.query(tid, start-1, end);
 		try {
@@ -65,6 +76,9 @@ public class TabixVCFAnnotator extends Annotator {
 						if (targetInfo.containsKey(e.getKey())) {
 							// FIXME- should check to prevent duplicates being overwritten
 							info.put(e.getValue(), targetInfo.get(e.getKey()));
+							if (copyID) {
+								variant.mergeID(target.getID());
+							}
 						}
 					}
 					break;
@@ -74,11 +88,16 @@ public class TabixVCFAnnotator extends Annotator {
 			System.err.println(e);
 		}
 		
-		return info;
+		return variant;
 	}
 	
 	public Annotator setRequirePass(boolean require) {
 		requirePass = require;
+		return this;
+	}
+	
+	public Annotator setCopyID(boolean copyID) {
+		this.copyID  = copyID;
 		return this;
 	}
 

@@ -46,13 +46,7 @@ public abstract class Annotator {
 		return this;
 	}
 
-	public Map<String, Object> annotate(VCFVariant var) {
-		return annotate(var.getSequence(), var.getStart(), var.getEnd(), var.getRef(), var.getAlt(), var.getInfo());
-	}
-		
-	public abstract Map<String, Object> annotate(final String chromosome,
-			final int start, final int end, final String ref, final String alt,
-			Map<String, Object> info);
+	public abstract VCFVariant annotate(VCFVariant var);
 
 	public abstract Iterable<String> infoLines();
 
