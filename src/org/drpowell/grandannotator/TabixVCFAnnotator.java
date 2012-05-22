@@ -38,11 +38,7 @@ public class TabixVCFAnnotator extends Annotator {
 			}
 		}
 	}
-	
-	private final void handleID(VCFVariant v, String ID) {
 		
-	}
-	
 	@Override
 	public VCFVariant annotate(VCFVariant variant) {
 		String chromosome = variant.getSequence();
