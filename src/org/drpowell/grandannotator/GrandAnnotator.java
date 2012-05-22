@@ -1,14 +1,6 @@
 package org.drpowell.grandannotator;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.io.Reader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
@@ -19,9 +11,13 @@ import javax.script.ScriptException;
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.grandannotator.GrandAnnotator");
+	private final File configFile;
+	private final File configParent;
 
-	public GrandAnnotator(Reader config) throws IOException, ScriptException {
-		annotators = readConfigFromJS(config);
+	public GrandAnnotator(String configFileName) throws IOException, ScriptException {
+		configFile = new File(configFileName);
+		configParent = configFile.getParentFile();
+		annotators = readConfigFromJS(new BufferedReader(new FileReader(configFile)));
 	}
 
 	private ArrayList<Annotator> readConfigFromJS(Reader jsReader) throws ScriptException {
@@ -36,7 +32,24 @@ public class GrandAnnotator {
 		return annotators;
 	}
 	
+	private String findExistingFile(String f) {
+		if (new File(f).exists()) return f;
+		File attempt = new File(configParent, f);
+		logger.config("Trying " + attempt.getPath());
+		if (attempt.exists()) return attempt.getPath();
+		attempt = new File(System.getProperty("user.dir"), f);
+		logger.config("Trying " + attempt.getPath());
+		if (attempt.exists()) return attempt.getPath();
+		attempt = new File(System.getProperty("user.home"), f);
+		logger.config("Trying " + attempt.getPath());
+		if (attempt.exists()) return attempt.getPath();
+		
+		// give up and return f-- this will probably error later
+		return f;
+	}
+	
 	public GeneAnnotator addGeneAnnotator(String id, String fileName) {
+		fileName = findExistingFile(fileName);
 		try {
 			GeneAnnotator annotator = new GeneAnnotator(id, fileName);
 			annotators.add(annotator);
@@ -55,9 +68,10 @@ public class GrandAnnotator {
 		return a;
 	}
 
-	public TabixVCFAnnotator addVCFAnnotator(String filename, String fieldString) {
+	public TabixVCFAnnotator addVCFAnnotator(String fileName, String fieldString) {
+		fileName = findExistingFile(fileName);
 		try {
-			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(filename), fieldString);
+			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(fileName), fieldString);
 			annotators.add(annotator);
 			return annotator;
 		} catch (IOException e) {
@@ -67,9 +81,10 @@ public class GrandAnnotator {
 		return null;
 	}
 
-	public TabixTSVAnnotator addTSVAnnotator(String filename, String fieldString) {
+	public TabixTSVAnnotator addTSVAnnotator(String fileName, String fieldString) {
+		fileName = findExistingFile(fileName);
 		try {
-			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(filename), fieldString);
+			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(fileName), fieldString);
 			annotators.add(annotator);
 			return annotator;
 		} catch (IOException ioe) {
@@ -106,7 +121,7 @@ public class GrandAnnotator {
 	}
 
 	public static void main(String[] args) throws Exception {
-		GrandAnnotator annotator = new GrandAnnotator(new BufferedReader(new FileReader(args[0])));
+		GrandAnnotator annotator = new GrandAnnotator(args[0]);
 
 		FileOutputStream fdout = new FileOutputStream(FileDescriptor.out);
 		BufferedOutputStream bos = new BufferedOutputStream(fdout, 1024);
