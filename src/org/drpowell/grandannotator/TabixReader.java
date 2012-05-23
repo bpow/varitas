@@ -43,6 +43,7 @@ public class TabixReader
 {
 	public final String filename;
 	private BlockCompressedInputStream mFp;
+	// private static Logger logger = Logger.getLogger(TabixReader.class.getCanonicalName());
 
 	private final int mPreset;
 	public final int sequenceColumn;
@@ -117,7 +118,7 @@ public class TabixReader
 		beginColumn = readInt(is);
 		endColumn = readInt(is);
 		metaCharacter = readInt(is);
-		meta = String.valueOf(metaCharacter);
+		meta = String.valueOf((char) metaCharacter);
 		linesToSkip = readInt(is);
 		// TODO - everything final has been assigned by now, could move the rest out of the constructor
 		// read sequence dictionary
@@ -291,14 +292,16 @@ public class TabixReader
 	}
 	
 	public class Iterator {
-		private int i, n_seeks;
+		private int i;
+		// private int n_seeks;
 		private int tid, beg, end;
 		private TPair64[] off;
 		private long curr_off;
 		private boolean iseof;
 
 		public Iterator(final int _tid, final int _beg, final int _end, final TPair64[] _off) {
-			i = -1; n_seeks = 0; curr_off = 0; iseof = false;
+			i = -1; curr_off = 0; iseof = false;
+			// n_seeks = 0;
 			off = _off; tid = _tid; beg = _beg; end = _end;
 		}
 
@@ -311,7 +314,12 @@ public class TabixReader
 					if (i < 0 || off[i].v != off[i+1].u) { // not adjacent chunks; then seek
 						mFp.seek(off[i+1].u);
 						curr_off = mFp.getFilePointer();
+						/*
 						++n_seeks;
+						if (n_seeks % 100 == 0) {
+							logger.warning("Seeks so far for " + TabixReader.this + ": " + n_seeks);
+						}
+						*/
 					}
 					++i;
 				}

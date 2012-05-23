@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
 	private String prefix = "";
+	private static Logger logger = Logger.getLogger(TabixTSVAnnotator.class.getCanonicalName());
 	
 	public TabixTSVAnnotator(final TabixReader reader, String columns) {
 		tabix = reader;
@@ -28,7 +30,7 @@ public class TabixTSVAnnotator extends Annotator {
 		String chromosome = variant.getSequence();
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
-			// may want to log this...
+			logger.info(prefix + chromosome + " is not found in file " + tabix.filename);
 			return variant;
 		}
 		String [] row;
