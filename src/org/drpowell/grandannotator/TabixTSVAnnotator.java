@@ -9,7 +9,6 @@ import java.util.logging.Logger;
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
-	private String prefix = "";
 	private static Logger logger = Logger.getLogger(TabixTSVAnnotator.class.getCanonicalName());
 	
 	public TabixTSVAnnotator(final TabixReader reader, String columns) {
@@ -18,9 +17,9 @@ public class TabixTSVAnnotator extends Annotator {
 		for (String column : splitColumns) {
 			int eq = column.indexOf("=");
 			if (eq >= 0) {
-				fieldMap.put(Integer.valueOf(column.substring(0, eq)), column.substring(eq+1));
+				fieldMap.put(Integer.valueOf(column.substring(0, eq))-1, column.substring(eq+1));
 			} else {
-				fieldMap.put(Integer.valueOf(column), "col" + column);
+				fieldMap.put(Integer.valueOf(column)-1, "col" + column);
 			}
 		}
 	}
@@ -68,7 +67,7 @@ public class TabixTSVAnnotator extends Annotator {
 			infoValues.put("ID", entry.getValue());
 			infoValues.put("Number", "1");
 			infoValues.put("Type", "String");
-			infoValues.put("Description", "\"Column " + entry.getKey().toString() + " from " + tabix.filename + "\"");
+			infoValues.put("Description", "\"Column " + Integer.toString(entry.getKey() + 1) + " from " + tabix.filename + "\"");
 			// FIXME - can do better with the descriptions!
 			infos.add(new VCFMeta("INFO", infoValues).toString());
 		}
