@@ -14,7 +14,7 @@ public abstract class Annotator {
 	 * 
 	 * If the argument altColumn is less than or equal to 0, then no checking will be performed.
 	 * 
-	 * @param altColumn
+	 * @param refColumn
 	 * @return this, so you can chain calls
 	 */
 	public Annotator checkRef(int refColumn) {
