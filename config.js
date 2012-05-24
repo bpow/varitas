@@ -1,3 +1,8 @@
+addSnpEffSplitter()
+addGeneAnnotator("in_omim", "data/omimgenes")
+addGeneAnnotator("in_hgmd", "data/hgmdgenes")
+addGeneAnnotator("in_cosmic", "data/cosmicgenes")
+addGeneAnnotator("exclusion", "data/fajardogenes")
 addVCFAnnotator("data/niehs95.indels.vcf.gz", "AF=NIEHSIAF")
 addVCFAnnotator("data/niehs95.snps.vcf.gz", "AF=NIEHSAF")
 addVCFAnnotator("data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz",

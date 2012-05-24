@@ -1,5 +1,0 @@
-addSnpEffSplitter()
-addGeneAnnotator("in_omim", "data/omimgenes")
-addGeneAnnotator("in_hgmd", "data/hgmdgenes")
-addGeneAnnotator("in_cosmic", "data/cosmicgenes")
-addGeneAnnotator("exclusion", "data/fajardogenes")
