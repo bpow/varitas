@@ -3,7 +3,7 @@
     <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-        <jar destfile="/home/bpow/workspace/GrandAnnotator/dist/GrandAnnotator-runnable.jar">
+        <jar destfile="./dist/GrandAnnotator-runnable.jar">
             <manifest>
                 <attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader"/>
                 <attribute name="Rsrc-Main-Class" value="org.drpowell.grandannotator.GrandAnnotator"/>
@@ -11,8 +11,8 @@
                 <attribute name="Rsrc-Class-Path" value="./ sam-1.69.jar"/>
             </manifest>
             <zipfileset src="jar-in-jar-loader.zip"/>
-            <fileset dir="/home/bpow/workspace/GrandAnnotator/bin"/>
-            <zipfileset dir="/home/bpow/workspace/GrandAnnotator/lib" includes="sam-1.69.jar"/>
+            <fileset dir="./bin"/>
+            <zipfileset dir="./lib" includes="sam-1.69.jar"/>
         </jar>
     </target>
 </project>
