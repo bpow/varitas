@@ -12,17 +12,15 @@ public class VCFVariant implements GenomicVariant {
 	private int start; // fixme should this be final?
 	private int end;
 	
-	public enum FIXED_COLUMNS {CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT};
-	
 	public VCFVariant(String line) {
 		this(line.split("\t"));
 	}
 	
 	public VCFVariant(String [] row) {
 		this.row = row; // FIXME - should defensive copy?
-		start = Integer.parseInt(row[FIXED_COLUMNS.POS.ordinal()]);
+		start = Integer.parseInt(row[VCFFixedColumns.POS.ordinal()]);
 		end = start + getRef().length() - 1;
-		info = splitInfoField(row[FIXED_COLUMNS.INFO.ordinal()]);
+		info = splitInfoField(row[VCFFixedColumns.INFO.ordinal()]);
 	}
 
 	public static Map<String, Object> splitInfoField(String info) {
@@ -62,7 +60,7 @@ public class VCFVariant implements GenomicVariant {
 	}
 	
 	private void updateInfo() {
-		row[FIXED_COLUMNS.INFO.ordinal()] = joinInfo(info);
+		row[VCFFixedColumns.INFO.ordinal()] = joinInfo(info);
 	}
 	
 	public String toString() {
@@ -76,7 +74,7 @@ public class VCFVariant implements GenomicVariant {
 
 	@Override
 	public String getSequence() {
-		return row[FIXED_COLUMNS.CHROM.ordinal()];
+		return row[VCFFixedColumns.CHROM.ordinal()];
 	}
 
 	@Override
@@ -90,29 +88,29 @@ public class VCFVariant implements GenomicVariant {
 	}
 
 	public String getID() {
-		return row[FIXED_COLUMNS.ID.ordinal()];
+		return row[VCFFixedColumns.ID.ordinal()];
 	}
 
 	@Override
 	public String getRef() {
-		return row[FIXED_COLUMNS.REF.ordinal()];
+		return row[VCFFixedColumns.REF.ordinal()];
 	}
 
 	@Override
 	public String getAlt() {
-		return row[FIXED_COLUMNS.ALT.ordinal()];
+		return row[VCFFixedColumns.ALT.ordinal()];
 	}
 	
 	public String getFilter() {
-		return row[FIXED_COLUMNS.FILTER.ordinal()];
+		return row[VCFFixedColumns.FILTER.ordinal()];
 	}
 	
 	public String getFormat() {
-		return row[FIXED_COLUMNS.FORMAT.ordinal()];		
+		return row[VCFFixedColumns.FORMAT.ordinal()];		
 	}
 	
 	public VCFVariant mergeID(String newID) {
-		int idcol = FIXED_COLUMNS.ID.ordinal();
+		int idcol = VCFFixedColumns.ID.ordinal();
 		String oldID = row[idcol];
 		if (!".".equals(oldID)) {
 			if (oldID.equals(newID)) {

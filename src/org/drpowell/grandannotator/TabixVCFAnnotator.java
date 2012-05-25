@@ -106,7 +106,7 @@ public class TabixVCFAnnotator extends Annotator {
 				String newId = null; 
 				VCFMeta meta = VCFMeta.fromLine(metaLine);
 				String oldId = meta.getValue("ID");
-				if ("INFO".equals(meta.getMetaType()) && (newId = fieldMap.get(oldId)) != null) {
+				if ("INFO".equals(meta.getMetaKey()) && (newId = fieldMap.get(oldId)) != null) {
 					meta.putValue("ID", newId);
 					newInfos.put(newId, meta.toString());
 				}

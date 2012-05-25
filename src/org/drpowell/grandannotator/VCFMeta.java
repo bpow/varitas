@@ -5,32 +5,50 @@ import java.util.Map;
 
 
 
+/**
+ * A class to hold meta-information from a Variant Call Format (VCF) file.
+ * 
+ * For the most part, meta lines are formatted as ##KEY=value where value can
+ * be a group of comma-delimited values enclosed by <>. The VCF specification
+ * sets other requirements for INFO and FORMAT fields, which are not incorporated
+ * into this class (yet?).
+ * 
+ * 
+ * @see http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41
+ * @author bpow
+ */
 public class VCFMeta {
-	// FIXME-- really only designed for INFO and FORMAT fields with their defined keys for now
-	public enum MetaType {Integer, Float, Character, String, Flag};
-	private String metaType;
-	public String getMetaType() {
-		return metaType;
-	}
-
-	public void setMetaType(String metaType) {
-		this.metaType = metaType;
+	
+	private String metaKey;
+	private LinkedHashMap<String, String> values = null;
+	private String singleValue = null;
+	
+	public String getMetaKey() {
+		return metaKey;
 	}
 	
+	public VCFMeta setMetaKey(String key) {
+		metaKey = key;
+		return this;
+	}
+	
+	/**
+	 * 
+	 * @param key
+	 * @return
+	 */
 	public String getValue(String key) {
 		if (values != null) return values.get(key);
-		return null;
+		return singleValue;
 	}
 
-	private LinkedHashMap<String, String> values;
-	private String singleValue;
-
-	private VCFMeta(String typeAlone) {
-		metaType = typeAlone;
+	private VCFMeta(String keyOnly) {
+		this.metaKey = keyOnly;
+		values = null;
 	}
 	
-	private VCFMeta(String metaType, String value) {
-		this.metaType = metaType;
+	private VCFMeta(String metaKey, String value) {
+		this.metaKey = metaKey;
 		if (value.startsWith("<") && value.endsWith(">")) {
 			values = parseMultipleValues(value.substring(1, value.length()-1));
 		} else {
@@ -38,8 +56,12 @@ public class VCFMeta {
 		}
 	}
 	
-	public VCFMeta(String metaType, LinkedHashMap<String, String> values) {
-		this.metaType = metaType;
+	/**
+	 * 
+	 * @param values
+	 */
+	public VCFMeta(String metaKey, LinkedHashMap<String, String> values) {
+		this.metaKey = metaKey;
 		this.values = values;
 	}
 	
@@ -67,7 +89,7 @@ public class VCFMeta {
 	}
 	
 	public String toString() {
-		StringBuilder sb = new StringBuilder("##").append(metaType);
+		StringBuilder sb = new StringBuilder("##").append(metaKey);
 		if (values != null) {
 			sb.append("=<");
 			for (Map.Entry<String, String> entry : values.entrySet()) {
@@ -80,6 +102,11 @@ public class VCFMeta {
 		return sb.toString();
 	}
 
+	/**
+	 * 
+	 * @param line
+	 * @return
+	 */
 	public static VCFMeta fromLine(String line) {
 		if (line.startsWith("##")) {
 			line = line.substring(2);
@@ -88,11 +115,17 @@ public class VCFMeta {
 		if (eq <= 0) {
 			return new VCFMeta(line);
 		}
-		String metaType = line.substring(0, eq);
+		String metaKey = line.substring(0, eq);
 		String remainder = line.substring(eq+1);
-		return new VCFMeta(metaType, remainder);
+		return new VCFMeta(metaKey, remainder);
 	}
 
+	/**
+	 * 
+	 * @param key
+	 * @param value
+	 * @return
+	 */
 	public String putValue(String key, String value) {
 		return values.put(key, value);
 	}
