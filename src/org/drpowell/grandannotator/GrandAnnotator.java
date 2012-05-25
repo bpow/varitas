@@ -95,29 +95,22 @@ public class GrandAnnotator {
 	}
 	
 	public void annotateVCFFile(BufferedReader input) throws IOException {
-		String line;
-		boolean inHeader = true;
-		while ((line = input.readLine()) != null) {
-			if (inHeader && line.startsWith("##")) {
-				System.out.println(line);
-			} else if (inHeader && line.startsWith("#CHROM")) {
-				inHeader = false;
-				// add additional info lines
-				for (Annotator annotator: annotators) {
-					for (String infoLine: annotator.infoLines()) {
-						System.out.println(infoLine);
-					}
-				}
-				System.out.println(line);
-			} else {
-				VCFVariant variant = new VCFVariant(line);
-				
-				for (Annotator annotator: annotators) {
-					annotator.annotate(variant);
-				}
-				System.out.println(variant);
+		VCFParser parser = new VCFParser(input);
+		System.out.print(parser.getMetaHeaders());
+		// add additional info lines
+		for (Annotator annotator: annotators) {
+			for (String infoLine: annotator.infoLines()) {
+				System.out.println(infoLine);
 			}
 		}
+		System.out.println(parser.getColHeaders());
+
+		for (VCFVariant variant: parser) {
+			for (Annotator annotator: annotators) {
+				annotator.annotate(variant);
+			}
+		}
+		System.out.flush();
 	}
 
 	public static void main(String[] args) throws Exception {

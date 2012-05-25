@@ -13,14 +13,23 @@ import java.util.logging.Logger;
  * @author bpow
  */
 public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
-	private StringBuffer header = new StringBuffer();
+	private StringBuffer metaHeaders = new StringBuffer();
 	private ArrayList<VCFMeta> parsedHeaders = new ArrayList<VCFMeta>();
 	private Map<String, VCFMeta> infoHeaders = new LinkedHashMap<String, VCFMeta>();
+	private String colHeaders;
 	private String fileName;
 	private BufferedReader reader;
 	private String [] samples;
 	private boolean alreadyProvidedIterator = false;
 	private String nextLine;
+	
+	public String getMetaHeaders() {
+		return metaHeaders.toString();
+	}
+	
+	public String getColHeaders() {
+		return colHeaders;
+	}
 	
 	public VCFParser(BufferedReader reader) throws IOException {
 		this.reader = reader;
@@ -36,7 +45,6 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	private void parseHeaders() throws IOException {
 		String line;
 		while ((line = reader.readLine()) != null) {
-			header.append(line);
 			if (line.startsWith("##")) {
 				addMeta(line);
 			} else if (line.startsWith("#CHROM")) {
@@ -54,6 +62,8 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	}
 	
 	private VCFMeta addMeta(String line) {
+		// FIXME - use system eol character
+		metaHeaders.append(line).append('\n');
 		VCFMeta meta = VCFMeta.fromLine(line);
 		parsedHeaders.add(meta);
 		if (meta.getMetaKey().equals("INFO")) {
@@ -67,6 +77,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 			throw new RuntimeException("Problem reading VCF file\nExpected: " +
 					VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
 		}
+		colHeaders = line;
 		String [] headers = line.split("\t");
 		int numFixed = VCFFixedColumns.values().length;
 		samples = new String[headers.length - numFixed];
@@ -108,6 +119,9 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	private String readNext() {
 		try {
 			nextLine = reader.readLine();
+			if (nextLine == null) {
+				reader.close();
+			}
 		} catch (IOException ex) {
 			Logger.getLogger(VCFParser.class.getName()).log(Level.SEVERE, null, ex);
 		}
