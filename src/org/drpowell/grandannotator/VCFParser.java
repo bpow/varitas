@@ -49,6 +49,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 				addMeta(line);
 			} else if (line.startsWith("#CHROM")) {
 				parseColHeader(line);
+				readNext();
 				return;
 			} else {
 				String error = "Error parsing header: \n" + line;
@@ -58,7 +59,6 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 				throw new RuntimeException(error); 
 			}
 		}
-		readNext();
 	}
 	
 	private VCFMeta addMeta(String line) {
@@ -122,6 +122,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 			if (nextLine == null) {
 				reader.close();
 			}
+			return nextLine;
 		} catch (IOException ex) {
 			Logger.getLogger(VCFParser.class.getName()).log(Level.SEVERE, null, ex);
 		}
