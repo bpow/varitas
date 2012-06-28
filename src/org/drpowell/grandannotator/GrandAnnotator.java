@@ -109,6 +109,7 @@ public class GrandAnnotator {
 			for (Annotator annotator: annotators) {
 				annotator.annotate(variant);
 			}
+			System.out.println(variant);
 		}
 		System.out.flush();
 	}
