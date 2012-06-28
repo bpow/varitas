@@ -51,14 +51,14 @@ ESP5400.vcf.gz:
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 
-dbNSFP2.0b1_variant.zip:
-	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b1_variant.zip
+dbNSFP2.0b2.zip:
+	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b2.zip
 
-dbNSFP2.0b1_variant.gz: dbNSFP2.0b1_variant.zip
+dbNSFP2.0b2.gz: dbNSFP2.0b2zip
 	TMPDIR=$(shell mktemp -d) && \
 	unzip -a -d $$TMPDIR $< && \
 	for chrom in `seq 1 22` X Y; do \
-		tr -d \\r <$$TMPDIR/dbNSFP2.0b1_variant.chr$$chrom ; \
+		tr -d \\r <$$TMPDIR/dbNSFP2.0b2.chr$$chrom ; \
 	done | bgzip -c > $@ && \
 	rm -rf $$$TMPDIR
 
