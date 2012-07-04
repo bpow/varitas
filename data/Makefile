@@ -82,12 +82,9 @@ dbNSFP2.0b3.zip:
 	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b3.zip
 
 dbNSFP2.0b3_variant.gz: dbNSFP2.0b3.zip
-	TMPDIR=$(shell mktemp -d) && \
-	unzip -a -d $$TMPDIR $< && \
 	for chrom in `seq 1 22` X Y; do \
-		tr -d \\r <$$TMPDIR/dbNSFP2.0b3_variant.chr$$chrom ; \
-	done | bgzip -c > $@ && \
-	rm -rf $$$TMPDIR
+		unzip -p $< dbNSFP2.0b3_variant.chr$$chrom | tr -d \\r ; \
+	done | bgzip -c > $@
 
 dbNSFP2.0b3: dbNSFP2.0b3_variant.gz
 	tabix -s1 -b2 -e2 $<
