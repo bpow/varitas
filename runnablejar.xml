@@ -11,7 +11,7 @@
                 <attribute name="Rsrc-Class-Path" value="./ sam-1.69.jar"/>
             </manifest>
             <zipfileset src="jar-in-jar-loader.zip"/>
-            <fileset dir="./bin"/>
+            <fileset dir="./build/classes"/>
             <zipfileset dir="./lib" includes="sam-1.69.jar"/>
         </jar>
     </target>
