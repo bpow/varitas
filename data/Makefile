@@ -47,14 +47,26 @@ ESP5400.vcf.gz:
 	TMPDIR=$(shell mktemp -d) && \
 	tar -C $$TMPDIR xzf ESP5400.snps.vcf.tar.gz && \
 	for chrom in `seq 1 22` X ; do \
-		cat $$TMPDIR/ESP5400.chr$${chrom}.snps.vcf"; \
+		cat "$$TMPDIR/ESP5400.chr$${chrom}.snps.vcf"; \
+	done | bgzip -c > $@ && \
+	rm -rf $$TMPDIR
+
+ESP6500: ESP6500.vcf.gz.tbi
+	date >> ESP6500
+
+ESP6500.vcf.gz:
+	curl -O http://evs.gs.washington.edu/evs_bulk_data/ESP6500.snps.vcf.tar.gz
+	TMPDIR=$(shell mktemp -d) && \
+	tar -C $$TMPDIR xzf ESP6500.snps.vcf.tar.gz && \
+	for chrom in `seq 1 22` X ; do \
+		cat "$$TMPDIR/ESP6500.chr$${chrom}.snps.vcf"; \
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 
 dbNSFP2.0b2.zip:
 	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b2.zip
 
-dbNSFP2.0b2.gz: dbNSFP2.0b2zip
+dbNSFP2.0b2_variant.gz: dbNSFP2.0b2.zip
 	TMPDIR=$(shell mktemp -d) && \
 	unzip -a -d $$TMPDIR $< && \
 	for chrom in `seq 1 22` X Y; do \
@@ -62,9 +74,24 @@ dbNSFP2.0b2.gz: dbNSFP2.0b2zip
 	done | bgzip -c > $@ && \
 	rm -rf $$$TMPDIR
 
-dbNSFP2.0b1: dbNSFP2.0b1_variant.gz
+dbNSFP2.0b2: dbNSFP2.0b2_variant.gz
 	tabix -s1 -b2 -e2 $<
 	date >>dbNSFP2.0b1
+
+dbNSFP2.0b3.zip:
+	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b3.zip
+
+dbNSFP2.0b3_variant.gz: dbNSFP2.0b3.zip
+	TMPDIR=$(shell mktemp -d) && \
+	unzip -a -d $$TMPDIR $< && \
+	for chrom in `seq 1 22` X Y; do \
+		tr -d \\r <$$TMPDIR/dbNSFP2.0b3_variant.chr$$chrom ; \
+	done | bgzip -c > $@ && \
+	rm -rf $$$TMPDIR
+
+dbNSFP2.0b3: dbNSFP2.0b3_variant.gz
+	tabix -s1 -b2 -e2 $<
+	date >>dbNSFP2.0b3
 
 dbNSFP1.3.zip:
 	curl -A "UA" -O http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP1.3.zip
