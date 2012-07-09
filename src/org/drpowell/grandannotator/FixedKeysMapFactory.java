@@ -122,7 +122,7 @@ public class FixedKeysMapFactory<K, V> {
 		}
 		
 		private V checkNull(Object value) {
-			if (this.equals(value)) return null;
+			if (this == value) return null;
 			return (V) value;
 		}
 		
@@ -197,7 +197,10 @@ public class FixedKeysMapFactory<K, V> {
 		@Override
 		public Entry<K, V> next() {
 			for (int i = index; i < fkm.values.length; i++) {
-				if (!fkm.equals(fkm.values[i])) return fkm.getEntry(i); 
+				if (!fkm.equals(fkm.values[i])) {
+					index = i + 1;
+					return fkm.getEntry(i); 
+				}
 			}
 			throw new NoSuchElementException();
 		}
