@@ -11,6 +11,7 @@ public class VCFVariant implements GenomicVariant {
 	private String [] row;
 	private int start; // fixme should this be final?
 	private int end;
+	private static final Boolean INFO_FLAG_TRUE = new Boolean(true);
 	
 	public VCFVariant(String line) {
 		this(line.split("\t"));
@@ -31,17 +32,14 @@ public class VCFVariant implements GenomicVariant {
 		String [] entries = info.split(";");
 		for (String entry : entries) {
 			String [] keyvalue = entry.split("=",2);
-			if (keyvalue.length == 1) {
-				// Flag field, has no value
-				String tmp = keyvalue[0];
-				keyvalue = new String[2];
-				keyvalue[0] = tmp;
-				keyvalue[1] = ""; // or could use null
-			}
 			if (map.containsKey(keyvalue[0])) {
 				throw new RuntimeException("Unable to deal with duplicated keys in the INFO field of a VCF");
 			}
-			map.put(keyvalue[0], keyvalue[1]);
+			if (keyvalue.length == 1) {
+				map.put(keyvalue[0], INFO_FLAG_TRUE);
+			} else {
+				map.put(keyvalue[0], keyvalue[1]);
+			}
 		}
 		return map;
 	}
@@ -52,7 +50,11 @@ public class VCFVariant implements GenomicVariant {
 		}
 		StringBuilder sb = new StringBuilder();
 		for (Entry<String, Object> e: info.entrySet()) {
-			sb.append(e.getKey()).append("=").append(e.getValue()).append(";");
+			if (e.getValue() == INFO_FLAG_TRUE) {
+				sb.append(e.getKey()).append(";");
+			} else {
+				sb.append(e.getKey()).append("=").append(e.getValue()).append(";");
+			}
 		}
 		return sb.substring(0, sb.length()-1); // no need for the last semicolon
 	}
