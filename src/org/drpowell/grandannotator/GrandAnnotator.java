@@ -1,8 +1,19 @@
 package org.drpowell.grandannotator;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -124,7 +135,11 @@ public class GrandAnnotator {
 		
 		BufferedReader input;
 		if (args.length > 1) {
-			input = new BufferedReader(new FileReader(args[1]));
+			if (args[1].endsWith(".gz")) {
+				input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(args[1]))));
+			} else {
+				input = new BufferedReader(new FileReader(args[1]));
+			}
 		} else {
 			input = new BufferedReader(new InputStreamReader(System.in));
 		}
