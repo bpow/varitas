@@ -46,7 +46,8 @@ public class TabixTSVAnnotator extends Annotator {
 					// we have a match!
 					for (Map.Entry<Integer, String> entry: fieldMap.entrySet()) {
 						String value = row[entry.getKey()];
-						if (value != "") {
+						if (! ("".equals(value) || ".".equals(value)) ) {
+							// FIXME -- "." is frequently used to represent missing data, but consider whether I should pass it along
 							info.put(entry.getValue(), row[entry.getKey()]);
 						}
 					}
