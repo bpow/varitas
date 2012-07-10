@@ -16,6 +16,8 @@ public class GeneAnnotator extends Annotator {
 	private int keyColumn = 0;
 	private LinkedHashMap<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
 	private boolean initialized = false;
+	private boolean hasHeader = false;
+	private String [] headers;
 	
 	public GeneAnnotator(String annotatorName, String inputFile) throws IOException {
 		this.annotatorName = annotatorName;
@@ -38,6 +40,11 @@ public class GeneAnnotator extends Annotator {
 			try {
 				BufferedReader br = new BufferedReader(new FileReader(fileName));
 				String line = null;
+				if (hasHeader) {
+					if ((line = br.readLine()) != null) {
+						headers = line.split("\\t", -1);
+					}
+				}
 				while ((line = br.readLine()) != null) {
 					String [] row = line.split("\\t", -1);
 					// FIXME - use apache CSV or something else to allow for more than just tsv files
@@ -55,9 +62,15 @@ public class GeneAnnotator extends Annotator {
 		}
 	}
 
+	public GeneAnnotator hasHeader(boolean hasHeader) {
+		ensureUninitialized();
+		this.hasHeader = hasHeader;
+		return this;
+	}
+	
 	public GeneAnnotator setKeyColumn(int column) {
 		ensureUninitialized();
-		keyColumn = column;
+		keyColumn = column - 1;
 		return this;
 	}
 	
@@ -88,7 +101,6 @@ public class GeneAnnotator extends Annotator {
 					for (Entry<String, String> entry : data.get(vg).entrySet()) {
 						variant.getInfo().put(entry.getKey(), entry.getValue());
 					}
-					variant.getInfo().put(annotatorName, vg);
 				}
 			}
 		}
@@ -100,9 +112,14 @@ public class GeneAnnotator extends Annotator {
 		ensureFileRead();
 		LinkedList<String> l = new LinkedList<String>();
 		for (Entry<Integer, String> field : fieldMap.entrySet()) {
+			int colIndex = field.getKey();
+			String description = "column " + Integer.toString(colIndex + 1) + " from " + fileName; 
 			StringBuilder sb = new StringBuilder(100);
-			sb.append("##INFO=<ID=").append(field.getValue()).append(",Number=1,Type=String,Description=\"Column ")
-				.append(field.getKey()).append(" from ").append(fileName).append("\">");
+			sb.append("##INFO=<ID=").append(field.getValue()).append(",Number=1,Type=String,Description=\"");
+			if (headers != null && headers.length >= colIndex) {
+				sb.append(headers[colIndex]).append(", ");
+			}
+			sb.append("column ").append(field.getKey()+1).append(" from ").append(fileName).append("\">");
 			l.add(sb.toString());
 		}
 		return l;
