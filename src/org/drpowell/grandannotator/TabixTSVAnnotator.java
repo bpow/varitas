@@ -2,7 +2,9 @@ package org.drpowell.grandannotator;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -10,6 +12,7 @@ public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
 	private static Logger logger = Logger.getLogger(TabixTSVAnnotator.class.getCanonicalName());
+	private boolean hasHeader = false;
 	
 	public TabixTSVAnnotator(final TabixReader reader, String columns) {
 		tabix = reader;
@@ -22,6 +25,11 @@ public class TabixTSVAnnotator extends Annotator {
 				fieldMap.put(Integer.valueOf(column)-1, "col" + column);
 			}
 		}
+	}
+	
+	public TabixTSVAnnotator useHeader(boolean useHeader) {
+		hasHeader = useHeader;
+		return this;
 	}
 	
 	@Override
@@ -65,12 +73,28 @@ public class TabixTSVAnnotator extends Annotator {
 	@Override
 	public Iterable<String> infoLines() {
 		ArrayList<String> infos = new ArrayList<String>();
+		List<String> headers = null;
+		if (hasHeader) {
+			try {
+				headers = tabix.readHeaders();
+				if (!headers.isEmpty()) {
+					headers = Arrays.asList(headers.get(0).split("\\t",-1));
+				}
+			} catch (IOException ioe) {
+				logger.warning("problem reading from headers for " + tabix.filename + "\n" + ioe);
+			}
+		}
 		for (Map.Entry<Integer, String> entry : fieldMap.entrySet()) {
 			LinkedHashMap<String, String> infoValues = new LinkedHashMap<String, String>();
 			infoValues.put("ID", entry.getValue());
 			infoValues.put("Number", "1");
 			infoValues.put("Type", "String");
-			infoValues.put("Description", "\"Column " + Integer.toString(entry.getKey() + 1) + " from " + tabix.filename + "\"");
+			int colIndex = entry.getKey();
+			if (headers != null && headers.size() >= colIndex) {
+				infoValues.put("Description", "\"" + headers.get(colIndex) + ", column " + Integer.toString(colIndex + 1) + " from " + tabix.filename + "\"");
+			} else {
+				infoValues.put("Description", "\"Column " + Integer.toString(colIndex + 1) + " from " + tabix.filename + "\"");
+			}
 			// FIXME - can do better with the descriptions!
 			infos.add(new VCFMeta("INFO", infoValues).toString());
 		}
