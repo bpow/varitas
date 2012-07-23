@@ -1,4 +1,4 @@
-package org.drpowell.grandannotator;
+package org.drpowell.varitas;
 
 import java.io.BufferedReader;
 import java.io.File;

@@ -1,4 +1,4 @@
-package org.drpowell.grandannotator;
+package org.drpowell.varitas;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

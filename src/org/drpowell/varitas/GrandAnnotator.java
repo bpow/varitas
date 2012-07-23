@@ -1,4 +1,4 @@
-package org.drpowell.grandannotator;
+package org.drpowell.varitas;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -21,7 +21,7 @@ import javax.script.ScriptException;
 
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
-	private static Logger logger = Logger.getLogger("org.drpowell.grandannotator.GrandAnnotator");
+	private static Logger logger = Logger.getLogger("org.drpowell.varitas.GrandAnnotator");
 	private final File configFile;
 	private final File configParent;
 

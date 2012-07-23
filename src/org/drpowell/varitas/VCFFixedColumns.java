@@ -1,4 +1,4 @@
-package org.drpowell.grandannotator;
+package org.drpowell.varitas;
 
 public enum VCFFixedColumns {
 	CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT;

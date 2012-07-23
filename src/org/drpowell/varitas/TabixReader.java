@@ -25,7 +25,7 @@
 
 /* Contact: Heng Li <hengli@broadinstitute.org> */
 
-package org.drpowell.grandannotator;
+package org.drpowell.varitas;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
