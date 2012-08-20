@@ -1,0 +1,11 @@
+apply plugin: 'application'
+
+mainClassName = 'org.drpowell.varitas.GrandAnnotator'
+
+dependencies {
+	compile files(file('lib').listFiles())
+}
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '1.0-milestone-3'
+}
