@@ -114,7 +114,7 @@ public class GrandAnnotator {
 				System.out.println(infoLine);
 			}
 		}
-		System.out.println(parser.getColHeaders());
+		System.out.println(parser.getColHeaderLine());
 
 		for (VCFVariant variant: parser) {
 			for (Annotator annotator: annotators) {

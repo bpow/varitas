@@ -1,7 +1,10 @@
 package org.drpowell.varitas;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,6 +19,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	private StringBuffer metaHeaders = new StringBuffer();
 	private ArrayList<VCFMeta> parsedHeaders = new ArrayList<VCFMeta>();
 	private Map<String, VCFMeta> infoHeaders = new LinkedHashMap<String, VCFMeta>();
+	private Map<String, VCFMeta> formatHeaders = new LinkedHashMap<String, VCFMeta>();
 	private String colHeaders;
 	private String fileName;
 	private BufferedReader reader;
@@ -27,8 +31,20 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		return metaHeaders.toString();
 	}
 	
-	public String getColHeaders() {
+	public Map<String, VCFMeta> infos() {
+		return Collections.unmodifiableMap(infoHeaders);
+	}
+
+	public Map<String, VCFMeta> formats() {
+		return Collections.unmodifiableMap(formatHeaders);
+	}
+
+	public String getColHeaderLine() {
 		return colHeaders;
+	}
+	
+	public String [] samples() {
+		return samples;
 	}
 	
 	public VCFParser(BufferedReader reader) throws IOException {
@@ -66,8 +82,11 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		metaHeaders.append(line).append('\n');
 		VCFMeta meta = VCFMeta.fromLine(line);
 		parsedHeaders.add(meta);
-		if (meta.getMetaKey().equals("INFO")) {
+		if ("INFO".equals(meta.getMetaKey())) {
 			infoHeaders.put(meta.getValue("ID"), meta);
+		}
+		if ("FORMAT".equals(meta.getMetaKey())) {
+			formatHeaders.put(meta.getValue("ID"), meta);
 		}
 		return meta;
 	}
@@ -78,7 +97,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 					VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
 		}
 		colHeaders = line;
-		String [] headers = line.split("\t");
+		String [] headers = line.split("\t", -1);
 		int numFixed = VCFFixedColumns.values().length;
 		samples = new String[headers.length - numFixed];
 		for (int i = numFixed; i < headers.length; i++) {

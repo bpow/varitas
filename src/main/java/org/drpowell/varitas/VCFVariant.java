@@ -1,20 +1,23 @@
 package org.drpowell.varitas;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 public class VCFVariant implements GenomicVariant {
 	private Map<String, Object> info;
 	private String qual;
-	public String format;
 	private String [] row;
 	private int start; // fixme should this be final?
 	private int end;
 	private static final Boolean INFO_FLAG_TRUE = new Boolean(true);
 	
 	public VCFVariant(String line) {
-		this(line.split("\t"));
+		this(line.split("\t", -1));
 	}
 	
 	public VCFVariant(String [] row) {
@@ -117,6 +120,10 @@ public class VCFVariant implements GenomicVariant {
 		return row[VCFFixedColumns.FORMAT.ordinal()];		
 	}
 	
+	public List<String> getRow() {
+		return Collections.unmodifiableList(Arrays.asList(row));
+	}
+	
 	public VCFVariant mergeID(String newID) {
 		int idcol = VCFFixedColumns.ID.ordinal();
 		String oldID = row[idcol];
@@ -128,5 +135,32 @@ public class VCFVariant implements GenomicVariant {
 		}
 		row[idcol] = newID;
 		return this;
+	}
+	
+	public String [] getCalls() {
+		int num = row.length - VCFFixedColumns.SIZE;
+		if (num <= 0) {
+			return new String[0];
+		} else {
+			return Arrays.copyOfRange(row, VCFFixedColumns.SIZE, row.length);
+		}
+	}
+	
+	public String getInfoField(String key) {
+		Object o = info.get(key);
+		if (o == null) {
+			return "";
+		}
+		if (o == INFO_FLAG_TRUE) {
+			return key;
+		}
+		return o.toString();
+	}
+	
+	private static int indexOf(String key, String [] values) {
+		for (int i = 0; i < values.length; i++) {
+			if (key.equals(values[i])) return i;
+		}
+		return -1;
 	}
 }
