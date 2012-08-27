@@ -9,8 +9,13 @@ import java.util.regex.Pattern;
 /**
  * An annotator that splits out the info as provided by snpeff (http://snpeff.sourceforge.net).
  * 
- * The VCF field for snpeff output is described as follows:
+ * The VCF field for snpeff output is described as follows for SNPEff versions before 3:
  * Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_change | Gene_Name | Gene_BioType | Coding | Transcript | Exon [ | ERRORS | WARNINGS ] )
+ * 
+ * For version 3.0 and later (so far):
+ * Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_change| Amino_Acid_length | Gene_Name | Gene_BioType | Coding | Transcript | Exon [ | ERRORS | WARNINGS ] )
+ * 
+ * I'm going to default to version 3 for now, but will need to figure out a way to make this configurable
  * @author Bradford Powell
  *
  */
@@ -47,8 +52,8 @@ public class SnpEffAnnotationSplitter extends Annotator {
 	};
 
 	public enum SnpEffAnnotationField {
-		IMPACT, FUNCTIONAL_CLASS, CODON_CHANGE, AMINO_ACID_CHANGE, GENE_NAME, GENE_BIOTYPE,
-		TRANSCRIPT, EXON, ERRORS, WARNINGS;
+		IMPACT, FUNCTIONAL_CLASS, CODON_CHANGE, AMINO_ACID_CHANGE, AMINO_ACID_LENGTH,
+		GENE_NAME, GENE_BIOTYPE, TRANSCRIPT, EXON, ERRORS, WARNINGS;
 		public static final int size = values().length;
 	};
 
