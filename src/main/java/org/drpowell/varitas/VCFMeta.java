@@ -22,6 +22,7 @@ public class VCFMeta {
 	private String metaKey;
 	private LinkedHashMap<String, String> values = null;
 	private String singleValue = null;
+	private String id = null;
 	
 	public String getMetaKey() {
 		return metaKey;
@@ -63,6 +64,7 @@ public class VCFMeta {
 	public VCFMeta(String metaKey, LinkedHashMap<String, String> values) {
 		this.metaKey = metaKey;
 		this.values = values;
+		id = values.get("ID");
 	}
 	
 	private LinkedHashMap<String, String> parseMultipleValues(String multiValues) {
@@ -85,6 +87,7 @@ public class VCFMeta {
 				}
 			}
 		}
+		id = result.get("ID");
 		return result;
 	}
 	
@@ -127,6 +130,13 @@ public class VCFMeta {
 	 * @return
 	 */
 	public String putValue(String key, String value) {
+		if ("ID".equals(key)) {
+			id = key;
+		}
 		return values.put(key, value);
+	}
+	
+	public String getId() {
+		return id;
 	}
 }
