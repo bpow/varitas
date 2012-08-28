@@ -38,7 +38,7 @@ public class XLifyVcf {
 	private final String [] samples;
 	private final String [] headers;
 	private final Sheet dataSheet;
-	private short rowNum = 0;
+	private int rowNum = 0;
 	private BitSet numericColumns;
 	private CellStyle hlink_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
@@ -136,6 +136,12 @@ public class XLifyVcf {
 		}
 	}
 	
+	private boolean filterImpact(VCFVariant v) {
+		String effect = v.getInfoField("IMPACT");
+		if (effect == null) return false;
+		return "HIGH".equals(effect) || "MODERATE".equals(effect);
+	}
+	
 	private boolean filterAF(VCFVariant v, String key, double cutoff) {
 		String afString = v.getInfoField(key);
 		if (afString == null || afString.isEmpty() || ".".equals(afString)) return true;
@@ -151,7 +157,8 @@ public class XLifyVcf {
 	private boolean filter(VCFVariant v) {
 		String vFilter = v.getFilter();
 		double cutoff = 0.01;
-		return ("PASS".equals(vFilter) || ".".equals(vFilter) && 
+		return (("PASS".equals(vFilter) || ".".equals(vFilter)) &&
+				filterImpact(v) &&
 				filterAF(v, "NIEHSAF", cutoff) &&
 				filterAF(v, "NIEHSIAF", cutoff) &&
 				filterAF(v, "TGAF", cutoff)
