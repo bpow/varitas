@@ -136,9 +136,26 @@ public class XLifyVcf {
 		}
 	}
 	
+	private boolean filterAF(VCFVariant v, String key, double cutoff) {
+		String afString = v.getInfoField(key);
+		if (afString == null || afString.isEmpty() || ".".equals(afString)) return true;
+		try {
+			double d = Double.valueOf(afString);
+			return d <= cutoff;
+		} catch (NumberFormatException nfe) {
+			// nothing to do
+		}
+		return true;
+	}
+	
 	private boolean filter(VCFVariant v) {
 		String vFilter = v.getFilter();
-		return ("PASS".equals(vFilter) || ".".equals(vFilter)); 
+		double cutoff = 0.01;
+		return ("PASS".equals(vFilter) || ".".equals(vFilter) && 
+				filterAF(v, "NIEHSAF", cutoff) &&
+				filterAF(v, "NIEHSIAF", cutoff) &&
+				filterAF(v, "TGAF", cutoff)
+				); 
 	}
 	
 	private void writeRow(VCFVariant v) {
