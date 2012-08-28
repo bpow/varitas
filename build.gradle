@@ -2,8 +2,13 @@ apply plugin: 'application'
 
 mainClassName = 'org.drpowell.varitas.GrandAnnotator'
 
+repositories {
+	mavenCentral()
+}
+
 dependencies {
 	compile files(file('lib').listFiles())
+	compile 'org.apache.poi:poi:3.8'
 }
 
 task wrapper(type: Wrapper) {
