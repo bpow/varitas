@@ -177,7 +177,7 @@ public class XLifyVcf {
 				String [] subfields = call.split(":");
 				for (String k: formats.keySet()) {
 					Integer i = formatIndices.get(k);
-					if (i == null) {
+					if (i == null || i >= subfields.length) {
 						data.add("");
 					} else {
 						data.add(subfields[i]);
