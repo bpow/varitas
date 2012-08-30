@@ -77,7 +77,8 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		}
 	}
 	
-	private VCFMeta addMeta(String line) {
+	// FIXME - this should be private!
+	public VCFMeta addMeta(String line) {
 		// FIXME - use system eol character
 		metaHeaders.append(line).append('\n');
 		VCFMeta meta = VCFMeta.fromLine(line);

@@ -1,6 +1,5 @@
 package org.drpowell.varitas;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -60,6 +59,12 @@ public class VCFVariant implements GenomicVariant {
 			}
 		}
 		return sb.substring(0, sb.length()-1); // no need for the last semicolon
+	}
+	
+	public VCFVariant putInfo(String key, Object value) {
+		if (value == null) value = INFO_FLAG_TRUE;
+		info.put(key, value);
+		return this;
 	}
 
 	public Map<String, Object> getInfo() {
@@ -156,11 +161,16 @@ public class VCFVariant implements GenomicVariant {
 		}
 		return o.toString();
 	}
-	
+
+	public boolean hasInfo(String key) {
+		return info.containsKey(key);
+	}
+
 	private static int indexOf(String key, String [] values) {
 		for (int i = 0; i < values.length; i++) {
 			if (key.equals(values[i])) return i;
 		}
 		return -1;
 	}
+
 }

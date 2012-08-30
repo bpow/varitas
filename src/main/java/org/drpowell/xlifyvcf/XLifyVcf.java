@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
@@ -25,6 +26,7 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.VCFMeta;
 import org.drpowell.varitas.VCFParser;
 import org.drpowell.varitas.VCFVariant;
@@ -42,6 +44,7 @@ public class XLifyVcf {
 	private BitSet numericColumns;
 	private CellStyle hlink_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
+	private final boolean applyBiallelicFilter;
 	
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
@@ -58,6 +61,13 @@ public class XLifyVcf {
 		createHelper = workbook.getCreationHelper();
 		vcfParser = input;
 		formats = vcfParser.formats();
+		// TODO - fix this kludge in adding filter for biallelic mutations within genes
+		if (vcfParser.samples().length == 3) {
+			applyBiallelicFilter = true;
+			vcfParser.addMeta("##INFO=<ID=BIALLELIC,Number=0,Type=Flag,Description=\"variant participates in biallelic non-reference inheritance in a gene\">");
+		} else {
+			applyBiallelicFilter = false;
+		}
 		infos = vcfParser.infos();
 		samples = vcfParser.samples();
 		headers = makeHeaders();
@@ -136,35 +146,6 @@ public class XLifyVcf {
 		}
 	}
 	
-	private boolean filterImpact(VCFVariant v) {
-		String effect = v.getInfoField("IMPACT");
-		if (effect == null) return false;
-		return "HIGH".equals(effect) || "MODERATE".equals(effect);
-	}
-	
-	private boolean filterAF(VCFVariant v, String key, double cutoff) {
-		String afString = v.getInfoField(key);
-		if (afString == null || afString.isEmpty() || ".".equals(afString)) return true;
-		try {
-			double d = Double.valueOf(afString);
-			return d <= cutoff;
-		} catch (NumberFormatException nfe) {
-			// nothing to do
-		}
-		return true;
-	}
-	
-	private boolean filter(VCFVariant v) {
-		String vFilter = v.getFilter();
-		double cutoff = 0.01;
-		return (("PASS".equals(vFilter) || ".".equals(vFilter)) &&
-				filterImpact(v) &&
-				filterAF(v, "NIEHSAF", cutoff) &&
-				filterAF(v, "NIEHSIAF", cutoff) &&
-				filterAF(v, "TGAF", cutoff)
-				); 
-	}
-	
 	private void writeRow(VCFVariant v) {
 		rowNum++;
 		ArrayList<String> data = new ArrayList<String>(headers.length);
@@ -237,11 +218,13 @@ public class XLifyVcf {
 	}
 	
 	public void doWork() {
-		for (VCFVariant variant : vcfParser) {
-			if (filter(variant)) {
-				writeRow(variant);
-				// TODO: progress
-			}
+		Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
+		if (applyBiallelicFilter) {
+			variants = new CompoundMutationFilter(variants);
+		}
+		while (variants.hasNext()) {
+			writeRow(variants.next());
+			// TODO: progress
 		}
 	}
 	
