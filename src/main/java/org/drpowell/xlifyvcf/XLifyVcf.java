@@ -45,6 +45,8 @@ public class XLifyVcf {
 	private CellStyle hlink_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
 	private final boolean applyBiallelicFilter;
+	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
+	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
@@ -80,6 +82,7 @@ public class XLifyVcf {
 		ArrayList<String> out = new ArrayList<String>(Arrays.asList(vcfParser.getColHeaderLine().split("\t", -1)));
 		numericColumns.set(1);
 		numericColumns.set(5);
+		// TODO - add comments to the header fields describing them (from VCFMeta Description)
 		for (VCFMeta m: infos.values()) {
 			if ("1".equals(m.getValue("Number"))) {
 				String type = m.getValue("Type");
@@ -122,6 +125,8 @@ public class XLifyVcf {
 	
 	private Sheet setupDataSheet() {
 		Sheet data = workbook.createSheet("data");
+		workbook.setActiveSheet(workbook.getSheetIndex(data));
+		data.createFreezePane(5, 1);
 		Row r = data.createRow(rowNum);
 		for (int c = 0; c < headers.length; c++) {
 			r.createCell(c).setCellValue(headers[c]);
@@ -225,6 +230,12 @@ public class XLifyVcf {
 		while (variants.hasNext()) {
 			writeRow(variants.next());
 			// TODO: progress
+		}
+		for (int i = 0; i < COLUMNS_TO_AUTO_RESIZE.length; i++) {
+			dataSheet.autoSizeColumn(COLUMNS_TO_AUTO_RESIZE[i]);
+		}
+		for (int i = 0; i < COLUMNS_TO_HIDE.length; i++) {
+			dataSheet.setColumnHidden(COLUMNS_TO_HIDE[i], true);
 		}
 	}
 	
