@@ -18,8 +18,11 @@ import java.util.zip.GZIPInputStream;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.ClientAnchor;
+import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Drawing;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Hyperlink;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -47,6 +50,7 @@ public class XLifyVcf {
 	private final boolean applyBiallelicFilter;
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
+	private Map<String, String> headerComments;
 	
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
@@ -82,6 +86,7 @@ public class XLifyVcf {
 		ArrayList<String> out = new ArrayList<String>(Arrays.asList(vcfParser.getColHeaderLine().split("\t", -1)));
 		numericColumns.set(1);
 		numericColumns.set(5);
+		headerComments = new HashMap<String, String>();
 		// TODO - add comments to the header fields describing them (from VCFMeta Description)
 		for (VCFMeta m: infos.values()) {
 			if ("1".equals(m.getValue("Number"))) {
@@ -90,6 +95,7 @@ public class XLifyVcf {
 					numericColumns.set(out.size());
 				}
 			}
+			headerComments.put(m.getValue("ID"), m.getValue("Description"));
 			out.add(m.getId());
 		}
 		for (String s : samples) {
@@ -125,11 +131,23 @@ public class XLifyVcf {
 	
 	private Sheet setupDataSheet() {
 		Sheet data = workbook.createSheet("data");
+		Drawing drawing = data.createDrawingPatriarch();
 		workbook.setActiveSheet(workbook.getSheetIndex(data));
 		data.createFreezePane(5, 1);
 		Row r = data.createRow(rowNum);
 		for (int c = 0; c < headers.length; c++) {
-			r.createCell(c).setCellValue(headers[c]);
+			Cell cell = r.createCell(c);
+			cell.setCellValue(headers[c]);
+			if (headerComments.containsKey(headers[c])) {
+				ClientAnchor anchor = createHelper.createClientAnchor();
+				anchor.setCol1(cell.getColumnIndex());
+				anchor.setCol2(cell.getColumnIndex()+3);
+				anchor.setRow1(cell.getRowIndex());
+				anchor.setRow2(cell.getRowIndex()+1);
+				Comment comment = drawing.createCellComment(anchor);
+				comment.setString(createHelper.createRichTextString(headerComments.get(headers[c])));
+				cell.setCellComment(comment);
+			}
 		}
 		
 		hlink_style = workbook.createCellStyle();
