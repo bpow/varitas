@@ -109,7 +109,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	@Override
 	public Iterator<VCFVariant> iterator() {
 		if (alreadyProvidedIterator) {
-			throw new UnsupportedOperationException("Tried to access iterator for VCFParser twice");
+			throw new IllegalStateException("Tried to access iterator for VCFParser twice");
 		} else {
 			alreadyProvidedIterator = true;
 		}
