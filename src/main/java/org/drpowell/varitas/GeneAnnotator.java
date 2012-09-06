@@ -113,7 +113,6 @@ public class GeneAnnotator extends Annotator {
 		LinkedList<String> l = new LinkedList<String>();
 		for (Entry<Integer, String> field : fieldMap.entrySet()) {
 			int colIndex = field.getKey();
-			String description = "column " + Integer.toString(colIndex + 1) + " from " + fileName; 
 			StringBuilder sb = new StringBuilder(100);
 			sb.append("##INFO=<ID=").append(field.getValue()).append(",Number=1,Type=String,Description=\"");
 			if (headers != null && headers.length >= colIndex) {

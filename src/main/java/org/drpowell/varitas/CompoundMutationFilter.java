@@ -31,7 +31,6 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 				// proband unknown or homozygous reference
 			}
 			int alt1 = countAltAlleles(calls[1]), alt2 = countAltAlleles(calls[2]);
-			boolean addVariant = false;
 			if (alt0 == 2) {
 				if (alt1 < 2 && alt2 < 2) {
 					transmitted[0]++;

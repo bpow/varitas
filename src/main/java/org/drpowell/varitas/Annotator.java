@@ -1,6 +1,5 @@
 package org.drpowell.varitas;
 
-import java.util.Map;
 
 public abstract class Annotator {
 	
