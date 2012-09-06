@@ -13,7 +13,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	private Iterator<VCFVariant> filteredVariants;
 
 	public CompoundMutationFilter(Iterator<VCFVariant> delegate) {
-		grouper = new Grouper<String, VCFVariant>(delegate, new VCFGeneKey());
+		grouper = new VCFGeneGrouper().setDelegate(delegate);
 		advanceGroup();
 	}
 	
@@ -71,9 +71,9 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		throw new UnsupportedOperationException();
 	}
 	
-	public static class VCFGeneKey implements Grouper.KeyFunction<String, VCFVariant> {
+	public static class VCFGeneGrouper extends Grouper<String, VCFVariant> {
 		@Override
-		public String apply(VCFVariant v) {
+		public String keyForValue(VCFVariant v) {
 			String gene = v.getInfoField("Gene_name");
 			if (gene.isEmpty()) gene = null;
 			return gene;

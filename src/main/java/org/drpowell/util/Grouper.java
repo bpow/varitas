@@ -29,23 +29,36 @@ import java.util.NoSuchElementException;
  * @author Bradford Powell
  *
  */
-public class Grouper<K,V> implements Iterator<Collection <V>> {
-	private final Iterator<V> delegate;
-	private final KeyFunction<K,V> keyF;
+public abstract class Grouper<K,V> implements Iterator<Collection <V>> {
+	private Iterator<V> delegate;
 	private V nextItem = null;
 	private K prevKey;
 	private K nextKey;
 	
-	public Grouper(Iterator<V> client, KeyFunction<K,V> keyFunction) {
+	public Grouper() {
+		delegate = null;
+	}
+	
+	public Grouper(Iterator<V> client) {
 		delegate = client;
-		keyF = keyFunction;
 		advance();
 	}
+	
+	public Grouper<K,V> setDelegate(Iterator<V> delegate) {
+		this.delegate = delegate;
+		advance();
+		return this;
+	}
+	
+	/**
+	 * Given a value, return the grouping key for that datum
+	 */
+	public abstract K keyForValue(V value);
 	
 	private K advance() {
 		if (delegate.hasNext()) {
 			nextItem = delegate.next();
-			nextKey = keyF.apply(nextItem);
+			nextKey = keyForValue(nextItem);
 		} else {
 			nextItem = null;
 			nextKey = null;
@@ -73,7 +86,7 @@ public class Grouper<K,V> implements Iterator<Collection <V>> {
 			advance();
 			return out;
 		}
-		while (nextItem != null && prevKey.equals(keyF.apply(nextItem))) {
+		while (nextItem != null && prevKey.equals(keyForValue(nextItem))) {
 			out.add(nextItem);
 			advance();
 		}
@@ -85,27 +98,16 @@ public class Grouper<K,V> implements Iterator<Collection <V>> {
 		throw new UnsupportedOperationException();
 	}
 
-	/**
-	 * This interface provides a single method to generate a key for the use of grouping objects, so
-	 * it is basically a closure. The object returned will be compared using <pre>.equals()</pre>
-	 */
-	public interface KeyFunction<K,V> {
-		public abstract K apply(V value);
-	}
-	
-	/**
-	 * A simple key-generator that returns the string value of its argument.
-	 */
-	public static class ToStringKey<V> implements KeyFunction<String, V> {
+	public static class StringGrouper<V> extends Grouper<String, V> {
 		@Override
-		public String apply(V value) {
+		public String keyForValue(V value) {
 			return value.toString();
 		}
 	}
-
+	
 	public static void main(String argv[]) {
 		String [] tests = {"one", "one", "one", "two", "three", "three", "a", "b"};
-		Grouper<String, String> g = new Grouper<String, String>(Arrays.asList(tests).iterator(), new Grouper.ToStringKey<String>());
+		Grouper<String, String> g = new StringGrouper<String>().setDelegate(Arrays.asList(tests).iterator());
 		while (g.hasNext()) {
 			System.out.println((Iterable<String>) g.next());
 		}
