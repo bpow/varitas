@@ -1,3 +1,5 @@
+defaultTasks 'install'
+
 apply plugin: 'application'
 
 mainClassName = 'org.drpowell.varitas.GrandAnnotator'
