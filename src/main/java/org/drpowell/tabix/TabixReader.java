@@ -25,7 +25,7 @@
 
 /* Contact: Heng Li <hengli@broadinstitute.org> */
 
-package org.drpowell.varitas;
+package org.drpowell.tabix;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +36,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.drpowell.tabix.Tabix.Pair64Unsigned;
 
 import net.sf.samtools.util.BlockCompressedInputStream;
 
@@ -45,46 +48,63 @@ public class TabixReader
 	private BlockCompressedInputStream mFp;
 	// private static Logger logger = Logger.getLogger(TabixReader.class.getCanonicalName());
 
-	private final int mPreset;
-	public final int sequenceColumn;
-	public final int beginColumn;
-	public final int endColumn;
-	public final int metaCharacter;
-	public final String meta;
-	public final int linesToSkip;
-	private final String[] mSeq;
+	public final Tabix tabix;
 	private ArrayList<String> headers;
-
-	private final HashMap<String, Integer> mChr2tid;
-
-	private static int MAX_BIN = 37450;
-	private static int TAD_MIN_CHUNK_GAP = 32768;
-	private static int TAD_LIDX_SHIFT = 14;
-
-	private class TPair64 implements Comparable<TPair64> {
-		final long u;
-		final long v;
-		public TPair64(final long _u, final long _v) {
-			u = _u; v = _v;
-		}
-		public int compareTo(final TPair64 p) {
-			return u == p.u? 0 : ((u < p.u) ^ (u < 0) ^ (p.u < 0))? -1 : 1; // unsigned 64-bit comparison
-		}
-	};
-
-	private class TIndex {
-		HashMap<Integer, TPair64[]> b; // binning index
-		long[] l; // linear index
-	};
-	private TIndex[] mIndex;
-
-	private class TIntv {
-		Integer tid;
-		int beg, end;
-	};
 
 	private static boolean less64(final long u, final long v) { // unsigned 64-bit comparison
 		return (u < v) ^ (u < 0) ^ (v < 0);
+	}
+	
+	private Tabix readHeader(BlockCompressedInputStream bcis) throws IOException {
+		byte[] buf = new byte[4];
+
+		bcis.read(buf, 0, 4); // read "TBI\1"
+		String [] mSeq = new String[readInt(bcis)]; // # sequences
+		HashMap<String, Integer> mChr2tid = new HashMap<String, Integer>();
+		int mPreset = readInt(bcis);
+		int sequenceColumn = readInt(bcis);
+		int beginColumn = readInt(bcis);
+		int endColumn = readInt(bcis);
+		int metaCharacter = readInt(bcis);
+		int linesToSkip = readInt(bcis);
+
+		// read sequence dictionary
+		int i, j, k, l = readInt(bcis);
+		buf = new byte[l];
+		bcis.read(buf);
+		for (i = j = k = 0; i < buf.length; ++i) {
+			if (buf[i] == 0) {
+				byte[] b = new byte[i - j];
+				System.arraycopy(buf, j, b, 0, b.length);
+				String s = new String(b);
+				mChr2tid.put(s, k);
+				mSeq[k++] = s;
+				j = i + 1;
+			}
+		}
+
+		// read the index
+		for (i = 0; i < mSeq.length; ++i) {
+			// the binning index
+			int n_bin = readInt(bcis);
+			for (j = 0; j < n_bin; ++j) {
+				int bin = readInt(bcis);
+				ArrayList<Tabix.Pair64Unsigned> chunks = new ArrayList<Tabix.Pair64Unsigned>(readInt(bcis));
+				for (k = 0; k < chunks.size(); ++k) {
+					long u = readLong(bcis);
+					long v = readLong(bcis);
+					chunks.add(new Tabix.Pair64Unsigned(u, v)); // in C, this is inefficient
+				}
+				tabix.binningIndex.get(i).put(bin, chunks);
+			}
+			// the linear index
+			ArrayList<Long> linear = new ArrayList<Long>(readInt(bcis));
+			for (k = 0; k < linear.size(); ++k)
+				linear.add(readLong(bcis));
+			tabix.linearIndex.set(i, linear);
+		}
+		
+		return new Tabix(mPreset, sequenceColumn, beginColumn, endColumn, (char) metaCharacter, linesToSkip);
 	}
 	
 	/**
@@ -107,57 +127,7 @@ public class TabixReader
 		this.filename = filename;
 		mFp = new BlockCompressedInputStream(new File(filename));
 		BlockCompressedInputStream is = new BlockCompressedInputStream(new File(filename + ".tbi"));
-		// readIndex
-		byte[] buf = new byte[4];
-
-		is.read(buf, 0, 4); // read "TBI\1"
-		mSeq = new String[readInt(is)]; // # sequences
-		mChr2tid = new HashMap<String, Integer>();
-		mPreset = readInt(is);
-		sequenceColumn = readInt(is);
-		beginColumn = readInt(is);
-		endColumn = readInt(is);
-		metaCharacter = readInt(is);
-		meta = String.valueOf((char) metaCharacter);
-		linesToSkip = readInt(is);
-		// TODO - everything final has been assigned by now, could move the rest out of the constructor
-		// read sequence dictionary
-		int i, j, k, l = readInt(is);
-		buf = new byte[l];
-		is.read(buf);
-		for (i = j = k = 0; i < buf.length; ++i) {
-			if (buf[i] == 0) {
-				byte[] b = new byte[i - j];
-				System.arraycopy(buf, j, b, 0, b.length);
-				String s = new String(b);
-				mChr2tid.put(s, k);
-				mSeq[k++] = s;
-				j = i + 1;
-			}
-		}
-		// read the index
-		mIndex = new TIndex[mSeq.length];
-		for (i = 0; i < mSeq.length; ++i) {
-			// the binning index
-			int n_bin = readInt(is);
-			mIndex[i] = new TIndex();
-			mIndex[i].b = new HashMap<Integer, TPair64[]>();
-			for (j = 0; j < n_bin; ++j) {
-				int bin = readInt(is);
-				TPair64[] chunks = new TPair64[readInt(is)];
-				for (k = 0; k < chunks.length; ++k) {
-					long u = readLong(is);
-					long v = readLong(is);
-					chunks[k] = new TPair64(u, v); // in C, this is inefficient
-				}
-				mIndex[i].b.put(bin, chunks);
-			}
-			// the linear index
-			mIndex[i].l = new long[readInt(is)];
-			for (k = 0; k < mIndex[i].l.length; ++k)
-				mIndex[i].l[k] = readLong(is);
-		}
-		// close
+		tabix = readHeader(is);
 		is.close();
 	}
 
@@ -203,17 +173,6 @@ public class TabixReader
 	}
 
 	/**
-	 * Read one line from the data file.
-	 */
-	public String readLine() throws IOException {
-		return mFp.readLine();
-	}
-
-	public Integer getIdForChromosome(final String chromosome) {
-		return mChr2tid.get(chromosome);
-	}
-
-	/**
 	 * Parse a region in the format of "chr1", "chr1:100" or "chr1:100-1000"
 	 *
 	 * @param reg Region string
@@ -228,59 +187,20 @@ public class TabixReader
 		chr = colon >= 0? reg.substring(0, colon) : reg;
 		ret[1] = colon >= 0? Integer.parseInt(reg.substring(colon+1, hyphen >= 0? hyphen : reg.length())) - 1 : 0;
 		ret[2] = hyphen >= 0? Integer.parseInt(reg.substring(hyphen+1)) : 0x7fffffff;
-		Integer tid = getIdForChromosome(chr);
+		Integer tid = tabix.getIdForChromosome(chr);
 		ret[0] = tid == null? -1 : tid.intValue();
 		return ret;
 	}
 
-	private TIntv getIntv(final String s[]) {
-		TIntv intv = new TIntv();
-		intv.tid = getIdForChromosome(s[sequenceColumn-1]);
-		// begin
-		intv.beg = Integer.parseInt(s[beginColumn-1]);
-		intv.end = intv.beg;
-		if ((mPreset&0x10000) != 0) ++intv.end;
-		else --intv.beg;
-		if (intv.beg < 0) intv.beg = 0;
-		if (intv.end < 1) intv.end = 1;
-		if ((mPreset&0xffff) == 0) { // generic
-			intv.end = Integer.parseInt(s[endColumn-1]);
-		} else if ((mPreset&0xffff) == 1) { // SAM
-			String cigar = s[5];
-			int cigarLen = 0, i, j;
-			for (i = j = 0; i < cigar.length(); ++i) {
-				if (cigar.charAt(i) > '9') {
-					int op = cigar.charAt(i);
-					if (op == 'M' || op == 'D' || op == 'N')
-						cigarLen += Integer.parseInt(cigar.substring(j, i));
-				}
-			}
-			intv.end = intv.beg + cigarLen;
-		} else if ((mPreset&0xffff) == 2) { // VCF
-			String ref = s[3];
-			if (ref.length() > 0) intv.end = intv.beg + ref.length();
-			// check in the INFO field for an END
-			String info = s[7];
-			int endOffsetInInfo = -1;
-			if (info.startsWith("END=")) {
-				endOffsetInInfo = 4;
-				intv.end = Integer.parseInt(info.substring(endOffsetInInfo).split(";",2)[0]);
-			} else if ((endOffsetInInfo = info.indexOf(";END=")) > 0){
-				intv.end = Integer.parseInt(info.substring(endOffsetInInfo+5).split(";",2)[0]);
-			}
-		}
-		return intv;
-	}
-
 	public List<String> readHeaders() throws IOException {
 		if (headers == null) {
-			ArrayList<String> tmpHeaders = new ArrayList<String>(linesToSkip);
-			int skiplinesRemaining = linesToSkip;
+			ArrayList<String> tmpHeaders = new ArrayList<String>(tabix.linesToSkip);
+			int skiplinesRemaining = tabix.linesToSkip;
 			mFp.seek(0);
 			String line;
 			while ((line = mFp.readLine()) != null) {
 				skiplinesRemaining--;
-				if (skiplinesRemaining >= 0 || line.charAt(0) == metaCharacter) {
+				if (skiplinesRemaining >= 0 || line.charAt(0) == tabix.commentChar) {
 					tmpHeaders.add(line);
 				} else {
 					break;
@@ -295,11 +215,11 @@ public class TabixReader
 		private int i;
 		// private int n_seeks;
 		private int tid, beg, end;
-		private TPair64[] off;
+		private Tabix.Pair64Unsigned[] off;
 		private long curr_off;
 		private boolean iseof;
 
-		public Iterator(final int _tid, final int _beg, final int _end, final TPair64[] _off) {
+		public Iterator(final int _tid, final int _beg, final int _end, final Tabix.Pair64Unsigned[] _off) {
 			i = -1; curr_off = 0; iseof = false;
 			// n_seeks = 0;
 			off = _off; tid = _tid; beg = _beg; end = _end;
@@ -324,13 +244,13 @@ public class TabixReader
 					++i;
 				}
 				String s;
-				if ((s = readLine()) != null) {
+				if ((s = mFp.readLine()) != null) {
 					curr_off = mFp.getFilePointer();
-					if (s.length() == 0 || s.startsWith(meta)) continue;
+					if (s.length() == 0 || s.startsWith(tabix.comment)) continue;
 					String [] row = s.split("\t");
-					TIntv intv;
+					Tabix.GenomicInterval intv;
 					try {
-						intv = getIntv(row);
+						intv = tabix.getInterval(row);
 					} catch (NumberFormatException nfe) {
 						nfe.printStackTrace();
 						System.err.println("Skipping...");
@@ -346,25 +266,29 @@ public class TabixReader
 	};
 
 	public Iterator query(final int tid, final int beg, final int end) {
-		TPair64[] off, chunks;
+		Tabix.Pair64Unsigned[] off;
+		List<Tabix.Pair64Unsigned> chunks;
 		long min_off;
-		TIndex idx = mIndex[tid];
+		// Tabix.Index idx = mIndex[tid];
+		List<Long> linear = tabix.linearIndex.get(tid);
+		Map<Integer, List<Pair64Unsigned>> binning = tabix.binningIndex.get(tid);
 		List<Integer> bins = reg2bins(beg, end);
 		int i, l, n_off;
-		if (idx.l.length > 0)
-			min_off = (beg>>TAD_LIDX_SHIFT >= idx.l.length)? idx.l[idx.l.length-1] : idx.l[beg>>TAD_LIDX_SHIFT];
+		if (!linear.isEmpty())
+			min_off = (beg>>Tabix.TAD_LIDX_SHIFT >= linear.size())? 
+					linear.get(linear.size() - 1) : linear.get(beg>>Tabix.TAD_LIDX_SHIFT);
 		else min_off = 0;
-		ArrayList<TPair64> offList = new ArrayList<TPair64>();
+		ArrayList<Tabix.Pair64Unsigned> offList = new ArrayList<Tabix.Pair64Unsigned>();
 		for (Integer bin : bins) {
-			if ((chunks = idx.b.get(bin)) != null ) {
-				for (TPair64 chunk : chunks) {
+			if ((chunks = binning.get(bin)) != null ) {
+				for (Tabix.Pair64Unsigned chunk : chunks) {
 					if (less64(min_off, chunk.v)) offList.add(chunk);
 				}
 			}
 		}
-		if (offList.isEmpty()) return new Iterator(tid, beg, end, new TPair64[0]);
+		if (offList.isEmpty()) return new Iterator(tid, beg, end, new Tabix.Pair64Unsigned[0]);
 		n_off = offList.size();
-		off = (TPair64 []) offList.toArray(new TPair64 [n_off]);
+		off = (Tabix.Pair64Unsigned []) offList.toArray(new Tabix.Pair64Unsigned [n_off]);
 
 		// resolve completely contained adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {
@@ -376,10 +300,10 @@ public class TabixReader
 		n_off = l + 1;
 		// resolve overlaps between adjacent blocks; this may happen due to the merge in indexing
 		for (i = 1; i < n_off; ++i)
-			if (!less64(off[i-1].v, off[i].u)) off[i-1] = new TPair64(off[i-1].u, off[i].u);
+			if (!less64(off[i-1].v, off[i].u)) off[i-1] = new Tabix.Pair64Unsigned(off[i-1].u, off[i].u);
 		// merge adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {
-			if (off[l].v>>16 == off[i].u>>16) off[l] = new TPair64(off[l].u, off[i].v);
+			if (off[l].v>>16 == off[i].u>>16) off[l] = new Tabix.Pair64Unsigned(off[l].u, off[i].v);
 			else {
 				++l;
 				off[l] = off[i];
@@ -387,8 +311,8 @@ public class TabixReader
 		}
 		n_off = l + 1;
 		// return
-		TPair64[] ret = Arrays.copyOf(off, n_off);
-		if (ret.length == 1 && ret[0] == null) ret = new TPair64[0]; // not sure how this would happen
+		Tabix.Pair64Unsigned[] ret = Arrays.copyOf(off, n_off);
+		if (ret.length == 1 && ret[0] == null) ret = new Tabix.Pair64Unsigned[0]; // not sure how this would happen
 		return new TabixReader.Iterator(tid, beg, end, ret);
 	}
 	
@@ -414,11 +338,12 @@ public class TabixReader
 		}
 		try {
 			TabixReader tr = new TabixReader(args[0]);
-			String s;
-			if (args.length == 1) { // no region is specified; print the whole file
-				while ((s = tr.readLine()) != null)
-					System.out.println(s);
-			} else { // a region is specified; random access
+//			String s;
+			if (args.length != 1) { 
+				// no region is specified; print the whole file
+//				while ((s = tr.readLine()) != null)
+//					System.out.println(s);
+//			} else { // a region is specified; random access
 				String [] row;
 				TabixReader.Iterator iter = tr.query(args[1]); // get the iterator
 				while (iter != null && (row = iter.next()) != null)
@@ -426,5 +351,9 @@ public class TabixReader
 			}
 		} catch (IOException e) {
 		}
+	}
+
+	public Integer getIdForChromosome(String chromosome) {
+		return tabix.getIdForChromosome(chromosome);
 	}
 }
