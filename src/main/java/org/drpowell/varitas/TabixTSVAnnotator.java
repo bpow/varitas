@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import org.drpowell.tabix.TabixReader;
+
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();

@@ -19,6 +19,8 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.drpowell.tabix.TabixReader;
+
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.varitas.GrandAnnotator");

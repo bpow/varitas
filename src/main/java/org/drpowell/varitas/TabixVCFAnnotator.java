@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.drpowell.tabix.TabixReader;
+
 public class TabixVCFAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<String, String> fieldMap = new LinkedHashMap<String, String>();
