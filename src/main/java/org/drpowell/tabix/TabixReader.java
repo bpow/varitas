@@ -59,13 +59,14 @@ public class TabixReader
 
 		bcis.read(buf, 0, 4); // read "TBI\1"
 		String [] mSeq = new String[readInt(bcis)]; // # sequences
-		HashMap<String, Integer> mChr2tid = new HashMap<String, Integer>();
 		int mPreset = readInt(bcis);
 		int sequenceColumn = readInt(bcis);
 		int beginColumn = readInt(bcis);
 		int endColumn = readInt(bcis);
 		int metaCharacter = readInt(bcis);
 		int linesToSkip = readInt(bcis);
+		
+		Tabix t = new Tabix(mPreset, sequenceColumn, beginColumn, endColumn, (char) metaCharacter, linesToSkip);
 
 		// read sequence dictionary
 		int i, j, k, l = readInt(bcis);
@@ -76,7 +77,7 @@ public class TabixReader
 				byte[] b = new byte[i - j];
 				System.arraycopy(buf, j, b, 0, b.length);
 				String s = new String(b);
-				mChr2tid.put(s, k);
+				t.mChr2tid.put(s, k);
 				mSeq[k++] = s;
 				j = i + 1;
 			}
@@ -86,24 +87,28 @@ public class TabixReader
 		for (i = 0; i < mSeq.length; ++i) {
 			// the binning index
 			int n_bin = readInt(bcis);
+			HashMap<Integer, List<Tabix.Pair64Unsigned>> binMap = new HashMap<Integer, List<Tabix.Pair64Unsigned>>(1 + n_bin * 4 / 3);
+			t.binningIndex.add(binMap);
 			for (j = 0; j < n_bin; ++j) {
 				int bin = readInt(bcis);
-				ArrayList<Tabix.Pair64Unsigned> chunks = new ArrayList<Tabix.Pair64Unsigned>(readInt(bcis));
-				for (k = 0; k < chunks.size(); ++k) {
+				int n_chunks = readInt(bcis);
+				ArrayList<Tabix.Pair64Unsigned> chunks = new ArrayList<Tabix.Pair64Unsigned>(n_chunks);
+				for (k = 0; k < n_chunks; ++k) {
 					long u = readLong(bcis);
 					long v = readLong(bcis);
 					chunks.add(new Tabix.Pair64Unsigned(u, v)); // in C, this is inefficient
 				}
-				tabix.binningIndex.get(i).put(bin, chunks);
+				binMap.put(bin, chunks);
 			}
 			// the linear index
-			ArrayList<Long> linear = new ArrayList<Long>(readInt(bcis));
-			for (k = 0; k < linear.size(); ++k)
+			int n_linear = readInt(bcis);
+			ArrayList<Long> linear = new ArrayList<Long>(n_linear);
+			for (k = 0; k < n_linear; ++k)
 				linear.add(readLong(bcis));
-			tabix.linearIndex.set(i, linear);
+			t.linearIndex.add(i, linear);
 		}
 		
-		return new Tabix(mPreset, sequenceColumn, beginColumn, endColumn, (char) metaCharacter, linesToSkip);
+		return t;
 	}
 	
 	/**

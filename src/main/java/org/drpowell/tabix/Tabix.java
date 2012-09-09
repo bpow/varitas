@@ -57,6 +57,7 @@ public class Tabix {
     public static final Tabix PSLTBL_CONF = new Tabix(TI_FLAG_UCSC, 15, 17, 18, '#', 0);
     public static final Tabix SAM_CONF = new Tabix(TI_PRESET_SAM, 3, 4, 0, '@', 0);
     public static final Tabix VCF_CONF = new Tabix(TI_PRESET_VCF, 1, 2, 0, '#', 0);
+	private static final int MAX_BYTE_BUFFER = 8;
 
     public final int preset;
     public final int seqColumn;
@@ -65,7 +66,8 @@ public class Tabix {
     public final char commentChar;
     public final String comment;
     public final int linesToSkip;
-	LinkedHashMap<String, Integer> mChr2tid;
+	LinkedHashMap<String, Integer> mChr2tid = new LinkedHashMap<String, Integer>(50);
+	private final ByteBuffer buffer;
 
 	/** The binning index. */
     List<Map<Integer, List<Pair64Unsigned>>> binningIndex = new ArrayList<Map<Integer, List<Pair64Unsigned>>>();
@@ -97,6 +99,8 @@ public class Tabix {
         this.commentChar = commentChar;
         comment = Character.toString(commentChar);
         this.linesToSkip = linesToSkip;
+        buffer = ByteBuffer.allocate(MAX_BYTE_BUFFER);
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 	
 	public Integer getIdForChromosome(final String chromosome) {
@@ -210,16 +214,16 @@ public class Tabix {
         }
     }
 
-    public static void writeInt(final OutputStream os, int value) throws IOException {
-        byte[] buf = new byte[4];
-        ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
-        os.write(buf);
+    public void writeInt(final OutputStream os, int value) throws IOException {
+    	buffer.clear();
+    	buffer.putInt(value);
+    	os.write(buffer.array(), 0, 4);
     }
 
-    public static void writeLong(final OutputStream os, long value) throws IOException {
-        byte[] buf = new byte[8];
-        ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putLong(value);
-        os.write(buf);
+    public void writeLong(final OutputStream os, long value) throws IOException {
+    	buffer.clear();
+    	buffer.putLong(value);
+    	os.write(buffer.array(), 0, 4);
     }
 
 
