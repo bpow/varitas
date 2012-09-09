@@ -69,7 +69,7 @@ public class GrandAnnotator {
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			logger.severe(ioe.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
 	}
@@ -89,7 +89,7 @@ public class GrandAnnotator {
 			return annotator;
 		} catch (IOException e) {
 			e.printStackTrace();
-			logger.severe(e.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + e.toString());
 		}
 		return null;
 	}
@@ -102,7 +102,7 @@ public class GrandAnnotator {
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			logger.severe(ioe.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
 	}
