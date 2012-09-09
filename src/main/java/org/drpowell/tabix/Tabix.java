@@ -34,6 +34,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,7 +65,7 @@ public class Tabix {
     public final char commentChar;
     public final String comment;
     public final int linesToSkip;
-	HashMap<String, Integer> mChr2tid;
+	LinkedHashMap<String, Integer> mChr2tid;
 
 	/** The binning index. */
     List<Map<Integer, List<Pair64Unsigned>>> binningIndex = new ArrayList<Map<Integer, List<Pair64Unsigned>>>();
