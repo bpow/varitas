@@ -4,6 +4,7 @@ package org.drpowell.tabix;
 
    Copyright (c) 2010 Broad Institute.
    Portions Copyright (c) 2011 University of Toronto.
+   Portions Copyright (c) 2012 Baylor College of Medicine
 
    Permission is hereby granted, free of charge, to any person obtaining
    a copy of this software and associated documentation files (the
@@ -43,6 +44,7 @@ import org.drpowell.tabix.Tabix.Pair64Unsigned;
  * Tabix writer, based on Heng Li's C implementation.
  *
  * @author tarkvara
+ * @author Bradford Powell
  */
 public class TabixWriter {
     //private static final Logger LOG = Logger.getLogger(TabixWriter.class.getCanonicalName());

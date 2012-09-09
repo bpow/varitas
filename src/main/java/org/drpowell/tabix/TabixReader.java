@@ -1,6 +1,7 @@
 /* The MIT License
 
    Copyright (c) 2010 Broad Institute.
+   Portions Copyright (c) 2012 Baylor College of Medicine.
 
    Permission is hereby granted, free of charge, to any person obtaining
    a copy of this software and associated documentation files (the
@@ -22,8 +23,6 @@
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
 */
-
-/* Contact: Heng Li <hengli@broadinstitute.org> */
 
 package org.drpowell.tabix;
 import java.io.File;
