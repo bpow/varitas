@@ -37,7 +37,7 @@ import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
 import org.drpowell.tabix.Tabix.GenomicInterval;
-import org.drpowell.tabix.Tabix.Pair64Unsigned;
+import org.drpowell.tabix.Tabix.Chunk;
 
 
 /**
@@ -123,12 +123,12 @@ public class TabixWriter {
 	}
     }
 
-    private void insertBinning(Map<Integer, List<Pair64Unsigned>> binningForChr, int bin, long beg, long end) {
+    private void insertBinning(Map<Integer, List<Chunk>> binningForChr, int bin, long beg, long end) {
         if (!binningForChr.containsKey(bin)) {
-            binningForChr.put(bin, new ArrayList<Pair64Unsigned>());
+            binningForChr.put(bin, new ArrayList<Chunk>());
         }
-        List<Pair64Unsigned> list = binningForChr.get(bin);
-        list.add(new Pair64Unsigned(beg, end));
+        List<Chunk> list = binningForChr.get(bin);
+        list.add(new Chunk(beg, end));
     }
 
     private long insertLinear(List<Long> linearForChr, int beg, int end, long offset) {
@@ -156,13 +156,13 @@ public class TabixWriter {
 
     private void mergeChunks() {
         for (int i = 0; i < tabix.binningIndex.size(); i++) {
-            Map<Integer, List<Pair64Unsigned>> binningForChr = tabix.binningIndex.get(i);
+            Map<Integer, List<Chunk>> binningForChr = tabix.binningIndex.get(i);
             for (Integer k: binningForChr.keySet()) {
-                List<Pair64Unsigned> p = binningForChr.get(k);
+                List<Chunk> p = binningForChr.get(k);
                 int m = 0;
                 for (int l = 1; l < p.size(); l++) {
                     if (p.get(m).v >> 16 == p.get(l).u >> 16) {
-                    	p.set(m, new Pair64Unsigned(p.get(m).u, p.get(l).v));
+                    	p.set(m, new Chunk(p.get(m).u, p.get(l).v));
                     } else {
                         p.set(++m, p.get(l));
                     }

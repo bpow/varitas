@@ -52,6 +52,7 @@ public class Tabix {
     public static final int TI_FLAG_UCSC = 0x10000;
     private static final Charset LATIN1 = Charset.forName("ISO-8859-1");
 
+    // TODO - split out config class, since this class now does much more...
     public static final Tabix GFF_CONF = new Tabix(0, 1, 4, 5, '#', 0);
     public static final Tabix BED_CONF = new Tabix(TI_FLAG_UCSC, 1, 2, 3, '#', 0);
     public static final Tabix PSLTBL_CONF = new Tabix(TI_FLAG_UCSC, 15, 17, 18, '#', 0);
@@ -70,18 +71,18 @@ public class Tabix {
 	private final ByteBuffer buffer;
 
 	/** The binning index. */
-    List<Map<Integer, List<Pair64Unsigned>>> binningIndex = new ArrayList<Map<Integer, List<Pair64Unsigned>>>();
+    List<Map<Integer, List<Chunk>>> binningIndex = new ArrayList<Map<Integer, List<Chunk>>>();
 
     /** The linear index. */
     List<List<Long>> linearIndex = new ArrayList<List<Long>>();
 
-    public static class Pair64Unsigned implements Comparable<Pair64Unsigned> {
+    public static class Chunk implements Comparable<Chunk> {
 		public final long u;
 		public final long v;
-		public Pair64Unsigned(final long _u, final long _v) {
+		public Chunk(final long _u, final long _v) {
 			u = _u; v = _v;
 		}
-		public int compareTo(final Pair64Unsigned p) {
+		public int compareTo(final Chunk p) {
 			return u == p.u? 0 : ((u < p.u) ^ (u < 0) ^ (p.u < 0))? -1 : 1; // unsigned 64-bit comparison
 		}
 	};
@@ -111,7 +112,7 @@ public class Tabix {
             mChr2tid.put(chromosome, tid);
 
             // Expand our indices.
-            binningIndex.add(new HashMap<Integer, List<Pair64Unsigned>>());
+            binningIndex.add(new HashMap<Integer, List<Chunk>>());
             linearIndex.add(new ArrayList<Long>());
 		}
 		return tid;
@@ -133,13 +134,13 @@ public class Tabix {
 		// begin
 		intv.beg = Integer.parseInt(s[startColumn-1]);
 		intv.end = intv.beg;
-		if ((preset&0x10000) != 0) ++intv.end;
+		if ((preset&TI_FLAG_UCSC) != 0) ++intv.end;
 		else --intv.beg;
 		if (intv.beg < 0) intv.beg = 0;
 		if (intv.end < 1) intv.end = 1;
 		if ((preset&0xffff) == 0) { // generic
 			intv.end = Integer.parseInt(s[endColumn-1]);
-		} else if ((preset&0xffff) == 1) { // SAM
+		} else if ((preset&0xffff) == TI_PRESET_SAM) { // SAM
 			String cigar = s[5];
 			int cigarLen = 0, i, j;
 			for (i = j = 0; i < cigar.length(); ++i) {
@@ -150,7 +151,7 @@ public class Tabix {
 				}
 			}
 			intv.end = intv.beg + cigarLen;
-		} else if ((preset&0xffff) == 2) { // VCF
+		} else if ((preset&0xffff) == TI_PRESET_VCF) { // VCF
 			String ref = s[3];
 			if (ref.length() > 0) intv.end = intv.beg + ref.length();
 			// check in the INFO field for an END
@@ -192,15 +193,15 @@ public class Tabix {
         }
 
         for (int i = 0; i < mChr2tid.size(); i++) {
-            Map<Integer, List<Pair64Unsigned>> binningForChr = binningIndex.get(i);
+            Map<Integer, List<Chunk>> binningForChr = binningIndex.get(i);
             
             // Write the binning index.
             writeInt(fp, binningForChr.size());
             for (int k: binningForChr.keySet()) {
-                List<Pair64Unsigned> p = binningForChr.get(k);
+                List<Chunk> p = binningForChr.get(k);
                 writeInt(fp, k);
                 writeInt(fp, p.size());
-                for (Pair64Unsigned bin: p) {
+                for (Chunk bin: p) {
                     writeLong(fp, bin.u);
                     writeLong(fp, bin.v);
                 }

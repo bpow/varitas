@@ -15,14 +15,15 @@ import net.sf.samtools.util.BlockCompressedOutputStream;
 import net.sf.samtools.util.StringUtil;
 
 public class TabixCompressorAndWriter {
-	private class BIndex extends LinkedHashMap<Integer, List<Tabix.Pair64Unsigned>> {
+	private class BIndex extends LinkedHashMap<Integer, List<Tabix.Chunk>> {
+		private static final long serialVersionUID = 1L;
 		public BIndex(int capacity, float loadFactor) {
 			super(capacity, loadFactor);
 		}
-		public List<Tabix.Pair64Unsigned> getWithNew(int i) {
-			List<Tabix.Pair64Unsigned> out = get(i);
+		public List<Tabix.Chunk> getWithNew(int i) {
+			List<Tabix.Chunk> out = get(i);
 			if (out == null) {
-				out = new ArrayList<Tabix.Pair64Unsigned>(); // TODO- presize or change to LinkedList
+				out = new ArrayList<Tabix.Chunk>(); // TODO- presize or change to LinkedList
 			}
 			put(i, out);
 			return out;
@@ -98,17 +99,17 @@ public class TabixCompressorAndWriter {
 		final long startOffset = bcos.getFilePointer();
 		bcos.write(line.getBytes());
 		final long endOffset = bcos.getFilePointer();
-		Tabix.Pair64Unsigned chunk = new Tabix.Pair64Unsigned(startOffset, endOffset);
+		Tabix.Chunk chunk = new Tabix.Chunk(startOffset, endOffset);
 		
 		// process binning index
-		List<Tabix.Pair64Unsigned> bin = currBinningIndex.getWithNew(intv.bin);
+		List<Tabix.Chunk> bin = currBinningIndex.getWithNew(intv.bin);
 		// check for overlapping chunks
 		if (bin.isEmpty()) {
 			bin.add(chunk);
 		} else {
-			Tabix.Pair64Unsigned lastChunk = bin.get(bin.size()-1);
+			Tabix.Chunk lastChunk = bin.get(bin.size()-1);
 			if (BlockCompressedFilePointerUtil.areInSameOrAdjacentBlocks(lastChunk.v, chunk.u)) {
-				bin.set(bin.size()-1, new Tabix.Pair64Unsigned(lastChunk.u, chunk.v)); // coalesce
+				bin.set(bin.size()-1, new Tabix.Chunk(lastChunk.u, chunk.v)); // coalesce
 			} else {
 				bin.add(chunk);
 			}
@@ -159,6 +160,7 @@ public class TabixCompressorAndWriter {
 			tcaw.addLine(line);
 		}
 		tcaw.writeIndex();
+		br.close();
 	}
 
 }

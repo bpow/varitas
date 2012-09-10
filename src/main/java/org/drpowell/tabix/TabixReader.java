@@ -37,7 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.drpowell.tabix.Tabix.Pair64Unsigned;
+import org.drpowell.tabix.Tabix.Chunk;
 
 import net.sf.samtools.util.BlockCompressedInputStream;
 
@@ -87,16 +87,16 @@ public class TabixReader
 		for (i = 0; i < mSeq.length; ++i) {
 			// the binning index
 			int n_bin = readInt(bcis);
-			HashMap<Integer, List<Tabix.Pair64Unsigned>> binMap = new HashMap<Integer, List<Tabix.Pair64Unsigned>>(1 + n_bin * 4 / 3);
+			HashMap<Integer, List<Tabix.Chunk>> binMap = new HashMap<Integer, List<Tabix.Chunk>>(1 + n_bin * 4 / 3);
 			t.binningIndex.add(binMap);
 			for (j = 0; j < n_bin; ++j) {
 				int bin = readInt(bcis);
 				int n_chunks = readInt(bcis);
-				ArrayList<Tabix.Pair64Unsigned> chunks = new ArrayList<Tabix.Pair64Unsigned>(n_chunks);
+				ArrayList<Tabix.Chunk> chunks = new ArrayList<Tabix.Chunk>(n_chunks);
 				for (k = 0; k < n_chunks; ++k) {
 					long u = readLong(bcis);
 					long v = readLong(bcis);
-					chunks.add(new Tabix.Pair64Unsigned(u, v)); // in C, this is inefficient
+					chunks.add(new Tabix.Chunk(u, v)); // in C, this is inefficient
 				}
 				binMap.put(bin, chunks);
 			}
@@ -219,11 +219,11 @@ public class TabixReader
 		private int i;
 		// private int n_seeks;
 		private int tid, beg, end;
-		private Tabix.Pair64Unsigned[] off;
+		private Tabix.Chunk[] off;
 		private long curr_off;
 		private boolean iseof;
 
-		public Iterator(final int _tid, final int _beg, final int _end, final Tabix.Pair64Unsigned[] _off) {
+		public Iterator(final int _tid, final int _beg, final int _end, final Tabix.Chunk[] _off) {
 			i = -1; curr_off = 0; iseof = false;
 			// n_seeks = 0;
 			off = _off; tid = _tid; beg = _beg; end = _end;
@@ -270,29 +270,29 @@ public class TabixReader
 	};
 
 	public Iterator query(final int tid, final int beg, final int end) {
-		Tabix.Pair64Unsigned[] off;
-		List<Tabix.Pair64Unsigned> chunks;
+		Tabix.Chunk[] off;
+		List<Tabix.Chunk> chunks;
 		long min_off;
 		// Tabix.Index idx = mIndex[tid];
 		List<Long> linear = tabix.linearIndex.get(tid);
-		Map<Integer, List<Pair64Unsigned>> binning = tabix.binningIndex.get(tid);
+		Map<Integer, List<Chunk>> binning = tabix.binningIndex.get(tid);
 		List<Integer> bins = reg2bins(beg, end);
 		int i, l, n_off;
 		if (!linear.isEmpty())
 			min_off = (beg>>Tabix.TAD_LIDX_SHIFT >= linear.size())? 
 					linear.get(linear.size() - 1) : linear.get(beg>>Tabix.TAD_LIDX_SHIFT);
 		else min_off = 0;
-		ArrayList<Tabix.Pair64Unsigned> offList = new ArrayList<Tabix.Pair64Unsigned>();
+		ArrayList<Tabix.Chunk> offList = new ArrayList<Tabix.Chunk>();
 		for (Integer bin : bins) {
 			if ((chunks = binning.get(bin)) != null ) {
-				for (Tabix.Pair64Unsigned chunk : chunks) {
+				for (Tabix.Chunk chunk : chunks) {
 					if (less64(min_off, chunk.v)) offList.add(chunk);
 				}
 			}
 		}
-		if (offList.isEmpty()) return new Iterator(tid, beg, end, new Tabix.Pair64Unsigned[0]);
+		if (offList.isEmpty()) return new Iterator(tid, beg, end, new Tabix.Chunk[0]);
 		n_off = offList.size();
-		off = (Tabix.Pair64Unsigned []) offList.toArray(new Tabix.Pair64Unsigned [n_off]);
+		off = (Tabix.Chunk []) offList.toArray(new Tabix.Chunk [n_off]);
 
 		// resolve completely contained adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {
@@ -304,10 +304,10 @@ public class TabixReader
 		n_off = l + 1;
 		// resolve overlaps between adjacent blocks; this may happen due to the merge in indexing
 		for (i = 1; i < n_off; ++i)
-			if (!less64(off[i-1].v, off[i].u)) off[i-1] = new Tabix.Pair64Unsigned(off[i-1].u, off[i].u);
+			if (!less64(off[i-1].v, off[i].u)) off[i-1] = new Tabix.Chunk(off[i-1].u, off[i].u);
 		// merge adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {
-			if (off[l].v>>16 == off[i].u>>16) off[l] = new Tabix.Pair64Unsigned(off[l].u, off[i].v);
+			if (off[l].v>>16 == off[i].u>>16) off[l] = new Tabix.Chunk(off[l].u, off[i].v);
 			else {
 				++l;
 				off[l] = off[i];
@@ -315,8 +315,8 @@ public class TabixReader
 		}
 		n_off = l + 1;
 		// return
-		Tabix.Pair64Unsigned[] ret = Arrays.copyOf(off, n_off);
-		if (ret.length == 1 && ret[0] == null) ret = new Tabix.Pair64Unsigned[0]; // not sure how this would happen
+		Tabix.Chunk[] ret = Arrays.copyOf(off, n_off);
+		if (ret.length == 1 && ret[0] == null) ret = new Tabix.Chunk[0]; // not sure how this would happen
 		return new TabixReader.Iterator(tid, beg, end, ret);
 	}
 	
