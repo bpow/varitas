@@ -157,6 +157,18 @@ public class Tabix {
 			Arrays.fill(index, 0L);
 			size = 0;
 		}
+		protected void fillZeros() {
+			// FIXME - could be done as part of constructor from pre-filled index
+            long lastNonZeroOffset = 0;
+            for (int i = 0; i < index.length; i++) {
+                if (index[i] == 0) {
+                    index[i] = lastNonZeroOffset; // not necessary, but C (samtools index) does this
+                    // note, if you remove the above line BAMIndexWriterTest.compareTextual and compareBinary will have to change
+                } else {
+                    lastNonZeroOffset = index[i];
+                }
+            }
+		}
 	}
 
 	public Tabix(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {

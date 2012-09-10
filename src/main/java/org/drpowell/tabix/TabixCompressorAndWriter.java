@@ -72,12 +72,14 @@ public class TabixCompressorAndWriter {
 	private void finishPrevChromosome(int tidPrev) {
 		if (currBinningIndex.isEmpty()) return; // saw nothing for this reference
 		
+		tabix.linearIndex.set(tidPrev, new Tabix.ReferenceLinearIndex(currLinearIndex));
+		tabix.linearIndex.get(tidPrev).fillZeros();
+		currLinearIndex.clear();
+		
 		// make things as compact as possible...
 		tabix.binningIndex.set(tidPrev, new Tabix.ReferenceBinIndex(currBinningIndex));
 		currBinningIndex.clear();
 		
-		tabix.linearIndex.set(tidPrev, new Tabix.ReferenceLinearIndex(currLinearIndex));
-		currLinearIndex.clear();
 	}
 	
 	private final int calcMaxCol() {
@@ -90,7 +92,9 @@ public class TabixCompressorAndWriter {
 	public void writeIndex() throws IOException {
 		// TODO After writing the index, shouldn't allow addition of more rows
 		finishPrevChromosome(tidCurr);
-		tabix.saveIndex(new BlockCompressedOutputStream(fileName + ".gz.tbi"));
+		BlockCompressedOutputStream indexOutput = new BlockCompressedOutputStream(fileName + ".gz.tbi");
+		tabix.saveIndex(indexOutput);
+		indexOutput.close();
 		bcos.close();
 	}
 

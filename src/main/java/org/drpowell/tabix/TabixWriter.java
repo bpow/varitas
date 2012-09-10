@@ -29,15 +29,13 @@ package org.drpowell.tabix;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
-import org.drpowell.tabix.Tabix.GenomicInterval;
 import org.drpowell.tabix.Tabix.Chunk;
+import org.drpowell.tabix.Tabix.GenomicInterval;
 
 
 /**
@@ -123,40 +121,31 @@ public class TabixWriter {
 	}
     }
 
-    private void insertBinning(Map<Integer, List<Chunk>> binningForChr, int bin, long beg, long end) {
-        if (!binningForChr.containsKey(bin)) {
-            binningForChr.put(bin, new ArrayList<Chunk>());
-        }
-        List<Chunk> list = binningForChr.get(bin);
-        list.add(new Chunk(beg, end));
+    private void insertBinning(Tabix.ReferenceBinIndex binningForChr, int bin, long beg, long end) {
+    	binningForChr.getWithNew(bin).add(new Chunk(beg, end));
     }
 
-    private long insertLinear(List<Long> linearForChr, int beg, int end, long offset) {
-	beg = beg >> Tabix.TAD_LIDX_SHIFT;
-	end = (end - 1) >> Tabix.TAD_LIDX_SHIFT;
+    private long insertLinear(Tabix.ReferenceLinearIndex linearForChr, int beg, int end, long offset) {
+    	beg = beg >> Tabix.TAD_LIDX_SHIFT;
+        end = (end - 1) >> Tabix.TAD_LIDX_SHIFT;
 
-        // Expand the array if necessary.
-        int newSize = Math.max(beg, end) + 1;
-        while (linearForChr.size() < newSize) {
-            linearForChr.add(0L);
-        }
-	if (beg == end) {
+        if (beg == end) {
             if (linearForChr.get(beg) == 0L) {
                 linearForChr.set(beg, offset);
             }
-	} else {
+        } else {
             for (int i = beg; i <= end; ++i) {
                 if (linearForChr.get(i) == 0L) {
                     linearForChr.set(i, offset);
                 }
             }
-	}
-	return (long)beg<<32 | end;
+        }
+        return (long)beg<<32 | end;
     }
 
     private void mergeChunks() {
         for (int i = 0; i < tabix.binningIndex.size(); i++) {
-            Map<Integer, List<Chunk>> binningForChr = tabix.binningIndex.get(i);
+            Tabix.ReferenceBinIndex binningForChr = tabix.binningIndex.get(i);
             for (Integer k: binningForChr.keySet()) {
                 List<Chunk> p = binningForChr.get(k);
                 int m = 0;
