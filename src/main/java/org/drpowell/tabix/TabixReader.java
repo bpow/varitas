@@ -27,20 +27,15 @@
 package org.drpowell.tabix;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import org.drpowell.tabix.Tabix.Chunk;
-import org.drpowell.tabix.Tabix.ReferenceBinIndex;
-
+import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedInputStream;
+
+import org.drpowell.tabix.Tabix.ReferenceBinIndex;
 
 public class TabixReader
 {
@@ -59,20 +54,21 @@ public class TabixReader
 		byte[] buf = new byte[4];
 
 		bcis.read(buf, 0, 4); // read "TBI\1"
-		String [] mSeq = new String[readInt(bcis)]; // # sequences
-		int mPreset = readInt(bcis);
-		int sequenceColumn = readInt(bcis);
-		int beginColumn = readInt(bcis);
-		int endColumn = readInt(bcis);
-		int metaCharacter = readInt(bcis);
-		int linesToSkip = readInt(bcis);
+		BinaryCodec codec = new BinaryCodec(bcis);
+		String [] mSeq = new String[codec.readInt()]; // # sequences
+		int mPreset = codec.readInt();
+		int sequenceColumn = codec.readInt();
+		int beginColumn = codec.readInt();
+		int endColumn = codec.readInt();
+		int metaCharacter = codec.readInt();
+		int linesToSkip = codec.readInt();
 		
 		Tabix t = new Tabix(mPreset, sequenceColumn, beginColumn, endColumn, (char) metaCharacter, linesToSkip);
 
 		// read sequence dictionary
-		int i, j, k, l = readInt(bcis);
+		int i, j, k, l = codec.readInt();
 		buf = new byte[l];
-		bcis.read(buf);
+		codec.readBytes(buf);
 		for (i = j = k = 0; i < buf.length; ++i) {
 			if (buf[i] == 0) {
 				byte[] b = new byte[i - j];
@@ -87,25 +83,25 @@ public class TabixReader
 		// read the index
 		for (i = 0; i < mSeq.length; ++i) {
 			// the binning index
-			int n_bin = readInt(bcis);
+			int n_bin = codec.readInt();
 			Tabix.ReferenceBinIndex binMap = new Tabix.ReferenceBinIndex(1 + n_bin * 4 / 3, 0.75f);
 			t.binningIndex.add(binMap);
 			for (j = 0; j < n_bin; ++j) {
-				int bin = readInt(bcis);
-				int n_chunks = readInt(bcis);
+				int bin = codec.readInt();
+				int n_chunks = codec.readInt();
 				ArrayList<Tabix.Chunk> chunks = new ArrayList<Tabix.Chunk>(n_chunks);
 				for (k = 0; k < n_chunks; ++k) {
-					long u = readLong(bcis);
-					long v = readLong(bcis);
+					long u = codec.readLong();
+					long v = codec.readLong();
 					chunks.add(new Tabix.Chunk(u, v)); // in C, this is inefficient
 				}
 				binMap.put(bin, chunks);
 			}
 			// the linear index
-			int n_linear = readInt(bcis);
+			int n_linear = codec.readInt();
 			Tabix.ReferenceLinearIndex linear = new Tabix.ReferenceLinearIndex(n_linear);
 			for (k = 0; k < n_linear; ++k)
-				linear.add(readLong(bcis));
+				linear.add(codec.readLong());
 			t.linearIndex.add(linear);
 		}
 		
@@ -134,18 +130,6 @@ public class TabixReader
 		BlockCompressedInputStream is = new BlockCompressedInputStream(new File(filename + ".tbi"));
 		tabix = readHeader(is);
 		is.close();
-	}
-
-	public static int readInt(final InputStream is) throws IOException {
-		byte[] buf = new byte[4];
-		is.read(buf);
-		return ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).getInt();
-	}
-
-	public static long readLong(final InputStream is) throws IOException {
-		byte[] buf = new byte[8];
-		is.read(buf);
-		return ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).getLong();
 	}
 
 	/**

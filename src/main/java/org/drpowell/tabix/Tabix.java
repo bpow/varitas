@@ -28,10 +28,8 @@
 package org.drpowell.tabix;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.Charset;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.sf.samtools.LinearIndex;
+import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
 
@@ -52,7 +51,6 @@ public class Tabix {
     public static final int TI_PRESET_SAM = 1;
     public static final int TI_PRESET_VCF = 2;
     public static final int TI_FLAG_UCSC = 0x10000;
-    private static final Charset LATIN1 = Charset.forName("ISO-8859-1");
 
     // TODO - split out config class, since this class now does much more...
     public static final Tabix GFF_CONF = new Tabix(0, 1, 4, 5, '#', 0);
@@ -237,17 +235,18 @@ public class Tabix {
 		return intv;
 	}
 	
-    protected void saveIndex(BlockCompressedOutputStream fp) throws IOException {
-        fp.write("TBI\1".getBytes(LATIN1));
-        writeInt(fp, binningIndex.size());
+    protected void saveIndex(BlockCompressedOutputStream bcos) throws IOException {
+    	BinaryCodec codec = new BinaryCodec(bcos);
+    	codec.writeString("TBI\1", false, false);
+        codec.writeInt(binningIndex.size());
 
         // Write the ti_conf_t
-        writeInt(fp, preset);
-        writeInt(fp, seqColumn);
-        writeInt(fp, startColumn);
-        writeInt(fp, endColumn);
-        writeInt(fp, commentChar);
-        writeInt(fp, linesToSkip);
+        codec.writeInt(preset);
+        codec.writeInt(seqColumn);
+        codec.writeInt(startColumn);
+        codec.writeInt(endColumn);
+        codec.writeInt(commentChar);
+        codec.writeInt(linesToSkip);
 
         // Write sequence dictionary.  Since mChr2tid is a LinkedHashmap, the keyset
         // will be returned in insertion order.
@@ -255,31 +254,30 @@ public class Tabix {
         for (String k: mChr2tid.keySet()) {
             l += k.length() + 1;
         }
-        writeInt(fp, l);
+        codec.writeInt(l);
         for (String k: mChr2tid.keySet()) {
-            fp.write(k.getBytes(LATIN1));
-            fp.write(0);
+        	codec.writeString(k, false, true);
         }
 
         for (int i = 0; i < mChr2tid.size(); i++) {
             Map<Integer, List<Chunk>> binningForChr = binningIndex.get(i);
             
             // Write the binning index.
-            writeInt(fp, binningForChr.size());
+            codec.writeInt(binningForChr.size());
             for (int k: binningForChr.keySet()) {
                 List<Chunk> p = binningForChr.get(k);
-                writeInt(fp, k);
-                writeInt(fp, p.size());
+                codec.writeInt(k);
+                codec.writeInt(p.size());
                 for (Chunk bin: p) {
-                    writeLong(fp, bin.u);
-                    writeLong(fp, bin.v);
+                    codec.writeLong(bin.u);
+                    codec.writeLong(bin.v);
                 }
             }
             // Write the linear index.
             List<Long> linearForChr = linearIndex.get(i);
-            writeInt(fp, linearForChr.size());
+            codec.writeInt(linearForChr.size());
             for (int x = 0; x < linearForChr.size(); x++) {
-                writeLong(fp, linearForChr.get(x));
+                codec.writeLong(linearForChr.get(x));
             }
         }
     }
@@ -312,17 +310,5 @@ public class Tabix {
 		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) bins.add(k);
 		return bins;
 	}
-
-	public static void writeInt(final OutputStream os, int value) throws IOException {
-        byte[] buf = new byte[4];
-        ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
-        os.write(buf);
-    }
-
-    public static void writeLong(final OutputStream os, long value) throws IOException {
-        byte[] buf = new byte[8];
-        ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putLong(value);
-        os.write(buf);
-    }
 
 }
