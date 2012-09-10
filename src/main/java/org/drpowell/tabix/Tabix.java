@@ -214,16 +214,16 @@ public class Tabix {
         }
     }
 
-    public void writeInt(final OutputStream os, int value) throws IOException {
-    	buffer.clear();
-    	buffer.putInt(value);
-    	os.write(buffer.array(), 0, 4);
+    public static void writeInt(final OutputStream os, int value) throws IOException {
+        byte[] buf = new byte[4];
+        ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
+        os.write(buf);
     }
 
-    public void writeLong(final OutputStream os, long value) throws IOException {
-    	buffer.clear();
-    	buffer.putLong(value);
-    	os.write(buffer.array(), 0, 4);
+    public static void writeLong(final OutputStream os, long value) throws IOException {
+        byte[] buf = new byte[8];
+        ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putLong(value);
+        os.write(buf);
     }
 
 }
