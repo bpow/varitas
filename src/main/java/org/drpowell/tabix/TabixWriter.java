@@ -51,8 +51,7 @@ public class TabixWriter {
 
     private final String fileName;
     private Tabix tabix;
-    
-
+   
     public TabixWriter(File fn, Tabix conf) throws Exception {
     	fileName = fn.getAbsolutePath();
         tabix = conf;
@@ -184,6 +183,13 @@ public class TabixWriter {
                 }
             }
         }
+    }
+    
+    public static void main(String args[]) throws Exception {
+    	File f = new File(args[0]);
+    	TabixWriter tw = new TabixWriter(f, Tabix.VCF_CONF);
+    	tw.createIndex();
+    	
     }
 
 }
