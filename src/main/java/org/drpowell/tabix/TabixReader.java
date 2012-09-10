@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.drpowell.tabix.Tabix.Chunk;
+import org.drpowell.tabix.Tabix.ReferenceBinIndex;
 
 import net.sf.samtools.util.BlockCompressedInputStream;
 
@@ -87,7 +88,7 @@ public class TabixReader
 		for (i = 0; i < mSeq.length; ++i) {
 			// the binning index
 			int n_bin = readInt(bcis);
-			HashMap<Integer, List<Tabix.Chunk>> binMap = new HashMap<Integer, List<Tabix.Chunk>>(1 + n_bin * 4 / 3);
+			Tabix.ReferenceBinIndex binMap = new Tabix.ReferenceBinIndex(1 + n_bin * 4 / 3, 0.75f);
 			t.binningIndex.add(binMap);
 			for (j = 0; j < n_bin; ++j) {
 				int bin = readInt(bcis);
@@ -102,10 +103,10 @@ public class TabixReader
 			}
 			// the linear index
 			int n_linear = readInt(bcis);
-			ArrayList<Long> linear = new ArrayList<Long>(n_linear);
+			Tabix.ReferenceLinearIndex linear = new Tabix.ReferenceLinearIndex(n_linear);
 			for (k = 0; k < n_linear; ++k)
 				linear.add(readLong(bcis));
-			t.linearIndex.add(i, linear);
+			t.linearIndex.add(linear);
 		}
 		
 		return t;
@@ -135,35 +136,6 @@ public class TabixReader
 		is.close();
 	}
 
-	/**
-	 * Calculates the bins that overlap a given region.
-	 * 
-	 * Although this is an implementation detail, it may be more useful in general since the
-	 * same binning index is used elsewhere (in bam files, for instance). Heng Li's reg2bin had
-	 * used an int[37450] which was allocated for each query. While this results in more object
-	 * allocations (for the ArrayList and Integer objects), it actually works faster (with my
-	 * testing) for the common case where there are not many overlapped regions).
-	 * 
-	 * @param beg Start coordinate (0 based, inclusive)
-	 * @param end End coordinate (0 based, exclusive)
-	 * @return A list of bins
-	 */
-	public static ArrayList<Integer> reg2bins(int beg, int end) {
-		if (beg >= end) { return new ArrayList<Integer>(0); }
-		// any given point will overlap 6 regions, go ahead and allocate a few extra spots by default
-		ArrayList<Integer> bins = new ArrayList<Integer>(8);
-		int k;
-		if (end >= 1<<29) end = 1<<29;
-		--end;
-		bins.add(0); // everything can overlap the 0th bin!
-		for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) bins.add(k);
-		for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) bins.add(k);
-		for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) bins.add(k);
-		for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) bins.add(k);
-		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) bins.add(k);
-		return bins;
-	}
-	
 	public static int readInt(final InputStream is) throws IOException {
 		byte[] buf = new byte[4];
 		is.read(buf);
@@ -275,8 +247,8 @@ public class TabixReader
 		long min_off;
 		// Tabix.Index idx = mIndex[tid];
 		List<Long> linear = tabix.linearIndex.get(tid);
-		Map<Integer, List<Chunk>> binning = tabix.binningIndex.get(tid);
-		List<Integer> bins = reg2bins(beg, end);
+		ReferenceBinIndex binning = tabix.binningIndex.get(tid);
+		List<Integer> bins = Tabix.reg2bins(beg, end);
 		int i, l, n_off;
 		if (!linear.isEmpty())
 			min_off = (beg>>Tabix.TAD_LIDX_SHIFT >= linear.size())? 

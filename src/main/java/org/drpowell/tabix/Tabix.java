@@ -32,12 +32,14 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
+import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.sf.samtools.LinearIndex;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
 
@@ -71,10 +73,10 @@ public class Tabix {
 	private final ByteBuffer buffer;
 
 	/** The binning index. */
-    List<Map<Integer, List<Chunk>>> binningIndex = new ArrayList<Map<Integer, List<Chunk>>>();
+    List<ReferenceBinIndex> binningIndex = new ArrayList<ReferenceBinIndex>();
 
     /** The linear index. */
-    List<List<Long>> linearIndex = new ArrayList<List<Long>>();
+    List<ReferenceLinearIndex> linearIndex = new ArrayList<ReferenceLinearIndex>();
 
     public static class Chunk implements Comparable<Chunk> {
 		public final long u;
@@ -91,6 +93,73 @@ public class Tabix {
 		int tid, bin;
 		int beg, end;
 	};
+
+	protected static class ReferenceBinIndex extends LinkedHashMap<Integer, List<Chunk>> {
+		private static final long serialVersionUID = 1L;
+		public ReferenceBinIndex(int capacity, float loadFactor) {
+			super(capacity, loadFactor);
+		}
+		public ReferenceBinIndex() {
+			super(Tabix.MAX_BIN, 1.0f);
+		}
+		public ReferenceBinIndex(ReferenceBinIndex other) {
+			// a new clone with size sufficient to hold the contents of "other"
+			super(other);
+		}
+		public List<Chunk> getWithNew(int i) {
+			List<Chunk> out = get(i);
+			if (out == null) {
+				out = new ArrayList<Chunk>(); // TODO- presize or change to LinkedList
+			}
+			put(i, out);
+			return out;
+		}
+	}
+
+	protected static class ReferenceLinearIndex extends AbstractList<Long> {
+		private long[] index;
+		int size = 0;
+		public ReferenceLinearIndex() {
+			index = new long[LinearIndex.MAX_LINEAR_INDEX_SIZE];
+		}
+		public ReferenceLinearIndex(int n_linear) {
+			index = new long[n_linear];
+		}
+		public long getPrimitive(int i) { return index[i]; }
+		public long setPrimitive(int pos, long l) {
+			long old = index[pos];
+			if (pos >= size) {
+				size = pos+1;
+			}
+			index[pos] = l;
+			return old;
+		}
+		@Override
+		public Long get(int i) {
+			return index[i];
+		}
+		@Override
+		public int size() {
+			return size;
+		}
+		@Override
+		public Long set(int pos, Long l) {
+			return setPrimitive(pos, l);
+		}
+		@Override
+		public void add(int i, Long l) {
+			this.setPrimitive(size, l);
+		}
+		public ReferenceLinearIndex(ReferenceLinearIndex old) {
+			size = old.size();
+			index = new long[size];
+			System.arraycopy(old.index, 0, index, 0, size);
+		}
+		public void clear() {
+			Arrays.fill(index, 0L);
+			size = 0;
+		}
+	}
 
 	public Tabix(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {
         this.preset = preset;
@@ -112,8 +181,8 @@ public class Tabix {
             mChr2tid.put(chromosome, tid);
 
             // Expand our indices.
-            binningIndex.add(new HashMap<Integer, List<Chunk>>());
-            linearIndex.add(new ArrayList<Long>());
+            binningIndex.add(new ReferenceBinIndex());
+            linearIndex.add(new ReferenceLinearIndex());
 		}
 		return tid;
 	}
@@ -215,7 +284,36 @@ public class Tabix {
         }
     }
 
-    public static void writeInt(final OutputStream os, int value) throws IOException {
+    /**
+	 * Calculates the bins that overlap a given region.
+	 * 
+	 * Although this is an implementation detail, it may be more useful in general since the
+	 * same binning index is used elsewhere (in bam files, for instance). Heng Li's reg2bin had
+	 * used an int[37450] which was allocated for each query. While this results in more object
+	 * allocations (for the ArrayList and Integer objects), it actually works faster (with my
+	 * testing) for the common case where there are not many overlapped regions).
+	 * 
+	 * @param beg Start coordinate (0 based, inclusive)
+	 * @param end End coordinate (0 based, exclusive)
+	 * @return A list of bins
+	 */
+	public static ArrayList<Integer> reg2bins(int beg, int end) {
+		if (beg >= end) { return new ArrayList<Integer>(0); }
+		// any given point will overlap 6 regions, go ahead and allocate a few extra spots by default
+		ArrayList<Integer> bins = new ArrayList<Integer>(8);
+		int k;
+		if (end >= 1<<29) end = 1<<29;
+		--end;
+		bins.add(0); // everything can overlap the 0th bin!
+		for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) bins.add(k);
+		for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) bins.add(k);
+		for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) bins.add(k);
+		for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) bins.add(k);
+		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) bins.add(k);
+		return bins;
+	}
+
+	public static void writeInt(final OutputStream os, int value) throws IOException {
         byte[] buf = new byte[4];
         ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
         os.write(buf);

@@ -3,10 +3,6 @@ package org.drpowell.tabix;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 import net.sf.samtools.LinearIndex;
@@ -15,66 +11,13 @@ import net.sf.samtools.util.BlockCompressedOutputStream;
 import net.sf.samtools.util.StringUtil;
 
 public class TabixCompressorAndWriter {
-	private class BIndex extends LinkedHashMap<Integer, List<Tabix.Chunk>> {
-		private static final long serialVersionUID = 1L;
-		public BIndex(int capacity, float loadFactor) {
-			super(capacity, loadFactor);
-		}
-		public List<Tabix.Chunk> getWithNew(int i) {
-			List<Tabix.Chunk> out = get(i);
-			if (out == null) {
-				out = new ArrayList<Tabix.Chunk>(); // TODO- presize or change to LinkedList
-			}
-			put(i, out);
-			return out;
-		}
-	}
-	
-	private class LIndex extends AbstractList<Long> {
-		private long[] index;
-		int size = 0;
-		public LIndex() {
-			index = new long[LinearIndex.MAX_LINEAR_INDEX_SIZE];
-		}
-		public long getPrimitive(int i) { return index[i]; }
-		public long setPrimitive(int pos, long l) {
-			long old = index[pos];
-			if (pos >= size) {
-				size = pos+1;
-			}
-			index[pos] = l;
-			return old;
-		}
-		@Override
-		public Long get(int i) {
-			return index[i];
-		}
-		@Override
-		public int size() {
-			return size;
-		}
-		@Override
-		public Long set(int pos, Long l) {
-			return setPrimitive(pos, l);
-		}
-		public LIndex(LIndex old) {
-			size = old.size();
-			index = new long[size];
-			System.arraycopy(old.index, 0, index, 0, size);
-		}
-		public void clear() {
-			Arrays.fill(index, 0L);
-			size = 0;
-		}
-	}
-	
 	private final BlockCompressedOutputStream bcos;
 	private final String fileName;
 	private final Tabix tabix;
 	private final int maxColOfInterest;
 	private int tidCurr = -1;
-	private BIndex currBinningIndex = new BIndex(Tabix.MAX_BIN, 1.0f);
-	private LIndex currLinearIndex = new LIndex();
+	private Tabix.ReferenceBinIndex currBinningIndex = new Tabix.ReferenceBinIndex();
+	private Tabix.ReferenceLinearIndex currLinearIndex = new Tabix.ReferenceLinearIndex();
 	
 	public TabixCompressorAndWriter(String fileName, Tabix tabix) {
 		this.fileName = fileName;
@@ -130,11 +73,10 @@ public class TabixCompressorAndWriter {
 		if (currBinningIndex.isEmpty()) return; // saw nothing for this reference
 		
 		// make things as compact as possible...
-		tabix.binningIndex.set(tidPrev, currBinningIndex);
-		currBinningIndex = new BIndex(Tabix.MAX_BIN, 1.0f);
-		// TODO - compact binning index
+		tabix.binningIndex.set(tidPrev, new Tabix.ReferenceBinIndex(currBinningIndex));
+		currBinningIndex.clear();
 		
-		tabix.linearIndex.set(tidPrev, new LIndex(currLinearIndex));
+		tabix.linearIndex.set(tidPrev, new Tabix.ReferenceLinearIndex(currLinearIndex));
 		currLinearIndex.clear();
 	}
 	
