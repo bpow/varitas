@@ -207,7 +207,7 @@ public class TabixReader
 				if ((s = mFp.readLine()) != null) {
 					curr_off = mFp.getFilePointer();
 					if (s.length() == 0 || s.startsWith(tabix.comment)) continue;
-					String [] row = s.split("\t");
+					String [] row = s.split("\t", -1);
 					Tabix.GenomicInterval intv;
 					try {
 						intv = tabix.getInterval(row);
