@@ -5,6 +5,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 
+import org.drpowell.tabix.Tabix.TabixConfig;
+
 import net.sf.samtools.LinearIndex;
 import net.sf.samtools.util.BlockCompressedFilePointerUtil;
 import net.sf.samtools.util.BlockCompressedOutputStream;
@@ -19,16 +21,16 @@ public class TabixCompressorAndWriter {
 	private Tabix.ReferenceBinIndex currBinningIndex = new Tabix.ReferenceBinIndex();
 	private Tabix.ReferenceLinearIndex currLinearIndex = new Tabix.ReferenceLinearIndex();
 	
-	public TabixCompressorAndWriter(String fileName, Tabix tabix) {
+	public TabixCompressorAndWriter(String fileName, TabixConfig config) {
 		this.fileName = fileName;
 		bcos = new BlockCompressedOutputStream(fileName + ".gz");
-		this.tabix = tabix;
+		this.tabix = new Tabix(config);
 		maxColOfInterest = calcMaxCol();
 	}
 
 	public void addLine(String line) throws IOException {
 		line += "\n";
-		if (line.startsWith(tabix.comment)) {
+		if (line.startsWith(tabix.config.commentString)) {
 			bcos.write(line.getBytes());
 			return;
 		}
@@ -83,10 +85,14 @@ public class TabixCompressorAndWriter {
 	}
 	
 	private final int calcMaxCol() {
-		int max = tabix.seqColumn;
-		max = Math.max(max, tabix.startColumn);
-		max = Math.max(max, tabix.endColumn);
-		return max+8;
+		// as an optimization, what is the largest column which will be used in indexing?
+		if (tabix.config.preset == Tabix.TBX_PRESET_VCF) {
+			return 8; // VCF files use the INFO field for ends of structural variants
+		}
+		int max = tabix.config.seqCol;
+		max = Math.max(max, tabix.config.beginCol);
+		max = Math.max(max, tabix.config.endCol);
+		return max;
 	}
 	
 	public void writeIndex() throws IOException {
@@ -100,7 +106,7 @@ public class TabixCompressorAndWriter {
 
 	public static void main(String args[]) throws IOException {
 		BufferedReader br = new BufferedReader(new FileReader(args[0]));
-		TabixCompressorAndWriter tcaw = new TabixCompressorAndWriter(args[0], Tabix.VCF_CONF);
+		TabixCompressorAndWriter tcaw = new TabixCompressorAndWriter(args[0], TabixConfig.VCF);
 		String line = null;
 		while ((line = br.readLine()) != null) {
 			tcaw.addLine(line);

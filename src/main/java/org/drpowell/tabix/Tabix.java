@@ -44,31 +44,31 @@ import net.sf.samtools.util.BlockCompressedOutputStream;
 
 public class Tabix {
 
-	public static final int MAX_BIN = 37450;
-	public static final int TAD_MIN_CHUNK_GAP = 32768;
-	public static final int TAD_LIDX_SHIFT = 14;
-    public static final int TI_PRESET_GENERIC = 0;
-    public static final int TI_PRESET_SAM = 1;
-    public static final int TI_PRESET_VCF = 2;
-    public static final int TI_FLAG_UCSC = 0x10000;
+	public static final int TBX_MAX_BIN = 37450;
+	public static final int TBX_MIN_CHUNK_GAP = 32768;
+	public static final int TBX_LIDX_SHIFT = 14;
 
-    // TODO - split out config class, since this class now does much more...
-    public static final Tabix GFF_CONF = new Tabix(0, 1, 4, 5, '#', 0);
-    public static final Tabix BED_CONF = new Tabix(TI_FLAG_UCSC, 1, 2, 3, '#', 0);
-    public static final Tabix PSLTBL_CONF = new Tabix(TI_FLAG_UCSC, 15, 17, 18, '#', 0);
-    public static final Tabix SAM_CONF = new Tabix(TI_PRESET_SAM, 3, 4, 0, '@', 0);
-    public static final Tabix VCF_CONF = new Tabix(TI_PRESET_VCF, 1, 2, 0, '#', 0);
-	private static final int MAX_BYTE_BUFFER = 8;
+	public static class TabixConfig {
+		public final int preset, seqCol, beginCol, endCol, commentChar, linesToSkip;
+		public final String commentString;
+		public TabixConfig (int p, int sc, int bc, int ec, int comment, int skipLines) {
+			preset = p; seqCol = sc; beginCol = bc; endCol = ec; commentChar = comment; linesToSkip = skipLines; 
+			commentString = Character.toString((char) commentChar);
+		}
+		public static final TabixConfig GFF = new TabixConfig(0, 1, 4, 5, '#', 0);
+	    public static final TabixConfig BED = new TabixConfig(TBX_FLAG_UCSC, 1, 2, 3, '#', 0);
+	    public static final TabixConfig PSLTBL = new TabixConfig(TBX_FLAG_UCSC, 15, 17, 18, '#', 0);
+	    public static final TabixConfig SAM = new TabixConfig(TBX_PRESET_SAM, 3, 4, 0, '@', 0);
+	    public static final TabixConfig VCF = new TabixConfig(TBX_PRESET_VCF, 1, 2, 0, '#', 0);
+	}
+	public static final int TBX_PRESET_GENERIC = 0;
+    public static final int TBX_PRESET_SAM = 1;
+    public static final int TBX_PRESET_VCF = 2;
+    public static final int TBX_FLAG_UCSC = 0x10000;
 
-    public final int preset;
-    public final int seqColumn;
-    public final int startColumn;
-    public final int endColumn;
-    public final char commentChar;
-    public final String comment;
-    public final int linesToSkip;
-	LinkedHashMap<String, Integer> mChr2tid = new LinkedHashMap<String, Integer>(50);
-	private final ByteBuffer buffer;
+
+    public final TabixConfig config;
+    LinkedHashMap<String, Integer> mChr2tid = new LinkedHashMap<String, Integer>(50);
 
 	/** The binning index. */
     List<ReferenceBinIndex> binningIndex = new ArrayList<ReferenceBinIndex>();
@@ -98,7 +98,7 @@ public class Tabix {
 			super(capacity, loadFactor);
 		}
 		public ReferenceBinIndex() {
-			super(Tabix.MAX_BIN, 1.0f);
+			super(Tabix.TBX_MAX_BIN, 1.0f);
 		}
 		public ReferenceBinIndex(ReferenceBinIndex other) {
 			// a new clone with size sufficient to hold the contents of "other"
@@ -172,16 +172,12 @@ public class Tabix {
 	}
 
 	public Tabix(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {
-        this.preset = preset;
-        this.seqColumn = seqColumn;
-        this.startColumn = startColumn;
-        this.endColumn = endColumn;
-        this.commentChar = commentChar;
-        comment = Character.toString(commentChar);
-        this.linesToSkip = linesToSkip;
-        buffer = ByteBuffer.allocate(MAX_BYTE_BUFFER);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
+        this(new TabixConfig(preset, seqColumn, startColumn, endColumn, commentChar, linesToSkip));
     }
+	
+	public Tabix(final TabixConfig conf) {
+		config = conf;
+	}
 	
 	public Integer getIdForChromosome(final String chromosome) {
 		Integer tid = mChr2tid.get(chromosome);
@@ -209,17 +205,17 @@ public class Tabix {
     
 	public GenomicInterval getInterval(final String s[]) {
 		GenomicInterval intv = new GenomicInterval();
-		intv.tid = getIdForChromosome(s[seqColumn-1]);
+		intv.tid = getIdForChromosome(s[config.seqCol-1]);
 		// begin
-		intv.beg = Integer.parseInt(s[startColumn-1]);
+		intv.beg = Integer.parseInt(s[config.beginCol-1]);
 		intv.end = intv.beg;
-		if ((preset&TI_FLAG_UCSC) != 0) ++intv.end;
+		if ((config.preset&TBX_FLAG_UCSC) != 0) ++intv.end;
 		else --intv.beg;
 		if (intv.beg < 0) intv.beg = 0;
 		if (intv.end < 1) intv.end = 1;
-		if ((preset&0xffff) == 0) { // generic
-			intv.end = Integer.parseInt(s[endColumn-1]);
-		} else if ((preset&0xffff) == TI_PRESET_SAM) { // SAM
+		if ((config.preset&0xffff) == 0) { // generic
+			intv.end = Integer.parseInt(s[config.endCol-1]);
+		} else if ((config.preset&0xffff) == TBX_PRESET_SAM) { // SAM
 			String cigar = s[5];
 			int cigarLen = 0, i, j;
 			for (i = j = 0; i < cigar.length(); ++i) {
@@ -230,7 +226,7 @@ public class Tabix {
 				}
 			}
 			intv.end = intv.beg + cigarLen;
-		} else if ((preset&0xffff) == TI_PRESET_VCF) { // VCF
+		} else if ((config.preset&0xffff) == TBX_PRESET_VCF) { // VCF
 			String ref = s[3];
 			if (ref.length() > 0) intv.end = intv.beg + ref.length();
 			// check in the INFO field for an END
@@ -253,12 +249,12 @@ public class Tabix {
         codec.writeInt(binningIndex.size());
 
         // Write the ti_conf_t
-        codec.writeInt(preset);
-        codec.writeInt(seqColumn);
-        codec.writeInt(startColumn);
-        codec.writeInt(endColumn);
-        codec.writeInt(commentChar);
-        codec.writeInt(linesToSkip);
+        codec.writeInt(config.preset);
+        codec.writeInt(config.seqCol);
+        codec.writeInt(config.beginCol);
+        codec.writeInt(config.endCol);
+        codec.writeInt(config.commentChar);
+        codec.writeInt(config.linesToSkip);
 
         // Write sequence dictionary.  Since mChr2tid is a LinkedHashmap, the keyset
         // will be returned in insertion order.

@@ -36,6 +36,7 @@ import net.sf.samtools.util.BlockCompressedOutputStream;
 
 import org.drpowell.tabix.Tabix.Chunk;
 import org.drpowell.tabix.Tabix.GenomicInterval;
+import org.drpowell.tabix.Tabix.TabixConfig;
 
 
 /**
@@ -48,11 +49,13 @@ public class TabixWriter {
     //private static final Logger LOG = Logger.getLogger(TabixWriter.class.getCanonicalName());
 
     private final String fileName;
+    private final TabixConfig conf;
     private Tabix tabix;
    
-    public TabixWriter(File fn, Tabix conf) throws Exception {
+    public TabixWriter(File fn, TabixConfig conf) throws Exception {
     	fileName = fn.getAbsolutePath();
-        tabix = conf;
+        this.conf = conf;
+        tabix = new Tabix(conf);
     }
 
     public void createIndex() throws Exception {
@@ -76,7 +79,7 @@ public class TabixWriter {
         last_coor = 0xffffffff;    // Should be unsigned.
         while ((str = fp.readLine()) != null) {
             ++lineno;
-            if (lineno <= tabix.linesToSkip || str.charAt(0) == tabix.commentChar) {
+            if (lineno <= conf.linesToSkip || str.charAt(0) == conf.commentChar) {
                 last_off = fp.getFilePointer();
                 continue;
             }
@@ -126,8 +129,8 @@ public class TabixWriter {
     }
 
     private long insertLinear(Tabix.ReferenceLinearIndex linearForChr, int beg, int end, long offset) {
-    	beg = beg >> Tabix.TAD_LIDX_SHIFT;
-        end = (end - 1) >> Tabix.TAD_LIDX_SHIFT;
+    	beg = beg >> Tabix.TBX_LIDX_SHIFT;
+        end = (end - 1) >> Tabix.TBX_LIDX_SHIFT;
 
         if (beg == end) {
             if (linearForChr.get(beg) == 0L) {
@@ -176,7 +179,7 @@ public class TabixWriter {
     
     public static void main(String args[]) throws Exception {
     	File f = new File(args[0]);
-    	TabixWriter tw = new TabixWriter(f, Tabix.VCF_CONF);
+    	TabixWriter tw = new TabixWriter(f, TabixConfig.VCF);
     	tw.createIndex();
     	
     }

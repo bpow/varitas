@@ -36,6 +36,7 @@ import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedInputStream;
 
 import org.drpowell.tabix.Tabix.ReferenceBinIndex;
+import org.drpowell.tabix.Tabix.TabixConfig;
 
 public class TabixReader
 {
@@ -44,6 +45,7 @@ public class TabixReader
 	// private static Logger logger = Logger.getLogger(TabixReader.class.getCanonicalName());
 
 	public final Tabix tabix;
+	public final TabixConfig conf;
 	private ArrayList<String> headers;
 
 	private static boolean less64(final long u, final long v) { // unsigned 64-bit comparison
@@ -129,6 +131,7 @@ public class TabixReader
 		mFp = new BlockCompressedInputStream(new File(filename));
 		BlockCompressedInputStream is = new BlockCompressedInputStream(new File(filename + ".tbi"));
 		tabix = readHeader(is);
+		conf = tabix.config;
 		is.close();
 	}
 
@@ -154,13 +157,13 @@ public class TabixReader
 
 	public List<String> readHeaders() throws IOException {
 		if (headers == null) {
-			ArrayList<String> tmpHeaders = new ArrayList<String>(tabix.linesToSkip);
-			int skiplinesRemaining = tabix.linesToSkip;
+			ArrayList<String> tmpHeaders = new ArrayList<String>(conf.linesToSkip);
+			int skiplinesRemaining = conf.linesToSkip;
 			mFp.seek(0);
 			String line;
 			while ((line = mFp.readLine()) != null) {
 				skiplinesRemaining--;
-				if (skiplinesRemaining >= 0 || line.charAt(0) == tabix.commentChar) {
+				if (skiplinesRemaining >= 0 || line.charAt(0) == conf.commentChar) {
 					tmpHeaders.add(line);
 				} else {
 					break;
@@ -206,7 +209,7 @@ public class TabixReader
 				String s;
 				if ((s = mFp.readLine()) != null) {
 					curr_off = mFp.getFilePointer();
-					if (s.length() == 0 || s.startsWith(tabix.comment)) continue;
+					if (s.length() == 0 || s.startsWith(conf.commentString)) continue;
 					String [] row = s.split("\t", -1);
 					Tabix.GenomicInterval intv;
 					try {
@@ -235,8 +238,8 @@ public class TabixReader
 		List<Integer> bins = Tabix.reg2bins(beg, end);
 		int i, l, n_off;
 		if (!linear.isEmpty())
-			min_off = (beg>>Tabix.TAD_LIDX_SHIFT >= linear.size())? 
-					linear.get(linear.size() - 1) : linear.get(beg>>Tabix.TAD_LIDX_SHIFT);
+			min_off = (beg>>Tabix.TBX_LIDX_SHIFT >= linear.size())? 
+					linear.get(linear.size() - 1) : linear.get(beg>>Tabix.TBX_LIDX_SHIFT);
 		else min_off = 0;
 		ArrayList<Tabix.Chunk> offList = new ArrayList<Tabix.Chunk>();
 		for (Integer bin : bins) {
