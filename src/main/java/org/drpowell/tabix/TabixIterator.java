@@ -1,3 +1,29 @@
+/* The MIT License
+
+   Copyright (c) 2010 Broad Institute.
+   Portions Copyright (c) 2012 Baylor College of Medicine.
+
+   Permission is hereby granted, free of charge, to any person obtaining
+   a copy of this software and associated documentation files (the
+   "Software"), to deal in the Software without restriction, including
+   without limitation the rights to use, copy, modify, merge, publish,
+   distribute, sublicense, and/or sell copies of the Software, and to
+   permit persons to whom the Software is furnished to do so, subject to
+   the following conditions:
+
+   The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+*/
+
 package org.drpowell.tabix;
 
 import java.io.IOException;
@@ -14,6 +40,13 @@ import net.sf.samtools.util.BlockCompressedInputStream;
 
 import org.drpowell.tabix.TabixIndex.Chunk;
 
+/**
+ * An Iterator implementation for tabix-indexed files.
+ * 
+ * Much of the trickier code in the advance() method is from Heng Li's original TabixReader.java 
+ * @author bpow
+ *
+ */
 public class TabixIterator implements Iterator<String []>{
 	private int i;
 	// private int n_seeks;
@@ -37,8 +70,8 @@ public class TabixIterator implements Iterator<String []>{
 		i = -1; curr_off = 0; iseof = false;
 		// n_seeks = 0;
 		
-		candidateChunks = getCandidateChunks();
 		BlockCompressedInputStream bcis = null;
+		candidateChunks = getCandidateChunks();
 		try {
 			bcis = index.getIndexedStream();
 			next = advance();
@@ -53,11 +86,12 @@ public class TabixIterator implements Iterator<String []>{
 	
 	public List<Chunk> getCandidateChunks() {
 		final long minimumOffset = tabix.linearIndex.get(intv.getSequenceId()).getMinimumOffset(intv.getBegin());
+		ArrayList<TabixIndex.Chunk> offList = new ArrayList<TabixIndex.Chunk>();
 		
 		BinIndex binning = tabix.binningIndex.get(tid);
 		BitSet bins = GenomicInterval.reg2bins(beg, end);
+		if (bins.isEmpty()) { return offList; } // shortcut when no results
 		int i, l, n_off;
-		ArrayList<TabixIndex.Chunk> offList = new ArrayList<TabixIndex.Chunk>();
 		for (int bin = bins.nextSetBit(0); bin >= 0; bin = bins.nextSetBit(bin+1)) {
 			List<Chunk> chunks = null;
 			if ((chunks = binning.get(bin)) != null) {
@@ -66,7 +100,7 @@ public class TabixIterator implements Iterator<String []>{
 				}
 			}
 		}
-		if (offList.isEmpty()) { return offList; }
+		if (offList.isEmpty()) { return offList; } // shortcut when no results
 
 		n_off = offList.size();
 		Chunk [] off = (TabixIndex.Chunk []) offList.toArray(new TabixIndex.Chunk [n_off]);
@@ -146,6 +180,14 @@ public class TabixIterator implements Iterator<String []>{
 		return null;
 	}
 	
+	/**
+	 * By default, when an IOException (or other Exception) occurs, this is logged and the iterator
+	 * finishes. By overriding exceptionHandler, a subclass could do something else.
+	 * 
+	 * This is here because the Java Iterator interface does not allow for checked exceptions to be 
+	 * thrown in the next() or hasNext() methods.
+	 * @param e
+	 */
 	public void exceptionHandler(Exception e) {
 		logger.log(Level.WARNING, e.toString());
 	}

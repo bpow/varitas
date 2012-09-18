@@ -48,10 +48,6 @@ public class TabixReader
 	public final TabixConfig conf;
 	private ArrayList<String> headers;
 
-	static boolean less64(final long u, final long v) { // unsigned 64-bit comparison
-		return (u < v) ^ (u < 0) ^ (v < 0);
-	}
-	
 	private TabixIndex readHeader(BlockCompressedInputStream bcis) throws IOException {
 		byte[] buf = new byte[4];
 
@@ -65,8 +61,8 @@ public class TabixReader
 		int metaCharacter = codec.readInt();
 		int linesToSkip = codec.readInt();
 		
-		TabixIndex t = new TabixIndex(mPreset, sequenceColumn, beginColumn, endColumn,
-				(char) metaCharacter, linesToSkip, new File(filename));
+		TabixIndex t = new TabixIndex(new TabixConfig(mPreset, sequenceColumn, beginColumn, endColumn,
+				(char) metaCharacter, linesToSkip), new File(filename));
 
 		// read sequence dictionary
 		int i, j, k, l = codec.readInt();

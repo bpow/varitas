@@ -24,7 +24,6 @@
    SOFTWARE.
 */
 
-
 package org.drpowell.tabix;
 
 import java.io.File;
@@ -103,10 +102,6 @@ public class TabixIndex {
 			return ((u<v) ^ (u<0) ^ (v<0))? -1 : 1;
 		}
 	};
-	
-	public TabixIndex(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip, File dataFile) throws IOException {
-        this(new TabixConfig(preset, seqColumn, startColumn, endColumn, commentChar, linesToSkip), dataFile);
-    }
 	
 	public TabixIndex(final TabixConfig conf, File dataFile) throws IOException {
 		config = conf;
