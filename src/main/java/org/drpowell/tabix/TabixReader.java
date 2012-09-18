@@ -34,6 +34,7 @@ import java.util.List;
 
 import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedInputStream;
+import net.sf.samtools.util.StringUtil;
 
 import org.drpowell.tabix.TabixIndex.TabixConfig;
 
@@ -154,24 +155,6 @@ public class TabixReader
 		return Collections.unmodifiableList(headers);
 	}
 	
-	public Iterator<String []> query(final int tid, final int beg, final int end) {
-		return new TabixIterator(tabix, new GenomicInterval(beg, end, tid));
-	}
-	
-	public Iterator<String []> query(final String reg) {
-		return new TabixIterator(tabix, reg);
-	}
-	
-	public static String join(String [] strings, String delimiter) {
-		// the most-rewritten function in the java language
-		if (strings.length == 0) return "";
-		StringBuilder sb = new StringBuilder(strings[0]);
-		for (int i = 1; i < strings.length; i++) {
-			sb.append(delimiter).append(strings[i]);
-		}
-		return sb.toString();
-	}
-
 	public static void main(String[] args) {
 		if (args.length < 1) {
 			System.out.println("Usage: java -cp .:sam.jar TabixReader <in.gz> [region]");
@@ -186,9 +169,9 @@ public class TabixReader
 //					System.out.println(s);
 //			} else { // a region is specified; random access
 				String [] row;
-				Iterator<String []> iter = tr.query(args[1]); // get the iterator
+				Iterator<String []> iter = tr.getIndex().query(args[1]); // get the iterator
 				while (iter != null && (row = iter.next()) != null)
-					System.out.println(join(row, "\t"));
+					System.out.println(StringUtil.join("\t", row));
 			}
 		} catch (IOException e) {
 		}
@@ -197,4 +180,6 @@ public class TabixReader
 	public Integer getIdForChromosome(String chromosome) {
 		return tabix.getIdForChromosome(chromosome);
 	}
+	
+	public TabixIndex getIndex() { return tabix; }
 }

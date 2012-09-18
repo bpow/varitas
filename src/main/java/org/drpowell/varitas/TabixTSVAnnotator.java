@@ -48,7 +48,7 @@ public class TabixTSVAnnotator extends Annotator {
 		String alt = variant.getAlt();
 		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
-		Iterator<String []> iterator = tabix.query(tid, variant.getStart()-1, variant.getEnd());
+		Iterator<String []> iterator = tabix.getIndex().query(tid, variant.getStart()-1, variant.getEnd());
 		while ((row = iterator.next()) != null) {
 			// TODO - should we check start/stop to make sure exact? probably...
 			if ((refColumn < 0 || row[refColumn].equals(ref)) &&

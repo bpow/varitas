@@ -57,7 +57,7 @@ public class TabixVCFAnnotator extends Annotator {
 		String alt = variant.getAlt();
 		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
-		Iterator<String []> iterator = tabix.query(tid, start-1, end);
+		Iterator<String []> iterator = tabix.getIndex().query(tid, start-1, end);
 		while ((resultRow = iterator.next()) != null) {
 			VCFVariant target = new VCFVariant(resultRow);
 			// check on position (1), ref (3) and alt (4)

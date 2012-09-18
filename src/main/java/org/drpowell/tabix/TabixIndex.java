@@ -30,6 +30,7 @@ package org.drpowell.tabix;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -111,6 +112,15 @@ public class TabixIndex {
 		config = conf;
 		clientFileName = dataFile.getAbsolutePath();
 	}
+	
+	public Iterator<String []> query(final int tid, final int beg, final int end) {
+		return new TabixIterator(this, new GenomicInterval(beg, end, tid));
+	}
+
+	public Iterator<String []> query(final String reg) {
+		return new TabixIterator(this, reg);
+	}
+
 	
 	public BlockCompressedInputStream getIndexedStream() throws IOException {
 		if (indexedStream == null) {
