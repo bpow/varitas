@@ -73,6 +73,19 @@ class LinearIndex extends AbstractList<Long> {
         return indexPos >> TBX_LIDX_SHIFT;
     }
     
+    /**
+     * Gets the minimum offset of any alignment start appearing in this index, according to the linear index. 
+     * @param startPos Starting position for this query.
+     * @return The minimum offset, in chunk format, of any read appearing in this position.
+     */
+    public long getMinimumOffset(final int startPos) {
+        final int start = (startPos <= 0) ? 0 : startPos-1;
+        final int regionLinearBin = start >> TBX_LIDX_SHIFT;
+        // System.out.println("# regionLinearBin: " + regionLinearBin);
+        if (regionLinearBin >= size()) { return getPrimitive(size - 1); }
+        return getPrimitive(regionLinearBin);
+    }
+    
     class UnmodifiableLinearIndex extends LinearIndex {
     	public UnmodifiableLinearIndex(LinearIndex orig) {
     		index = new long[orig.size()];

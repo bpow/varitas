@@ -9,12 +9,12 @@ import net.sf.samtools.util.BlockCompressedFilePointerUtil;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 import net.sf.samtools.util.StringUtil;
 
-import org.drpowell.tabix.Tabix.TabixConfig;
+import org.drpowell.tabix.TabixIndex.TabixConfig;
 
 public class TabixCompressorAndWriter {
 	private final BlockCompressedOutputStream bcos;
 	private final String fileName;
-	private final Tabix tabix;
+	private final TabixIndex tabix;
 	private final int maxColOfInterest;
 	private int tidCurr = -1;
 	private BinIndex currBinningIndex = new BinIndex();
@@ -23,7 +23,7 @@ public class TabixCompressorAndWriter {
 	public TabixCompressorAndWriter(String fileName, TabixConfig config) {
 		this.fileName = fileName;
 		bcos = new BlockCompressedOutputStream(fileName + ".gz");
-		this.tabix = new Tabix(config);
+		this.tabix = new TabixIndex(config);
 		maxColOfInterest = calcMaxCol();
 	}
 
@@ -43,17 +43,17 @@ public class TabixCompressorAndWriter {
 		final long startOffset = bcos.getFilePointer();
 		bcos.write(line.getBytes());
 		final long endOffset = bcos.getFilePointer();
-		Tabix.Chunk chunk = new Tabix.Chunk(startOffset, endOffset);
+		TabixIndex.Chunk chunk = new TabixIndex.Chunk(startOffset, endOffset);
 		
 		// process binning index
-		List<Tabix.Chunk> bin = currBinningIndex.getWithNew(intv.getBin());
+		List<TabixIndex.Chunk> bin = currBinningIndex.getWithNew(intv.getBin());
 		// check for overlapping chunks
 		if (bin.isEmpty()) {
 			bin.add(chunk);
 		} else {
-			Tabix.Chunk lastChunk = bin.get(bin.size()-1);
+			TabixIndex.Chunk lastChunk = bin.get(bin.size()-1);
 			if (BlockCompressedFilePointerUtil.areInSameOrAdjacentBlocks(lastChunk.end, chunk.begin)) {
-				bin.set(bin.size()-1, new Tabix.Chunk(lastChunk.begin, chunk.end)); // coalesce
+				bin.set(bin.size()-1, new TabixIndex.Chunk(lastChunk.begin, chunk.end)); // coalesce
 			} else {
 				bin.add(chunk);
 			}
@@ -85,7 +85,7 @@ public class TabixCompressorAndWriter {
 	
 	private final int calcMaxCol() {
 		// as an optimization, what is the largest column which will be used in indexing?
-		if (tabix.config.preset == Tabix.TBX_PRESET_VCF) {
+		if (tabix.config.preset == TabixIndex.TBX_PRESET_VCF) {
 			return 8; // VCF files use the INFO field for ends of structural variants
 		}
 		int max = tabix.config.seqCol;

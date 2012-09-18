@@ -3,6 +3,7 @@ package org.drpowell.varitas;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,36 +57,31 @@ public class TabixVCFAnnotator extends Annotator {
 		String alt = variant.getAlt();
 		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
-		TabixReader.Iterator iterator = tabix.query(tid, start-1, end);
-		try {
-			while ((resultRow = iterator.next()) != null) {
-				VCFVariant target = new VCFVariant(resultRow);
-				// check on position (1), ref (3) and alt (4)
-				if (target.getStart() == start &&
-					target.getRef().equals(ref) &&
-					target.getAlt().equals(alt)) {
-					// FIXME - some target files will have more than one variant per line
-					if (requirePass && !target.getFilter().equals("PASS")) {
-						continue;
-					}
-					// found a match!
-					Map<String, Object> targetInfo = target.getInfo();
-					for (Entry<String, String> e: fieldMap.entrySet()) {
-						if (targetInfo.containsKey(e.getKey())) {
-							// FIXME- should check to prevent duplicates being overwritten
-							info.put(e.getValue(), targetInfo.get(e.getKey()));
-							if (copyID) {
-								variant.mergeID(target.getID());
-							}
+		Iterator<String []> iterator = tabix.query(tid, start-1, end);
+		while ((resultRow = iterator.next()) != null) {
+			VCFVariant target = new VCFVariant(resultRow);
+			// check on position (1), ref (3) and alt (4)
+			if (target.getStart() == start &&
+				target.getRef().equals(ref) &&
+				target.getAlt().equals(alt)) {
+				// FIXME - some target files will have more than one variant per line
+				if (requirePass && !target.getFilter().equals("PASS")) {
+					continue;
+				}
+				// found a match!
+				Map<String, Object> targetInfo = target.getInfo();
+				for (Entry<String, String> e: fieldMap.entrySet()) {
+					if (targetInfo.containsKey(e.getKey())) {
+						// FIXME- should check to prevent duplicates being overwritten
+						info.put(e.getValue(), targetInfo.get(e.getKey()));
+						if (copyID) {
+							variant.mergeID(target.getID());
 						}
 					}
-					break;
 				}
+				break;
 			}
-		} catch (IOException e) {
-			System.err.println(e);
-		}
-		
+		}		
 		return variant;
 	}
 	

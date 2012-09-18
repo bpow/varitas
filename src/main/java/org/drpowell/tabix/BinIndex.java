@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.drpowell.tabix.Tabix.Chunk;
+import org.drpowell.tabix.TabixIndex.Chunk;
 
 /**
  * Maps integers (bin numbers) to a list of chunks that overlap
@@ -19,7 +19,7 @@ class BinIndex {
 		map = new HashMap<Integer, List<Chunk>>(capacity, loadFactor);
 	}
 	public BinIndex() {
-		this(Tabix.TBX_MAX_BIN, 1.0f);
+		this(TabixIndex.TBX_MAX_BIN, 1.0f);
 	}
 	public BinIndex(BinIndex other) {
 		// a new clone with size sufficient to hold the contents of "other"

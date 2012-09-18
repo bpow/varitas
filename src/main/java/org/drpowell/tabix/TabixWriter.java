@@ -34,8 +34,8 @@ import java.util.List;
 import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
-import org.drpowell.tabix.Tabix.Chunk;
-import org.drpowell.tabix.Tabix.TabixConfig;
+import org.drpowell.tabix.TabixIndex.Chunk;
+import org.drpowell.tabix.TabixIndex.TabixConfig;
 
 
 /**
@@ -49,12 +49,12 @@ public class TabixWriter {
 
     private final String fileName;
     private final TabixConfig conf;
-    private Tabix tabix;
+    private TabixIndex tabix;
    
     public TabixWriter(File fn, TabixConfig conf) throws Exception {
     	fileName = fn.getAbsolutePath();
         this.conf = conf;
-        tabix = new Tabix(conf);
+        tabix = new TabixIndex(conf);
     }
 
     public void createIndex() throws Exception {
@@ -130,8 +130,8 @@ public class TabixWriter {
     }
 
     private long insertLinear(LinearIndex linearForChr, int beg, int end, long offset) {
-    	beg = beg >> Tabix.TBX_LIDX_SHIFT;
-        end = (end - 1) >> Tabix.TBX_LIDX_SHIFT;
+    	beg = beg >> TabixIndex.TBX_LIDX_SHIFT;
+        end = (end - 1) >> TabixIndex.TBX_LIDX_SHIFT;
 
         if (beg == end) {
             if (linearForChr.get(beg) == 0L) {

@@ -1,6 +1,7 @@
 package org.drpowell.tabix;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 
 class GenomicInterval {
 	private final int begin, end, sequenceId;
@@ -44,7 +45,7 @@ class GenomicInterval {
 	 * @param end End coordinate (0 based, exclusive)
 	 * @return A list of bins
 	 */
-	public static ArrayList<Integer> reg2bins(int beg, int end) {
+	public static ArrayList<Integer> reg2binList(int beg, int end) {
 		if (beg >= end) { return new ArrayList<Integer>(0); }
 		// any given point will overlap 6 regions, go ahead and allocate a few extra spots by default
 		ArrayList<Integer> bins = new ArrayList<Integer>(8);
@@ -59,4 +60,20 @@ class GenomicInterval {
 		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) bins.add(k);
 		return bins;
 	}
+
+	public static BitSet reg2bins(int beg, int end) {
+		BitSet bins = new BitSet();
+		if (beg >= end) { return bins; }
+		int k;
+		if (end >= 1<<29) end = 1<<29;
+		--end;
+		bins.set(0); // everything can overlap the 0th bin!
+		for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) bins.set(k);
+		for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) bins.set(k);
+		for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) bins.set(k);
+		for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) bins.set(k);
+		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) bins.set(k);
+		return bins;
+	}
+
 }

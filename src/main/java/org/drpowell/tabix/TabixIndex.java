@@ -33,10 +33,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import net.sf.samtools.util.BinaryCodec;
+import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
 
-public class Tabix {
+public class TabixIndex {
 
 	public static final int TBX_MAX_BIN = 37450;
 	public static final int TBX_MIN_CHUNK_GAP = 32768;
@@ -59,6 +60,7 @@ public class Tabix {
     public static final int TBX_PRESET_SAM = 1;
     public static final int TBX_PRESET_VCF = 2;
     public static final int TBX_FLAG_UCSC = 0x10000;
+    public BlockCompressedInputStream indexedFile;
 
 
     public final TabixConfig config;
@@ -99,11 +101,11 @@ public class Tabix {
 		}
 	};
 	
-	public Tabix(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {
+	public TabixIndex(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {
         this(new TabixConfig(preset, seqColumn, startColumn, endColumn, commentChar, linesToSkip));
     }
 	
-	public Tabix(final TabixConfig conf) {
+	public TabixIndex(final TabixConfig conf) {
 		config = conf;
 	}
 	
@@ -120,7 +122,27 @@ public class Tabix {
 		}
 		return tid;
 	}
-	
+
+	/**
+	 * Parse a region in the format of "chr1", "chr1:100" or "chr1:100-1000"
+	 *
+	 * @param reg Region string
+	 * @return An array where the three elements are sequence_id,
+	 *         region_begin and region_end. On failure, returns null.
+	 */
+	public GenomicInterval parseInterval(final String reg) {
+		int colon, hyphen;
+		String chr;
+		colon = reg.lastIndexOf(':'); hyphen = reg.lastIndexOf('-');
+		chr = colon >= 0? reg.substring(0, colon) : reg;
+		Integer tid = getIdForChromosome(chr);
+		if (tid == null) return null;
+		
+		return new GenomicInterval(tid,
+					colon >= 0? Integer.parseInt(reg.substring(colon+1, hyphen >= 0? hyphen : reg.length())) - 1 : 0,
+					hyphen >= 0? Integer.parseInt(reg.substring(hyphen+1)) : 0x7fffffff);
+	}
+
     public GenomicInterval getInterval(final String s[]) {
 		int sequenceId = getIdForChromosome(s[config.seqCol-1]);
 		// begin
