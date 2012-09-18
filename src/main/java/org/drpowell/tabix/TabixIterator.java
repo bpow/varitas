@@ -96,8 +96,8 @@ public class TabixIterator implements Iterator<String []>{
 				if (i == candidateChunks.size() - 1) break; // no more chunks
 				if (i >= 0) assert(curr_off == candidateChunks.get(i).end); // otherwise bug
 				if (i < 0 || candidateChunks.get(i).end != candidateChunks.get(i+1).begin) { // not adjacent chunks; then seek
-					tabix.indexedFile.seek(candidateChunks.get(i+1).begin);
-					curr_off = tabix.indexedFile.getFilePointer();
+					tabix.indexedStream.seek(candidateChunks.get(i+1).begin);
+					curr_off = tabix.indexedStream.getFilePointer();
 					/*
 					++n_seeks;
 					if (n_seeks % 100 == 0) {
@@ -108,8 +108,8 @@ public class TabixIterator implements Iterator<String []>{
 				++i;
 			}
 			String s;
-			if ((s = tabix.indexedFile.readLine()) != null) {
-				curr_off = tabix.indexedFile.getFilePointer();
+			if ((s = tabix.indexedStream.readLine()) != null) {
+				curr_off = tabix.indexedStream.getFilePointer();
 				if (s.length() == 0 || s.startsWith(tabix.config.commentString)) continue;
 				String [] row = s.split("\t", -1);
 				GenomicInterval intv;

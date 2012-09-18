@@ -28,8 +28,6 @@ package org.drpowell.tabix;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -37,7 +35,6 @@ import java.util.List;
 import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedInputStream;
 
-import org.drpowell.tabix.TabixIndex.Chunk;
 import org.drpowell.tabix.TabixIndex.TabixConfig;
 
 public class TabixReader
@@ -67,7 +64,8 @@ public class TabixReader
 		int metaCharacter = codec.readInt();
 		int linesToSkip = codec.readInt();
 		
-		TabixIndex t = new TabixIndex(mPreset, sequenceColumn, beginColumn, endColumn, (char) metaCharacter, linesToSkip);
+		TabixIndex t = new TabixIndex(mPreset, sequenceColumn, beginColumn, endColumn,
+				(char) metaCharacter, linesToSkip, new File(filename));
 
 		// read sequence dictionary
 		int i, j, k, l = codec.readInt();

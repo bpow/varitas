@@ -29,6 +29,7 @@ package org.drpowell.tabix;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.List;
 
 import net.sf.samtools.util.BlockCompressedInputStream;
@@ -51,10 +52,10 @@ public class TabixWriter {
     private final TabixConfig conf;
     private TabixIndex tabix;
    
-    public TabixWriter(File fn, TabixConfig conf) throws Exception {
+    public TabixWriter(File fn, TabixConfig conf) throws IOException {
     	fileName = fn.getAbsolutePath();
         this.conf = conf;
-        tabix = new TabixIndex(conf);
+        tabix = new TabixIndex(conf, new File(fileName));
     }
 
     public void createIndex() throws Exception {

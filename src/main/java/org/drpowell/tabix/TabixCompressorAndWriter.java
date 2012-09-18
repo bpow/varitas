@@ -1,6 +1,7 @@
 package org.drpowell.tabix;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
@@ -20,10 +21,10 @@ public class TabixCompressorAndWriter {
 	private BinIndex currBinningIndex = new BinIndex();
 	private LinearIndex currLinearIndex = new LinearIndex();
 	
-	public TabixCompressorAndWriter(String fileName, TabixConfig config) {
+	public TabixCompressorAndWriter(String fileName, TabixConfig config) throws IOException {
 		this.fileName = fileName;
 		bcos = new BlockCompressedOutputStream(fileName + ".gz");
-		this.tabix = new TabixIndex(config);
+		this.tabix = new TabixIndex(config, new File(fileName));
 		maxColOfInterest = calcMaxCol();
 	}
 

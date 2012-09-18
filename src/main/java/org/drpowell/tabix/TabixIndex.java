@@ -27,6 +27,7 @@
 
 package org.drpowell.tabix;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -60,7 +61,7 @@ public class TabixIndex {
     public static final int TBX_PRESET_SAM = 1;
     public static final int TBX_PRESET_VCF = 2;
     public static final int TBX_FLAG_UCSC = 0x10000;
-    public BlockCompressedInputStream indexedFile;
+    final BlockCompressedInputStream indexedStream;
 
 
     public final TabixConfig config;
@@ -101,12 +102,13 @@ public class TabixIndex {
 		}
 	};
 	
-	public TabixIndex(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {
-        this(new TabixConfig(preset, seqColumn, startColumn, endColumn, commentChar, linesToSkip));
+	public TabixIndex(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip, File dataFile) throws IOException {
+        this(new TabixConfig(preset, seqColumn, startColumn, endColumn, commentChar, linesToSkip), dataFile);
     }
 	
-	public TabixIndex(final TabixConfig conf) {
+	public TabixIndex(final TabixConfig conf, File dataFile) throws IOException {
 		config = conf;
+		indexedStream = new BlockCompressedInputStream(dataFile);
 	}
 	
 	public Integer getIdForChromosome(final String chromosome) {
