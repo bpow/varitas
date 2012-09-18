@@ -10,6 +10,8 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import net.sf.samtools.util.BlockCompressedInputStream;
+
 import org.drpowell.tabix.TabixIndex.Chunk;
 
 public class TabixIterator implements Iterator<String []>{
@@ -22,6 +24,7 @@ public class TabixIterator implements Iterator<String []>{
 	private final GenomicInterval intv;
 	private String [] next = null;
 	private List<Chunk> candidateChunks;
+	private final BlockCompressedInputStream indexedStream;
 
 	private static Logger logger = Logger.getLogger(TabixIterator.class.getCanonicalName());
 
@@ -35,7 +38,17 @@ public class TabixIterator implements Iterator<String []>{
 		// n_seeks = 0;
 		
 		candidateChunks = getCandidateChunks();
-		advance();
+		BlockCompressedInputStream bcis = null;
+		try {
+			bcis = index.getIndexedStream();
+			next = advance();
+		} catch (IOException e) {
+			logger.log(Level.WARNING, String.format(
+					"Unable to read from file '%s', so an empty result is returned for this query\n%s",
+					index.clientFileName, e));
+			// if an IOException was thrown, 'next' will be null, so there will be no results
+		}
+		indexedStream = bcis;
 	}
 	
 	public List<Chunk> getCandidateChunks() {
@@ -85,7 +98,9 @@ public class TabixIterator implements Iterator<String []>{
 	
 	public String [] next() {
 		if (next == null) { throw new NoSuchElementException("Tried to go beyond end of Iterator"); }
-		return advance();
+		String [] res = next;
+		next = advance();
+		return res;
 	}
 	
 	private String [] advance() {
@@ -96,8 +111,8 @@ public class TabixIterator implements Iterator<String []>{
 				if (i == candidateChunks.size() - 1) break; // no more chunks
 				if (i >= 0) assert(curr_off == candidateChunks.get(i).end); // otherwise bug
 				if (i < 0 || candidateChunks.get(i).end != candidateChunks.get(i+1).begin) { // not adjacent chunks; then seek
-					tabix.indexedStream.seek(candidateChunks.get(i+1).begin);
-					curr_off = tabix.indexedStream.getFilePointer();
+					indexedStream.seek(candidateChunks.get(i+1).begin);
+					curr_off = indexedStream.getFilePointer();
 					/*
 					++n_seeks;
 					if (n_seeks % 100 == 0) {
@@ -108,8 +123,8 @@ public class TabixIterator implements Iterator<String []>{
 				++i;
 			}
 			String s;
-			if ((s = tabix.indexedStream.readLine()) != null) {
-				curr_off = tabix.indexedStream.getFilePointer();
+			if ((s = indexedStream.readLine()) != null) {
+				curr_off = indexedStream.getFilePointer();
 				if (s.length() == 0 || s.startsWith(tabix.config.commentString)) continue;
 				String [] row = s.split("\t", -1);
 				GenomicInterval intv;

@@ -14,21 +14,22 @@ import org.drpowell.tabix.TabixIndex.TabixConfig;
 
 public class TabixCompressorAndWriter {
 	private final BlockCompressedOutputStream bcos;
-	private final String fileName;
 	private final TabixIndex tabix;
 	private final int maxColOfInterest;
 	private int tidCurr = -1;
 	private BinIndex currBinningIndex = new BinIndex();
 	private LinearIndex currLinearIndex = new LinearIndex();
+	private boolean done = false;
 	
 	public TabixCompressorAndWriter(String fileName, TabixConfig config) throws IOException {
-		this.fileName = fileName;
-		bcos = new BlockCompressedOutputStream(fileName + ".gz");
-		this.tabix = new TabixIndex(config, new File(fileName));
+		String ouf = fileName + ".gz";
+		bcos = new BlockCompressedOutputStream(ouf);
+		this.tabix = new TabixIndex(config, new File(ouf));
 		maxColOfInterest = calcMaxCol();
 	}
 
 	public void addLine(String line) throws IOException {
+		if (done) { throw new IllegalStateException("Tried to add rows to an index after finish() was called"); }
 		line += "\n";
 		if (line.startsWith(tabix.config.commentString)) {
 			bcos.write(line.getBytes());
@@ -61,7 +62,6 @@ public class TabixCompressorAndWriter {
 		}
 		
 		// process linear index
-		// TODO - do I need to check for off-by-one changes?
 		int startWindow = LinearIndex.convertToLinearIndexOffset(intv.getBegin());
 		int endWindow = LinearIndex.convertToLinearIndexOffset(intv.getEnd());
 		for (int win = startWindow; win <= endWindow; win++) {
@@ -81,7 +81,6 @@ public class TabixCompressorAndWriter {
 		// make things as compact as possible...
 		tabix.binningIndex.set(tidPrev, new BinIndex(currBinningIndex));
 		currBinningIndex = new BinIndex();
-		
 	}
 	
 	private final int calcMaxCol() {
@@ -95,13 +94,31 @@ public class TabixCompressorAndWriter {
 		return max;
 	}
 	
-	public void writeIndex() throws IOException {
-		// TODO After writing the index, shouldn't allow addition of more rows
+	public void finish() throws IOException {
 		finishPrevChromosome(tidCurr);
-		BlockCompressedOutputStream indexOutput = new BlockCompressedOutputStream(fileName + ".gz.tbi");
-		tabix.saveIndex(indexOutput);
-		indexOutput.close();
+		done = true;
 		bcos.close();
+	}
+	
+	public TabixIndex getIndex() {
+		return tabix;
+	}
+	
+	/**
+	 * A convenience method to read/process/compress/index from a BufferedReader.
+	 * 
+	 * This just reads each line from the BufferedReader and calls addLine()
+	 * @param reader
+	 * @return the constructed TabixIndex
+	 * @throws IOException
+	 */
+	public TabixIndex buildIndex(BufferedReader reader) throws IOException {
+		String line = null;
+		while ((line = reader.readLine()) != null) {
+			addLine(line);
+		}
+		this.finish();
+		return getIndex();
 	}
 
 	public static void main(String args[]) throws IOException {
@@ -111,7 +128,8 @@ public class TabixCompressorAndWriter {
 		while ((line = br.readLine()) != null) {
 			tcaw.addLine(line);
 		}
-		tcaw.writeIndex();
+		tcaw.finish();
+		tcaw.getIndex().save();
 		br.close();
 	}
 

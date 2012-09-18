@@ -61,7 +61,8 @@ public class TabixIndex {
     public static final int TBX_PRESET_SAM = 1;
     public static final int TBX_PRESET_VCF = 2;
     public static final int TBX_FLAG_UCSC = 0x10000;
-    final BlockCompressedInputStream indexedStream;
+    private volatile BlockCompressedInputStream indexedStream;
+    final String clientFileName;
 
 
     public final TabixConfig config;
@@ -108,7 +109,18 @@ public class TabixIndex {
 	
 	public TabixIndex(final TabixConfig conf, File dataFile) throws IOException {
 		config = conf;
-		indexedStream = new BlockCompressedInputStream(dataFile);
+		clientFileName = dataFile.getAbsolutePath();
+	}
+	
+	public BlockCompressedInputStream getIndexedStream() throws IOException {
+		if (indexedStream == null) {
+			synchronized(this) {
+				if (indexedStream == null) {
+					indexedStream = new BlockCompressedInputStream(new File(clientFileName));
+				}
+			}
+		}
+		return indexedStream;
 	}
 	
 	public Integer getIdForChromosome(final String chromosome) {
@@ -229,5 +241,15 @@ public class TabixIndex {
             }
         }
     }
+
+	/**
+	 * Save the index to the default filename (the input filename + '.tbi')
+	 */
+	public void save() throws IOException {
+		File outfile = new File(clientFileName + ".tbi");
+		BlockCompressedOutputStream bcos = new BlockCompressedOutputStream(outfile);
+		saveIndex(bcos);
+		bcos.close();
+	}
 
 }
