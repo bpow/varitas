@@ -5,12 +5,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 
-import org.drpowell.tabix.Tabix.TabixConfig;
-
-import net.sf.samtools.LinearIndex;
 import net.sf.samtools.util.BlockCompressedFilePointerUtil;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 import net.sf.samtools.util.StringUtil;
+
+import org.drpowell.tabix.Tabix.TabixConfig;
 
 public class TabixCompressorAndWriter {
 	private final BlockCompressedOutputStream bcos;
@@ -18,8 +17,8 @@ public class TabixCompressorAndWriter {
 	private final Tabix tabix;
 	private final int maxColOfInterest;
 	private int tidCurr = -1;
-	private Tabix.ReferenceBinIndex currBinningIndex = new Tabix.ReferenceBinIndex();
-	private Tabix.ReferenceLinearIndex currLinearIndex = new Tabix.ReferenceLinearIndex();
+	private BinIndex currBinningIndex = new BinIndex();
+	private LinearIndex currLinearIndex = new LinearIndex();
 	
 	public TabixCompressorAndWriter(String fileName, TabixConfig config) {
 		this.fileName = fileName;
@@ -74,13 +73,13 @@ public class TabixCompressorAndWriter {
 	private void finishPrevChromosome(int tidPrev) {
 		if (currBinningIndex.isEmpty()) return; // saw nothing for this reference
 		
-		tabix.linearIndex.set(tidPrev, new Tabix.ReferenceLinearIndex(currLinearIndex));
+		tabix.linearIndex.set(tidPrev, new LinearIndex(currLinearIndex));
 		tabix.linearIndex.get(tidPrev).fillZeros();
 		currLinearIndex.clear();
 		
 		// make things as compact as possible...
-		tabix.binningIndex.set(tidPrev, new Tabix.ReferenceBinIndex(currBinningIndex));
-		currBinningIndex.clear();
+		tabix.binningIndex.set(tidPrev, new BinIndex(currBinningIndex));
+		currBinningIndex = new BinIndex();
 		
 	}
 	

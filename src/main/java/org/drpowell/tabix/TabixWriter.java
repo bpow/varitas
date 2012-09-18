@@ -125,11 +125,11 @@ public class TabixWriter {
 	}
     }
 
-    private void insertBinning(Tabix.ReferenceBinIndex binningForChr, int bin, long beg, long end) {
+    private void insertBinning(BinIndex binningForChr, int bin, long beg, long end) {
     	binningForChr.getWithNew(bin).add(new Chunk(beg, end));
     }
 
-    private long insertLinear(Tabix.ReferenceLinearIndex linearForChr, int beg, int end, long offset) {
+    private long insertLinear(LinearIndex linearForChr, int beg, int end, long offset) {
     	beg = beg >> Tabix.TBX_LIDX_SHIFT;
         end = (end - 1) >> Tabix.TBX_LIDX_SHIFT;
 
@@ -149,9 +149,9 @@ public class TabixWriter {
 
     private void mergeChunks() {
         for (int i = 0; i < tabix.binningIndex.size(); i++) {
-            Tabix.ReferenceBinIndex binningForChr = tabix.binningIndex.get(i);
-            for (Integer k: binningForChr.keySet()) {
-                List<Chunk> p = binningForChr.get(k);
+            BinIndex binningForChr = tabix.binningIndex.get(i);
+            for (Integer binNum: binningForChr.bins()) {
+                List<Chunk> p = binningForChr.get(binNum);
                 int m = 0;
                 for (int l = 1; l < p.size(); l++) {
                     if (p.get(m).end >> 16 == p.get(l).begin >> 16) {

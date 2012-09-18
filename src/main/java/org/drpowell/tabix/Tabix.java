@@ -28,14 +28,10 @@
 package org.drpowell.tabix;
 
 import java.io.IOException;
-import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
-import net.sf.samtools.LinearIndex;
 import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
@@ -69,10 +65,10 @@ public class Tabix {
     LinkedHashMap<String, Integer> mChr2tid = new LinkedHashMap<String, Integer>(50);
 
 	/** The binning index. */
-    List<ReferenceBinIndex> binningIndex = new ArrayList<ReferenceBinIndex>();
+    List<BinIndex> binningIndex = new ArrayList<BinIndex>();
 
     /** The linear index. */
-    List<ReferenceLinearIndex> linearIndex = new ArrayList<ReferenceLinearIndex>();
+    List<LinearIndex> linearIndex = new ArrayList<LinearIndex>();
 
     /**
      * A BAM/Tabix chunk consists of two unsigned 64-bit integers which mark the
@@ -103,85 +99,6 @@ public class Tabix {
 		}
 	};
 	
-	protected static class ReferenceBinIndex extends LinkedHashMap<Integer, List<Chunk>> {
-		private static final long serialVersionUID = 1L;
-		public ReferenceBinIndex(int capacity, float loadFactor) {
-			super(capacity, loadFactor);
-		}
-		public ReferenceBinIndex() {
-			super(Tabix.TBX_MAX_BIN, 1.0f);
-		}
-		public ReferenceBinIndex(ReferenceBinIndex other) {
-			// a new clone with size sufficient to hold the contents of "other"
-			super(other);
-		}
-		public List<Chunk> getWithNew(int i) {
-			List<Chunk> out = get(i);
-			if (out == null) {
-				out = new ArrayList<Chunk>(); // TODO- presize or change to LinkedList
-			}
-			put(i, out);
-			return out;
-		}
-	}
-
-	protected static class ReferenceLinearIndex extends AbstractList<Long> {
-		private long[] index;
-		int size = 0;
-		public ReferenceLinearIndex() {
-			index = new long[LinearIndex.MAX_LINEAR_INDEX_SIZE];
-		}
-		public ReferenceLinearIndex(int n_linear) {
-			index = new long[n_linear];
-		}
-		public long getPrimitive(int i) { return index[i]; }
-		public long setPrimitive(int pos, long l) {
-			long old = index[pos];
-			if (pos >= size) {
-				size = pos+1;
-			}
-			index[pos] = l;
-			return old;
-		}
-		@Override
-		public Long get(int i) {
-			return index[i];
-		}
-		@Override
-		public int size() {
-			return size;
-		}
-		@Override
-		public Long set(int pos, Long l) {
-			return setPrimitive(pos, l);
-		}
-		@Override
-		public void add(int i, Long l) {
-			this.setPrimitive(size, l);
-		}
-		public ReferenceLinearIndex(ReferenceLinearIndex old) {
-			size = old.size();
-			index = new long[size];
-			System.arraycopy(old.index, 0, index, 0, size);
-		}
-		public void clear() {
-			Arrays.fill(index, 0L);
-			size = 0;
-		}
-		protected void fillZeros() {
-			// FIXME - could be done as part of constructor from pre-filled index
-            long lastNonZeroOffset = 0;
-            for (int i = 0; i < index.length; i++) {
-                if (index[i] == 0) {
-                    index[i] = lastNonZeroOffset; // not necessary, but C (samtools index) does this
-                    // note, if you remove the above line BAMIndexWriterTest.compareTextual and compareBinary will have to change
-                } else {
-                    lastNonZeroOffset = index[i];
-                }
-            }
-		}
-	}
-
 	public Tabix(int preset, int seqColumn, int startColumn, int endColumn, char commentChar, int linesToSkip) {
         this(new TabixConfig(preset, seqColumn, startColumn, endColumn, commentChar, linesToSkip));
     }
@@ -198,8 +115,8 @@ public class Tabix {
             mChr2tid.put(chromosome, tid);
 
             // Expand our indices.
-            binningIndex.add(new ReferenceBinIndex());
-            linearIndex.add(new ReferenceLinearIndex());
+            binningIndex.add(new BinIndex());
+            linearIndex.add(new LinearIndex());
 		}
 		return tid;
 	}
@@ -267,13 +184,13 @@ public class Tabix {
         }
 
         for (int i = 0; i < mChr2tid.size(); i++) {
-            Map<Integer, List<Chunk>> binningForChr = binningIndex.get(i);
+            BinIndex binningForChr = binningIndex.get(i);
             
             // Write the binning index.
             codec.writeInt(binningForChr.size());
-            for (int k: binningForChr.keySet()) {
-                List<Chunk> p = binningForChr.get(k);
-                codec.writeInt(k);
+            for (int binNum: binningForChr.bins()) {
+                List<Chunk> p = binningForChr.get(binNum);
+                codec.writeInt(binNum);
                 codec.writeInt(p.size());
                 for (Chunk bin: p) {
                     codec.writeLong(bin.begin);

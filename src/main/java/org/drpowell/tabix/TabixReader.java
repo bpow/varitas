@@ -35,7 +35,6 @@ import java.util.List;
 import net.sf.samtools.util.BinaryCodec;
 import net.sf.samtools.util.BlockCompressedInputStream;
 
-import org.drpowell.tabix.Tabix.ReferenceBinIndex;
 import org.drpowell.tabix.Tabix.TabixConfig;
 
 public class TabixReader
@@ -86,7 +85,7 @@ public class TabixReader
 		for (i = 0; i < mSeq.length; ++i) {
 			// the binning index
 			int n_bin = codec.readInt();
-			Tabix.ReferenceBinIndex binMap = new Tabix.ReferenceBinIndex(1 + n_bin * 4 / 3, 0.75f);
+			BinIndex binMap = new BinIndex(1 + n_bin * 4 / 3, 0.75f);
 			t.binningIndex.add(binMap);
 			for (j = 0; j < n_bin; ++j) {
 				int bin = codec.readInt();
@@ -101,7 +100,7 @@ public class TabixReader
 			}
 			// the linear index
 			int n_linear = codec.readInt();
-			Tabix.ReferenceLinearIndex linear = new Tabix.ReferenceLinearIndex(n_linear);
+			LinearIndex linear = new LinearIndex(n_linear);
 			for (k = 0; k < n_linear; ++k)
 				linear.add(codec.readLong());
 			t.linearIndex.add(linear);
@@ -234,7 +233,7 @@ public class TabixReader
 		long min_off;
 		// Tabix.Index idx = mIndex[tid];
 		List<Long> linear = tabix.linearIndex.get(tid);
-		ReferenceBinIndex binning = tabix.binningIndex.get(tid);
+		BinIndex binning = tabix.binningIndex.get(tid);
 		List<Integer> bins = GenomicInterval.reg2bins(beg, end);
 		int i, l, n_off;
 		if (!linear.isEmpty())
