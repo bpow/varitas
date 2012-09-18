@@ -191,11 +191,11 @@ public class TabixReader
 		public String [] next() throws IOException {
 			if (iseof) return null;
 			for (;;) {
-				if (curr_off == 0 || !less64(curr_off, off[i].v)) { // then jump to the next chunk
+				if (curr_off == 0 || !less64(curr_off, off[i].end)) { // then jump to the next chunk
 					if (i == off.length - 1) break; // no more chunks
-					if (i >= 0) assert(curr_off == off[i].v); // otherwise bug
-					if (i < 0 || off[i].v != off[i+1].u) { // not adjacent chunks; then seek
-						mFp.seek(off[i+1].u);
+					if (i >= 0) assert(curr_off == off[i].end); // otherwise bug
+					if (i < 0 || off[i].end != off[i+1].begin) { // not adjacent chunks; then seek
+						mFp.seek(off[i+1].begin);
 						curr_off = mFp.getFilePointer();
 						/*
 						++n_seeks;
@@ -211,7 +211,7 @@ public class TabixReader
 					curr_off = mFp.getFilePointer();
 					if (s.length() == 0 || s.startsWith(conf.commentString)) continue;
 					String [] row = s.split("\t", -1);
-					Tabix.GenomicInterval intv;
+					GenomicInterval intv;
 					try {
 						intv = tabix.getInterval(row);
 					} catch (NumberFormatException nfe) {
@@ -219,8 +219,8 @@ public class TabixReader
 						System.err.println("Skipping...");
 						continue;
 					}
-					if (intv.tid != tid || intv.beg >= end) break; // no need to proceed
-					else if (intv.end > beg && intv.beg < end) return row; // overlap; return
+					if (intv.getSequenceId() != tid || intv.getBegin() >= end) break; // no need to proceed
+					else if (intv.getEnd() > beg && intv.getBegin() < end) return row; // overlap; return
 				} else break; // end of file
 			}
 			iseof = true;
@@ -235,7 +235,7 @@ public class TabixReader
 		// Tabix.Index idx = mIndex[tid];
 		List<Long> linear = tabix.linearIndex.get(tid);
 		ReferenceBinIndex binning = tabix.binningIndex.get(tid);
-		List<Integer> bins = Tabix.reg2bins(beg, end);
+		List<Integer> bins = GenomicInterval.reg2bins(beg, end);
 		int i, l, n_off;
 		if (!linear.isEmpty())
 			min_off = (beg>>Tabix.TBX_LIDX_SHIFT >= linear.size())? 
@@ -245,7 +245,7 @@ public class TabixReader
 		for (Integer bin : bins) {
 			if ((chunks = binning.get(bin)) != null ) {
 				for (Tabix.Chunk chunk : chunks) {
-					if (less64(min_off, chunk.v)) offList.add(chunk);
+					if (less64(min_off, chunk.end)) offList.add(chunk);
 				}
 			}
 		}
@@ -255,7 +255,7 @@ public class TabixReader
 
 		// resolve completely contained adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {
-			if (less64(off[l].v, off[i].v)) {
+			if (less64(off[l].end, off[i].end)) {
 				++l;
 				off[l] = off[i];
 			}
@@ -263,10 +263,10 @@ public class TabixReader
 		n_off = l + 1;
 		// resolve overlaps between adjacent blocks; this may happen due to the merge in indexing
 		for (i = 1; i < n_off; ++i)
-			if (!less64(off[i-1].v, off[i].u)) off[i-1] = new Tabix.Chunk(off[i-1].u, off[i].u);
+			if (!less64(off[i-1].end, off[i].begin)) off[i-1] = new Tabix.Chunk(off[i-1].begin, off[i].begin);
 		// merge adjacent blocks
 		for (i = 1, l = 0; i < n_off; ++i) {
-			if (off[l].v>>16 == off[i].u>>16) off[l] = new Tabix.Chunk(off[l].u, off[i].v);
+			if (off[l].end>>16 == off[i].begin>>16) off[l] = new Tabix.Chunk(off[l].begin, off[i].end);
 			else {
 				++l;
 				off[l] = off[i];

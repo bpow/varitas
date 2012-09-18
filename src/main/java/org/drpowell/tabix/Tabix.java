@@ -28,8 +28,6 @@
 package org.drpowell.tabix;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,22 +74,35 @@ public class Tabix {
     /** The linear index. */
     List<ReferenceLinearIndex> linearIndex = new ArrayList<ReferenceLinearIndex>();
 
+    /**
+     * A BAM/Tabix chunk consists of two unsigned 64-bit integers which mark the
+     * beginning and end (in virtual offset coordinates) of a range in the 
+     * BlockCompressed file which is indexed.
+     * 
+     * Java doesn't have an unsigned long type, but as long as you don't divide, things
+     * should be OK.
+     * @author bpow
+     *
+     */
     public static class Chunk implements Comparable<Chunk> {
-		public final long u;
-		public final long v;
-		public Chunk(final long _u, final long _v) {
-			u = _u; v = _v;
+		public final long begin;
+		public final long end;
+		public Chunk(final long begin, final long end) {
+			this.begin = begin; this.end = end;
 		}
 		public int compareTo(final Chunk p) {
-			return u == p.u? 0 : ((u < p.u) ^ (u < 0) ^ (p.u < 0))? -1 : 1; // unsigned 64-bit comparison
+			if (begin == p.begin) {
+				return cmpUInt64(end, p.end);
+			} else {
+				return cmpUInt64(begin, p.begin);
+			}
+		}
+		public static final int cmpUInt64(long u, long v) {
+			if (u == v) return 0;
+			return ((u<v) ^ (u<0) ^ (v<0))? -1 : 1;
 		}
 	};
 	
-	protected static class GenomicInterval {
-		int tid, bin;
-		int beg, end;
-	};
-
 	protected static class ReferenceBinIndex extends LinkedHashMap<Integer, List<Chunk>> {
 		private static final long serialVersionUID = 1L;
 		public ReferenceBinIndex(int capacity, float loadFactor) {
@@ -193,28 +204,17 @@ public class Tabix {
 		return tid;
 	}
 	
-    public static final int reg2bin(int beg, int end) {
-    	--end;
-    	if (beg>>14 == end>>14) return 4681 + (beg>>14);
-    	if (beg>>17 == end>>17) return  585 + (beg>>17);
-    	if (beg>>20 == end>>20) return   73 + (beg>>20);
-    	if (beg>>23 == end>>23) return    9 + (beg>>23);
-    	if (beg>>26 == end>>26) return    1 + (beg>>26);
-    	return 0;
-    }
-    
-	public GenomicInterval getInterval(final String s[]) {
-		GenomicInterval intv = new GenomicInterval();
-		intv.tid = getIdForChromosome(s[config.seqCol-1]);
+    public GenomicInterval getInterval(final String s[]) {
+		int sequenceId = getIdForChromosome(s[config.seqCol-1]);
 		// begin
-		intv.beg = Integer.parseInt(s[config.beginCol-1]);
-		intv.end = intv.beg;
-		if ((config.preset&TBX_FLAG_UCSC) != 0) ++intv.end;
-		else --intv.beg;
-		if (intv.beg < 0) intv.beg = 0;
-		if (intv.end < 1) intv.end = 1;
+		int beg = Integer.parseInt(s[config.beginCol-1]);
+		int end = beg;
+		if ((config.preset&TBX_FLAG_UCSC) != 0) ++end;
+		else --beg;
+		if (beg < 0) beg = 0;
+		if (end < 1) end = 1;
 		if ((config.preset&0xffff) == 0) { // generic
-			intv.end = Integer.parseInt(s[config.endCol-1]);
+			end = Integer.parseInt(s[config.endCol-1]);
 		} else if ((config.preset&0xffff) == TBX_PRESET_SAM) { // SAM
 			String cigar = s[5];
 			int cigarLen = 0, i, j;
@@ -225,22 +225,21 @@ public class Tabix {
 						cigarLen += Integer.parseInt(cigar.substring(j, i));
 				}
 			}
-			intv.end = intv.beg + cigarLen;
+			end = beg + cigarLen;
 		} else if ((config.preset&0xffff) == TBX_PRESET_VCF) { // VCF
 			String ref = s[3];
-			if (ref.length() > 0) intv.end = intv.beg + ref.length();
+			if (ref.length() > 0) end = beg + ref.length();
 			// check in the INFO field for an END
 			String info = s[7];
 			int endOffsetInInfo = -1;
 			if (info.startsWith("END=")) {
 				endOffsetInInfo = 4;
-				intv.end = Integer.parseInt(info.substring(endOffsetInInfo).split(";",2)[0]);
+				end = Integer.parseInt(info.substring(endOffsetInInfo).split(";",2)[0]);
 			} else if ((endOffsetInInfo = info.indexOf(";END=")) > 0){
-				intv.end = Integer.parseInt(info.substring(endOffsetInInfo+5).split(";",2)[0]);
+				end = Integer.parseInt(info.substring(endOffsetInInfo+5).split(";",2)[0]);
 			}
 		}
-		intv.bin = reg2bin(intv.beg, intv.end);
-		return intv;
+		return new GenomicInterval(beg, end, sequenceId);
 	}
 	
     protected void saveIndex(BlockCompressedOutputStream bcos) throws IOException {
@@ -277,8 +276,8 @@ public class Tabix {
                 codec.writeInt(k);
                 codec.writeInt(p.size());
                 for (Chunk bin: p) {
-                    codec.writeLong(bin.u);
-                    codec.writeLong(bin.v);
+                    codec.writeLong(bin.begin);
+                    codec.writeLong(bin.end);
                 }
             }
             // Write the linear index.
@@ -289,34 +288,5 @@ public class Tabix {
             }
         }
     }
-
-    /**
-	 * Calculates the bins that overlap a given region.
-	 * 
-	 * Although this is an implementation detail, it may be more useful in general since the
-	 * same binning index is used elsewhere (in bam files, for instance). Heng Li's reg2bin had
-	 * used an int[37450] which was allocated for each query. While this results in more object
-	 * allocations (for the ArrayList and Integer objects), it actually works faster (with my
-	 * testing) for the common case where there are not many overlapped regions).
-	 * 
-	 * @param beg Start coordinate (0 based, inclusive)
-	 * @param end End coordinate (0 based, exclusive)
-	 * @return A list of bins
-	 */
-	public static ArrayList<Integer> reg2bins(int beg, int end) {
-		if (beg >= end) { return new ArrayList<Integer>(0); }
-		// any given point will overlap 6 regions, go ahead and allocate a few extra spots by default
-		ArrayList<Integer> bins = new ArrayList<Integer>(8);
-		int k;
-		if (end >= 1<<29) end = 1<<29;
-		--end;
-		bins.add(0); // everything can overlap the 0th bin!
-		for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) bins.add(k);
-		for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) bins.add(k);
-		for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) bins.add(k);
-		for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) bins.add(k);
-		for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) bins.add(k);
-		return bins;
-	}
 
 }

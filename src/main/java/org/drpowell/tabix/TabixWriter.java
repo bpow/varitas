@@ -35,7 +35,6 @@ import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
 import org.drpowell.tabix.Tabix.Chunk;
-import org.drpowell.tabix.Tabix.GenomicInterval;
 import org.drpowell.tabix.Tabix.TabixConfig;
 
 
@@ -84,34 +83,36 @@ public class TabixWriter {
                 continue;
             }
             GenomicInterval intv = tabix.getInterval(str.split("\t"));
-            if ( intv.beg<0 || intv.end<0 ) {
+            if ( intv.getBegin()<0 || intv.getEnd()<0 ) {
                 throw new Exception("The indexes overlap or are out of bounds.");
             }
-            if (last_tid != intv.tid) { // change of chromosomes
-                if (last_tid>intv.tid ) {
-                    throw new Exception(String.format("The chromosome blocks are not continuous at line %d, is the file sorted? [pos %d].", lineno, intv.beg+1));
+            if (last_tid != intv.getSequenceId()) { // change of chromosomes
+                if (last_tid>intv.getSequenceId() ) {
+                    throw new Exception(String.format(
+                    		"The chromosome blocks are not continuous at line %d, is the file sorted? [pos %d].",
+                    		lineno, intv.getBegin()+1));
                 }
-                last_tid = intv.tid;
+                last_tid = intv.getSequenceId();
                 last_bin = 0xffffffff;
-            } else if (last_coor > intv.beg) {
+            } else if (last_coor > intv.getBegin()) {
                 throw new Exception(String.format("File out of order at line %d.", lineno));
             }
-            long tmp = insertLinear(tabix.linearIndex.get(intv.tid), intv.beg, intv.end, last_off);
+            long tmp = insertLinear(tabix.linearIndex.get(intv.getSequenceId()), intv.getBegin(), intv.getEnd(), last_off);
             if (last_off == 0) offset0 = tmp;
-            if (intv.bin != last_bin) { // then possibly write the binning index
+            if (intv.getBin() != last_bin) { // then possibly write the binning index
                 if (save_bin != 0xffffffff) { // save_bin==0xffffffffu only happens to the first record
                     insertBinning(tabix.binningIndex.get(save_tid), save_bin, save_off, last_off);
                 }
                 save_off = last_off;
-                save_bin = last_bin = intv.bin;
-                save_tid = intv.tid;
+                save_bin = last_bin = intv.getBin();
+                save_tid = intv.getSequenceId();
                 if (save_tid < 0) break;
             }
             if (fp.getFilePointer() <= last_off) {
                 throw new Exception(String.format("Bug in BGZF: %x < %x.", fp.getFilePointer(), last_off));
             }
             last_off = fp.getFilePointer();
-            last_coor = intv.beg;
+            last_coor = intv.getBegin();
 	}
 	if (save_tid >= 0) insertBinning(tabix.binningIndex.get(save_tid), save_bin, save_off, fp.getFilePointer());
 	mergeChunks();
@@ -153,8 +154,8 @@ public class TabixWriter {
                 List<Chunk> p = binningForChr.get(k);
                 int m = 0;
                 for (int l = 1; l < p.size(); l++) {
-                    if (p.get(m).v >> 16 == p.get(l).u >> 16) {
-                    	p.set(m, new Chunk(p.get(m).u, p.get(l).v));
+                    if (p.get(m).end >> 16 == p.get(l).begin >> 16) {
+                    	p.set(m, new Chunk(p.get(m).begin, p.get(l).end));
                     } else {
                         p.set(++m, p.get(l));
                     }

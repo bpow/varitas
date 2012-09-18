@@ -36,25 +36,25 @@ public class TabixCompressorAndWriter {
 		}
 		String [] row = new String[maxColOfInterest];
 		StringUtil.split(line, row, '\t');
-		Tabix.GenomicInterval intv = tabix.getInterval(row);
-		if (intv.tid != tidCurr && tidCurr >= 0) {
+		GenomicInterval intv = tabix.getInterval(row);
+		if (intv.getSequenceId() != tidCurr && tidCurr >= 0) {
 			finishPrevChromosome(tidCurr);
 		}
-		tidCurr = intv.tid;
+		tidCurr = intv.getSequenceId();
 		final long startOffset = bcos.getFilePointer();
 		bcos.write(line.getBytes());
 		final long endOffset = bcos.getFilePointer();
 		Tabix.Chunk chunk = new Tabix.Chunk(startOffset, endOffset);
 		
 		// process binning index
-		List<Tabix.Chunk> bin = currBinningIndex.getWithNew(intv.bin);
+		List<Tabix.Chunk> bin = currBinningIndex.getWithNew(intv.getBin());
 		// check for overlapping chunks
 		if (bin.isEmpty()) {
 			bin.add(chunk);
 		} else {
 			Tabix.Chunk lastChunk = bin.get(bin.size()-1);
-			if (BlockCompressedFilePointerUtil.areInSameOrAdjacentBlocks(lastChunk.v, chunk.u)) {
-				bin.set(bin.size()-1, new Tabix.Chunk(lastChunk.u, chunk.v)); // coalesce
+			if (BlockCompressedFilePointerUtil.areInSameOrAdjacentBlocks(lastChunk.end, chunk.begin)) {
+				bin.set(bin.size()-1, new Tabix.Chunk(lastChunk.begin, chunk.end)); // coalesce
 			} else {
 				bin.add(chunk);
 			}
@@ -62,11 +62,11 @@ public class TabixCompressorAndWriter {
 		
 		// process linear index
 		// TODO - do I need to check for off-by-one changes?
-		int startWindow = LinearIndex.convertToLinearIndexOffset(intv.beg);
-		int endWindow = LinearIndex.convertToLinearIndexOffset(intv.end);
+		int startWindow = LinearIndex.convertToLinearIndexOffset(intv.getBegin());
+		int endWindow = LinearIndex.convertToLinearIndexOffset(intv.getEnd());
 		for (int win = startWindow; win <= endWindow; win++) {
-			if (currLinearIndex.getPrimitive(win) == 0 || chunk.u < currLinearIndex.getPrimitive(win)) {
-				currLinearIndex.setPrimitive(win, chunk.u);
+			if (currLinearIndex.getPrimitive(win) == 0 || chunk.begin < currLinearIndex.getPrimitive(win)) {
+				currLinearIndex.setPrimitive(win, chunk.begin);
 			}
 		}
 	}
