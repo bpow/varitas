@@ -44,12 +44,6 @@ class LinearIndex extends AbstractList<Long> {
 		this.setPrimitive(size, l);
 	}
 	
-	public LinearIndex(LinearIndex old) {
-		size = old.size();
-		index = new long[size];
-		System.arraycopy(old.index, 0, index, 0, size);
-	}
-	
 	public void clear() {
 		Arrays.fill(index, 0L);
 		size = 0;
@@ -66,6 +60,11 @@ class LinearIndex extends AbstractList<Long> {
                 lastNonZeroOffset = index[i];
             }
         }
+	}
+	
+	public LinearIndex getCompacted() {
+		fillZeros();
+		return new UnmodifiableLinearIndex(this);
 	}
 
     public static int convertToLinearIndexOffset(final int contigPos) {
@@ -88,8 +87,9 @@ class LinearIndex extends AbstractList<Long> {
     
     class UnmodifiableLinearIndex extends LinearIndex {
     	public UnmodifiableLinearIndex(LinearIndex orig) {
-    		index = new long[orig.size()];
-    		System.arraycopy(orig.index, 0, index, 0, index.length);
+    		size = orig.size();
+    		index = new long[size];
+    		System.arraycopy(orig.index, 0, index, 0, size);
     	}
     	public void clear() { throw new IllegalStateException("This index cannot be modified now."); }
     	public long setPrimitive(int i, long l) { throw new IllegalStateException("This index cannot be modified now."); }

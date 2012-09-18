@@ -74,8 +74,7 @@ public class TabixCompressorAndWriter {
 	private void finishPrevChromosome(int tidPrev) {
 		if (currBinningIndex.isEmpty()) return; // saw nothing for this reference
 		
-		tabix.linearIndex.set(tidPrev, new LinearIndex(currLinearIndex));
-		tabix.linearIndex.get(tidPrev).fillZeros();
+		tabix.linearIndex.set(tidPrev, currLinearIndex.getCompacted());
 		currLinearIndex.clear();
 		
 		// make things as compact as possible...
