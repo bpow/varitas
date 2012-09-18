@@ -32,34 +32,28 @@ import java.io.IOException;
 import java.util.List;
 
 import net.sf.samtools.util.BlockCompressedFilePointerUtil;
+import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 import net.sf.samtools.util.StringUtil;
 
 import org.drpowell.tabix.TabixIndex.TabixConfig;
 
-public class TabixCompressorAndWriter {
-	private final BlockCompressedOutputStream bcos;
+public class TabixBuilder {
 	private final TabixIndex tabix;
 	private final int maxColOfInterest;
 	private int tidCurr = -1;
 	private BinIndex currBinningIndex = new BinIndex();
 	private LinearIndex currLinearIndex = new LinearIndex();
-	private boolean done = false;
 	
-	public TabixCompressorAndWriter(String fileName, TabixConfig config) throws IOException {
-		String ouf = fileName + ".gz";
-		bcos = new BlockCompressedOutputStream(ouf);
-		this.tabix = new TabixIndex(config, new File(ouf));
+	// FIXME- arguably could just stick with '\n'...
+	private static final byte [] LINE_SEPARATOR = System.getProperty("line.separator").getBytes();
+	
+	private TabixBuilder(String fileName, TabixConfig config) throws IOException {
+		this.tabix = new TabixIndex(config, new File(fileName));
 		maxColOfInterest = calcMaxCol();
 	}
 
-	public void addLine(String line) throws IOException {
-		if (done) { throw new IllegalStateException("Tried to add rows to an index after finish() was called"); }
-		line += "\n";
-		if (line.startsWith(tabix.config.commentString)) {
-			bcos.write(line.getBytes());
-			return;
-		}
+	private void addLine(final String line, final long startOffset, final long endOffset) {
 		String [] row = new String[maxColOfInterest];
 		StringUtil.split(line, row, '\t');
 		GenomicInterval intv = tabix.getInterval(row);
@@ -67,9 +61,6 @@ public class TabixCompressorAndWriter {
 			finishPrevChromosome(tidCurr);
 		}
 		tidCurr = intv.getSequenceId();
-		final long startOffset = bcos.getFilePointer();
-		bcos.write(line.getBytes());
-		final long endOffset = bcos.getFilePointer();
 		TabixIndex.Chunk chunk = new TabixIndex.Chunk(startOffset, endOffset);
 		
 		// process binning index
@@ -120,41 +111,58 @@ public class TabixCompressorAndWriter {
 	
 	public void finish() throws IOException {
 		finishPrevChromosome(tidCurr);
-		done = true;
-		bcos.close();
 	}
 	
-	public TabixIndex getIndex() {
-		return tabix;
-	}
-	
-	/**
-	 * A convenience method to read/process/compress/index from a BufferedReader.
-	 * 
-	 * This just reads each line from the BufferedReader and calls addLine()
-	 * @param reader
-	 * @return the constructed TabixIndex
-	 * @throws IOException
-	 */
-	public TabixIndex buildIndex(BufferedReader reader) throws IOException {
+	public static TabixIndex buildIndex(BufferedReader reader, String compressedFileName, TabixConfig config) throws IOException {
+		TabixBuilder builder = new TabixBuilder(compressedFileName, config);
+		BlockCompressedOutputStream bcos = new BlockCompressedOutputStream(new File(compressedFileName));
+		long startOffset, endOffset;
 		String line = null;
 		while ((line = reader.readLine()) != null) {
-			addLine(line);
+			if (line.startsWith(config.commentString)) {
+				bcos.write(line.getBytes());
+				bcos.write(LINE_SEPARATOR);
+				continue;
+			}
+			startOffset = bcos.getFilePointer();
+			bcos.write(line.getBytes());
+			bcos.write(LINE_SEPARATOR);
+			endOffset = bcos.getFilePointer();
+			builder.addLine(line, startOffset, endOffset);
 		}
-		this.finish();
-		return getIndex();
+		builder.finish();
+		bcos.close();
+		return builder.tabix;
 	}
-
-	public static void main(String args[]) throws IOException {
-		BufferedReader br = new BufferedReader(new FileReader(args[0]));
-		TabixCompressorAndWriter tcaw = new TabixCompressorAndWriter(args[0], TabixConfig.VCF);
+	
+	public static TabixIndex buildIndex(String compressedFile, TabixConfig config) throws IOException {
+		TabixBuilder builder = new TabixBuilder(compressedFile, config);
+		BlockCompressedInputStream bcis = new BlockCompressedInputStream(new File(compressedFile));
+		long startOffset = 0, endOffset;
 		String line = null;
-		while ((line = br.readLine()) != null) {
-			tcaw.addLine(line);
+		while ((line = bcis.readLine()) != null) {
+			endOffset = bcis.getFilePointer();
+			if (!line.startsWith(config.commentString)) {
+				builder.addLine(line, startOffset, endOffset);
+			}
+			startOffset = endOffset;
 		}
-		tcaw.finish();
-		tcaw.getIndex().save();
-		br.close();
+		builder.finish();
+		bcis.close();
+		return builder.tabix;
+	}
+	
+	public static void main(String args[]) throws IOException {
+		String inf = args[0];
+		TabixIndex index;
+		if (inf.endsWith(".gz")) {
+			index = buildIndex(inf, TabixConfig.VCF);
+		} else {
+			BufferedReader br = new BufferedReader(new FileReader(inf));
+			index = buildIndex(br, inf + ".gz", TabixConfig.VCF);
+			br.close();
+		}
+		index.save();
 	}
 
 }
