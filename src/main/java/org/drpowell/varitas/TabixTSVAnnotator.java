@@ -3,10 +3,13 @@ package org.drpowell.varitas;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import org.drpowell.tabix.TabixReader;
 
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
@@ -45,26 +48,22 @@ public class TabixTSVAnnotator extends Annotator {
 		String alt = variant.getAlt();
 		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
-		TabixReader.Iterator iterator = tabix.query(tid, variant.getStart()-1, variant.getEnd());
-		try {
-			while ((row = iterator.next()) != null) {
-				// TODO - should we check start/stop to make sure exact? probably...
-				if ((refColumn < 0 || row[refColumn].equals(ref)) &&
-					(altColumn < 0 || row[altColumn].equals(alt))) {
-					// we have a match!
-					for (Map.Entry<Integer, String> entry: fieldMap.entrySet()) {
-						String value = row[entry.getKey()];
-						if (! ("".equals(value) || ".".equals(value)) ) {
-							// FIXME -- "." is frequently used to represent missing data, but consider whether I should pass it along
-							// FIXME -- think about the best way to handle semicolons in fields (which VCF doesn't like)
-							value = value.replace(";", ",");
-							info.put(entry.getValue(), value);
-						}
+		Iterator<String []> iterator = tabix.getIndex().query(tid, variant.getStart()-1, variant.getEnd());
+		while ((row = iterator.next()) != null) {
+			// TODO - should we check start/stop to make sure exact? probably...
+			if ((refColumn < 0 || row[refColumn].equals(ref)) &&
+				(altColumn < 0 || row[altColumn].equals(alt))) {
+				// we have a match!
+				for (Map.Entry<Integer, String> entry: fieldMap.entrySet()) {
+					String value = row[entry.getKey()];
+					if (! ("".equals(value) || ".".equals(value)) ) {
+						// FIXME -- "." is frequently used to represent missing data, but consider whether I should pass it along
+						// FIXME -- think about the best way to handle semicolons in fields (which VCF doesn't like)
+						value = value.replace(";", ",");
+						info.put(entry.getValue(), value);
 					}
 				}
 			}
-		} catch (IOException ioe) {
-			System.err.println(ioe);
 		}
 		return variant;
 		

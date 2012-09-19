@@ -19,6 +19,8 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.drpowell.tabix.TabixReader;
+
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.varitas.GrandAnnotator");
@@ -67,7 +69,7 @@ public class GrandAnnotator {
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			logger.severe(ioe.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
 	}
@@ -87,7 +89,7 @@ public class GrandAnnotator {
 			return annotator;
 		} catch (IOException e) {
 			e.printStackTrace();
-			logger.severe(e.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + e.toString());
 		}
 		return null;
 	}
@@ -100,7 +102,7 @@ public class GrandAnnotator {
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			logger.severe(ioe.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
 	}
