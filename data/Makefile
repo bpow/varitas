@@ -2,7 +2,7 @@
 
 .SECONDARY: dbNSFP2.0b3.zip dbNSFP1.3.zip
 
-all: TGwMAF ncbiSNP135 CG54 ESP5400 dbNSFP2.0b1 dbNSFP1.3
+all: TGwMAF ncbiSNP137 CG54 ESP6500 dbNSFP2.0b1
 	@echo WARNING-- not making target niehs95 because it requires manual downloads
 
 TGwMAF: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.dllog
@@ -23,7 +23,7 @@ ncbiSNP137: ncbiSNP137.vcf.dllog
 ncbiSNP137.vcf.gz:
 	$(eval $@_URL:=http://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz)
 	echo "URL: $($@_URL)" >> ncbiSNP137.vcf.dllog
-	curl -o $@ "$($@_URL)"
+	curl -C - -o $@ "$($@_URL)"
 
 CG54: Complete_Public_Genomes_54genomes_VQHIGH.vcf.dllog
 
