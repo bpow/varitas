@@ -25,6 +25,12 @@ ncbiSNP137.vcf.gz:
 	echo "URL: $($@_URL)" >> ncbiSNP137.vcf.dllog
 	curl -C - -o $@ "$($@_URL)"
 
+ncbiSNP137.vcf.gz.tbi:
+	@echo Using externally-generated tabix index rather than making our own
+	$(eval $@_URL:=http://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz.tbi)
+	echo "URL: $($@_URL)" >> ncbiSNP137.vcf.dllog
+	curl -C - -o $@ "$($@_URL)"
+
 CG54: Complete_Public_Genomes_54genomes_VQHIGH.vcf.dllog
 
 # FIXME- this may not be the best file to use... The cut command limits extraneous data.
