@@ -1,8 +1,8 @@
 .PHONY: all
 
-.SECONDARY: dbNSFP2.0b3.zip dbNSFP1.3.zip
+.SECONDARY: dbNSFP2.0b3.zip dbNSFP1.3.zip ESP6500.snps.vcf.tar.gz
 
-all: TGwMAF ncbiSNP137 CG54 ESP6500 dbNSFP2.0b1
+all: TGwMAF ncbiSNP137 CG54 ESP6500 dbNSFP2.0b3
 	@echo WARNING-- not making target niehs95 because it requires manual downloads
 
 TGwMAF: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.dllog
