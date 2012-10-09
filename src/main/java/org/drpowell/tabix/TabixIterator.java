@@ -131,9 +131,10 @@ public class TabixIterator implements Iterator<String []>{
 	}
 	
 	public String [] next() {
-		if (next == null) { throw new NoSuchElementException("Tried to go beyond end of Iterator"); }
 		String [] res = next;
-		next = advance();
+		if (next != null) {
+			next = advance();
+		}
 		return res;
 	}
 	

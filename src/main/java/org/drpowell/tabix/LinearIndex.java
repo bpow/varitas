@@ -103,10 +103,11 @@ class LinearIndex extends AbstractList<Long> {
      * @return The minimum offset, in chunk format, of any read appearing in this position.
      */
     public long getMinimumOffset(final int startPos) {
+    	if (size == 0) { return 0; }
         final int start = (startPos <= 0) ? 0 : startPos-1;
         final int regionLinearBin = start >> TBX_LIDX_SHIFT;
         // System.out.println("# regionLinearBin: " + regionLinearBin);
-        if (regionLinearBin >= size()) { return getPrimitive(size - 1); }
+        if (regionLinearBin >= size) { return getPrimitive(size - 1); }
         return getPrimitive(regionLinearBin);
     }
     
