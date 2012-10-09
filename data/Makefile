@@ -21,13 +21,13 @@ ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz.tbi:
 ncbiSNP137: ncbiSNP137.vcf.dllog
 
 ncbiSNP137.vcf.gz:
-	$(eval $@_URL:=http://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz)
+	$(eval $@_URL:=ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz)
 	echo "URL: $($@_URL)" >> ncbiSNP137.vcf.dllog
 	curl -C - -o $@ "$($@_URL)"
 
 ncbiSNP137.vcf.gz.tbi:
 	@echo Using externally-generated tabix index rather than making our own
-	$(eval $@_URL:=http://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz.tbi)
+	$(eval $@_URL:=ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz.tbi)
 	echo "URL: $($@_URL)" >> ncbiSNP137.vcf.dllog
 	curl -C - -o $@ "$($@_URL)"
 
