@@ -9,7 +9,7 @@ addVCFAnnotator("data/niehs95.snps.vcf.gz", "AF=NIEHSAF")
 addVCFAnnotator("data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz",
     "AMR_AF,ASN_AF,AFR_AF,EUR_AF,AF=TGAF")
 addVCFAnnotator("data/ncbiSNP137.vcf.gz", 
-    "SCS,GMAF,CLN,PM,G5A,G5").setCopyID(true)
+    "SCS,GMAF,PM,G5A,G5").setCopyID(true)
 addVCFAnnotator("data/ESP6500.vcf.gz",
     "MAF=ESPMAF,GTS,EA_GTC,AA_GTC,FG,GM,AA,AAC,PP,CDP,CG,GS,CA,DP=ESPDP,GL=ESPGL")
 addVCFAnnotator("data/Complete_Public_Genomes_54genomes_VQHIGH.vcf.gz",
