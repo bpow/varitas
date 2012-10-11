@@ -49,7 +49,6 @@ import org.drpowell.tabix.TabixIndex.Chunk;
  */
 public class TabixIterator implements Iterator<String []>{
 	private int i;
-	// private int n_seeks;
 	private int tid, beg, end;
 	private long curr_off;
 	private boolean iseof;
@@ -74,7 +73,6 @@ public class TabixIterator implements Iterator<String []>{
 		candidateChunks = getCandidateChunks();
 		try {
 			bcis = index.getIndexedStream();
-			next = advance();
 		} catch (IOException e) {
 			logger.log(Level.WARNING, String.format(
 					"Unable to read from file '%s', so an empty result is returned for this query\n%s",
@@ -82,14 +80,15 @@ public class TabixIterator implements Iterator<String []>{
 			// if an IOException was thrown, 'next' will be null, so there will be no results
 		}
 		indexedStream = bcis;
-	}
+        next = advance();
+    }
 	
 	public List<Chunk> getCandidateChunks() {
 		final long minimumOffset = tabix.linearIndex.get(intv.getSequenceId()).getMinimumOffset(intv.getBegin());
 		ArrayList<TabixIndex.Chunk> offList = new ArrayList<TabixIndex.Chunk>();
 		
-		BinIndex binning = tabix.binningIndex.get(tid);
-		BitSet bins = GenomicInterval.reg2bins(beg, end);
+		BinIndex binning = tabix.binningIndex.get(intv.getSequenceId());
+		BitSet bins = GenomicInterval.reg2bins(intv.getBegin(), intv.getEnd());
 		if (bins.isEmpty()) { return offList; } // shortcut when no results
 		int i, l, n_off;
 		for (int bin = bins.nextSetBit(0); bin >= 0; bin = bins.nextSetBit(bin+1)) {
@@ -162,16 +161,16 @@ public class TabixIterator implements Iterator<String []>{
 				curr_off = indexedStream.getFilePointer();
 				if (s.length() == 0 || s.startsWith(tabix.config.commentString)) continue;
 				String [] row = s.split("\t", -1);
-				GenomicInterval intv;
+				GenomicInterval candidate;
 				try {
-					intv = tabix.getInterval(row);
+					candidate = tabix.getInterval(row);
 				} catch (NumberFormatException nfe) {
 					nfe.printStackTrace();
 					System.err.println("Skipping...");
 					continue;
 				}
-				if (intv.getSequenceId() != tid || intv.getBegin() >= end) break; // no need to proceed
-				else if (intv.getEnd() > beg && intv.getBegin() < end) return row; // overlap; return
+				if (candidate.getSequenceId() != intv.getSequenceId() || candidate.getBegin() >= intv.getEnd()) break; // no need to proceed
+				else if (candidate.getEnd() > intv.getBegin() && candidate.getBegin() < candidate.getEnd()) return row; // overlap; return
 			} else break; // end of file
 		}
 		} catch (IOException ioe) {
