@@ -5,3 +5,5 @@
 data/*.gz
 data/*.tbi
 data/*.dllog
+/*.iml
+/.*
