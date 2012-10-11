@@ -16,6 +16,7 @@ public abstract class FilteringIterator<E> implements Iterator<E> {
 	
 	private E advance() {
 		E curr = nextValue;
+		nextValue = null;
 		while (delegate.hasNext()) {
 			nextValue = delegate.next();
 			if (filter(nextValue)) break;
