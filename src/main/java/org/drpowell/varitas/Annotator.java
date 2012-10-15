@@ -1,5 +1,7 @@
 package org.drpowell.varitas;
 
+import org.drpowell.vcf.VCFVariant;
+
 
 public abstract class Annotator {
 	

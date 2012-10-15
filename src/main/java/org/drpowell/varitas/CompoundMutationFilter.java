@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.drpowell.util.Grouper;
+import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFVariant;
 
 public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	

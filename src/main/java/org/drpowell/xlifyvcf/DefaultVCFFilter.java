@@ -3,7 +3,7 @@ package org.drpowell.xlifyvcf;
 import java.util.Iterator;
 
 import org.drpowell.util.FilteringIterator;
-import org.drpowell.varitas.VCFVariant;
+import org.drpowell.vcf.VCFVariant;
 
 public class DefaultVCFFilter extends FilteringIterator<VCFVariant> {
 	

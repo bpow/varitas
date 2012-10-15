@@ -30,9 +30,9 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.drpowell.varitas.CompoundMutationFilter;
-import org.drpowell.varitas.VCFMeta;
-import org.drpowell.varitas.VCFParser;
-import org.drpowell.varitas.VCFVariant;
+import org.drpowell.vcf.VCFMeta;
+import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFVariant;
 
 public class XLifyVcf {
 	public final Workbook workbook;

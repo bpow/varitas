@@ -1,4 +1,4 @@
-package org.drpowell.varitas;
+package org.drpowell.vcf;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,7 +18,14 @@ import java.util.Map;
  * @author bpow
  */
 public class VCFMeta {
-	
+
+	public enum VCFFixedColumns {
+		CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT;
+		public static final String VCF_FIXED_COLUMN_HEADERS =
+				"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
+		public static final int SIZE = values().length;
+	}
+
 	private String metaKey;
 	private LinkedHashMap<String, String> values = null;
 	private String singleValue = null;

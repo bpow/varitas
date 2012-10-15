@@ -1,4 +1,4 @@
-package org.drpowell.varitas;
+package org.drpowell.vcf;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -7,7 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class VCFVariant implements GenomicVariant {
+/**
+ * @author bpow
+ *
+ */
+public class VCFVariant {
 	private Map<String, Object> info;
 	private String qual;
 	private String [] row;
@@ -21,9 +25,9 @@ public class VCFVariant implements GenomicVariant {
 	
 	public VCFVariant(String [] row) {
 		this.row = row; // FIXME - should defensive copy?
-		start = Integer.parseInt(row[VCFFixedColumns.POS.ordinal()]);
+		start = Integer.parseInt(row[VCFMeta.VCFFixedColumns.POS.ordinal()]);
 		end = start + getRef().length() - 1;
-		info = splitInfoField(row[VCFFixedColumns.INFO.ordinal()]);
+		info = splitInfoField(row[VCFMeta.VCFFixedColumns.INFO.ordinal()]);
 	}
 
 	public static Map<String, Object> splitInfoField(String info) {
@@ -76,7 +80,7 @@ public class VCFVariant implements GenomicVariant {
 	}
 	
 	private void updateInfo() {
-		row[VCFFixedColumns.INFO.ordinal()] = joinInfo(info);
+		row[VCFMeta.VCFFixedColumns.INFO.ordinal()] = joinInfo(info);
 	}
 	
 	public String toString() {
@@ -88,41 +92,36 @@ public class VCFVariant implements GenomicVariant {
 		return sb.toString();
 	}
 
-	@Override
 	public String getSequence() {
-		return row[VCFFixedColumns.CHROM.ordinal()];
+		return row[VCFMeta.VCFFixedColumns.CHROM.ordinal()];
 	}
 
-	@Override
 	public int getStart() {
 		return start;
 	}
 
-	@Override
 	public int getEnd() {
 		return end;
 	}
 
 	public String getID() {
-		return row[VCFFixedColumns.ID.ordinal()];
+		return row[VCFMeta.VCFFixedColumns.ID.ordinal()];
 	}
 
-	@Override
 	public String getRef() {
-		return row[VCFFixedColumns.REF.ordinal()];
+		return row[VCFMeta.VCFFixedColumns.REF.ordinal()];
 	}
 
-	@Override
 	public String getAlt() {
-		return row[VCFFixedColumns.ALT.ordinal()];
+		return row[VCFMeta.VCFFixedColumns.ALT.ordinal()];
 	}
 	
 	public String getFilter() {
-		return row[VCFFixedColumns.FILTER.ordinal()];
+		return row[VCFMeta.VCFFixedColumns.FILTER.ordinal()];
 	}
 	
 	public String getFormat() {
-		return row[VCFFixedColumns.FORMAT.ordinal()];		
+		return row[VCFMeta.VCFFixedColumns.FORMAT.ordinal()];		
 	}
 	
 	public List<String> getRow() {
@@ -130,7 +129,7 @@ public class VCFVariant implements GenomicVariant {
 	}
 	
 	public VCFVariant mergeID(String newID) {
-		int idcol = VCFFixedColumns.ID.ordinal();
+		int idcol = VCFMeta.VCFFixedColumns.ID.ordinal();
 		String oldID = row[idcol];
 		if (!".".equals(oldID)) {
 			if (oldID.equals(newID)) {
@@ -143,11 +142,11 @@ public class VCFVariant implements GenomicVariant {
 	}
 	
 	public String [] getCalls() {
-		int num = row.length - VCFFixedColumns.SIZE;
+		int num = row.length - VCFMeta.VCFFixedColumns.SIZE;
 		if (num <= 0) {
 			return new String[0];
 		} else {
-			return Arrays.copyOfRange(row, VCFFixedColumns.SIZE, row.length);
+			return Arrays.copyOfRange(row, VCFMeta.VCFFixedColumns.SIZE, row.length);
 		}
 	}
 	

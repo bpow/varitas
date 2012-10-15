@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.drpowell.vcf.VCFVariant;
+
 /**
  * An annotator that splits out the info as provided by snpeff (http://snpeff.sourceforge.net).
  * 

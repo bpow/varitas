@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.drpowell.tabix.TabixReader;
+import org.drpowell.vcf.VCFMeta;
+import org.drpowell.vcf.VCFVariant;
 
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;

@@ -9,6 +9,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.drpowell.vcf.VCFVariant;
+
 public class GeneAnnotator extends Annotator {
 	public final String fileName;
 	public final String annotatorName;

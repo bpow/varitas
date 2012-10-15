@@ -1,4 +1,4 @@
-package org.drpowell.varitas;
+package org.drpowell.vcf;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -93,13 +93,13 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	}
 	
 	private void parseColHeader(String line) {
-		if (!line.startsWith(VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
+		if (!line.startsWith(VCFMeta.VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
 			throw new RuntimeException("Problem reading VCF file\nExpected: " +
-					VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
+					VCFMeta.VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
 		}
 		colHeaders = line;
 		String [] headers = line.split("\t", -1);
-		int numFixed = VCFFixedColumns.values().length;
+		int numFixed = VCFMeta.VCFFixedColumns.values().length;
 		samples = new String[headers.length - numFixed];
 		for (int i = numFixed; i < headers.length; i++) {
 			samples[i-numFixed] = headers[i];

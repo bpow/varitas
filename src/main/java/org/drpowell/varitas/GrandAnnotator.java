@@ -20,6 +20,8 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.drpowell.tabix.TabixReader;
+import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFVariant;
 
 public class GrandAnnotator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
