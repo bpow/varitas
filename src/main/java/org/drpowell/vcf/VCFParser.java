@@ -16,6 +16,14 @@ import java.util.logging.Logger;
  * @author bpow
  */
 public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
+	
+	public enum VCFFixedColumns {
+		CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT;
+		public static final String VCF_FIXED_COLUMN_HEADERS =
+				"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
+		public static final int SIZE = values().length;
+	}
+
 	private StringBuffer metaHeaders = new StringBuffer();
 	private ArrayList<VCFMeta> parsedHeaders = new ArrayList<VCFMeta>();
 	private Map<String, VCFMeta> infoHeaders = new LinkedHashMap<String, VCFMeta>();
@@ -77,11 +85,50 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		}
 	}
 	
-	// FIXME - this should be private!
+	private static LinkedHashMap<String, String> parseMultipleMetaValues(String multiValues) {
+		String [] keyvalues = multiValues.split(",");
+		LinkedHashMap<String, String> result = new LinkedHashMap<String, String>(keyvalues.length * 5 % 4);
+		String prev = null;
+		for (String s : keyvalues) {
+			if (prev != null) {
+				s = prev + "," + s;
+				prev = null;
+			}
+			if ((s.indexOf('"') >= 0 ) && ((s.endsWith("\\\"") || !s.endsWith("\"")))) {
+				prev = s;
+			} else {
+				int eq = s.indexOf("=");
+				if (eq > 0) {
+					result.put(s.substring(0, eq), s.substring(eq+1));
+				} else {
+					result.put(s, "");
+				}
+			}
+		}
+		return result;
+	}
+	
+	public static VCFMeta parseVCFMeta(String line) {
+		if (line.startsWith("##")) {
+			line = line.substring(2);
+		}
+		int eq = line.indexOf("=");
+		if (eq <= 0) {
+			return new VCFMeta(line, (LinkedHashMap<String, String>) null);
+		}
+		String metaKey = line.substring(0, eq);
+		String remainder = line.substring(eq+1);
+		if (remainder.startsWith("<") && remainder.endsWith(">")) {
+			return new VCFMeta(metaKey, parseMultipleMetaValues(remainder.substring(1, remainder.length()-1)));
+		}
+		return new VCFMeta(metaKey, remainder);
+	}
+	
+	// FIXME - this belongs in a VCFVariantCollection, if anywhere...
 	public VCFMeta addMeta(String line) {
 		// FIXME - use system eol character
 		metaHeaders.append(line).append('\n');
-		VCFMeta meta = VCFMeta.fromLine(line);
+		VCFMeta meta = parseVCFMeta(line);
 		parsedHeaders.add(meta);
 		if ("INFO".equals(meta.getMetaKey())) {
 			infoHeaders.put(meta.getValue("ID"), meta);
@@ -93,13 +140,13 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	}
 	
 	private void parseColHeader(String line) {
-		if (!line.startsWith(VCFMeta.VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
+		if (!line.startsWith(VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
 			throw new RuntimeException("Problem reading VCF file\nExpected: " +
-					VCFMeta.VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
+					VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
 		}
 		colHeaders = line;
 		String [] headers = line.split("\t", -1);
-		int numFixed = VCFMeta.VCFFixedColumns.values().length;
+		int numFixed = VCFFixedColumns.values().length;
 		samples = new String[headers.length - numFixed];
 		for (int i = numFixed; i < headers.length; i++) {
 			samples[i-numFixed] = headers[i];

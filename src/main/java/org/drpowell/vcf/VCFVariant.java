@@ -6,10 +6,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 
 /**
+ * Representation of a single row of a VCF file
+ * 
  * @author bpow
- *
  */
 public class VCFVariant {
 	private Map<String, Object> info;
@@ -25,9 +27,9 @@ public class VCFVariant {
 	
 	public VCFVariant(String [] row) {
 		this.row = row; // FIXME - should defensive copy?
-		start = Integer.parseInt(row[VCFMeta.VCFFixedColumns.POS.ordinal()]);
+		start = Integer.parseInt(row[VCFParser.VCFFixedColumns.POS.ordinal()]);
 		end = start + getRef().length() - 1;
-		info = splitInfoField(row[VCFMeta.VCFFixedColumns.INFO.ordinal()]);
+		info = splitInfoField(row[VCFParser.VCFFixedColumns.INFO.ordinal()]);
 	}
 
 	public static Map<String, Object> splitInfoField(String info) {
@@ -65,12 +67,24 @@ public class VCFVariant {
 		return sb.substring(0, sb.length()-1); // no need for the last semicolon
 	}
 	
+	/**
+	 * Add an item to the VCF variant.
+	 * 
+	 * @param key - the ID of the data, this should be defined in the VCF header
+	 * @param value - if null, then the key is treated as a FLAG field
+	 * @return this VCFVariant, to facilitate chaining
+	 */
 	public VCFVariant putInfo(String key, Object value) {
 		if (value == null) value = INFO_FLAG_TRUE;
 		info.put(key, value);
 		return this;
 	}
 
+	/**
+	 * Returns the contents of the info field as a map. This is a reference to the actual map used
+	 * in this VCFVariant, so modifications are not threadsafe and should only be undertaken if you
+	 * really know what you are doing.
+	 */
 	public Map<String, Object> getInfo() {
 		return info;
 	}
@@ -80,7 +94,7 @@ public class VCFVariant {
 	}
 	
 	private void updateInfo() {
-		row[VCFMeta.VCFFixedColumns.INFO.ordinal()] = joinInfo(info);
+		row[VCFParser.VCFFixedColumns.INFO.ordinal()] = joinInfo(info);
 	}
 	
 	public String toString() {
@@ -92,8 +106,19 @@ public class VCFVariant {
 		return sb.toString();
 	}
 
+	/**
+	 * Returns the value of one of the fixed columns of a vcf file.
+	 * @see VCFParser.VCFFixedColumns
+	 */
+	public String getFixedColumn(int i) {
+		if (i >= VCFParser.VCFFixedColumns.SIZE) {
+			throw new NoSuchElementException("Tried to access an invalid column in a VCF file");
+		}
+		return row[i];
+	}
+
 	public String getSequence() {
-		return row[VCFMeta.VCFFixedColumns.CHROM.ordinal()];
+		return row[VCFParser.VCFFixedColumns.CHROM.ordinal()];
 	}
 
 	public int getStart() {
@@ -103,25 +128,25 @@ public class VCFVariant {
 	public int getEnd() {
 		return end;
 	}
-
+	
 	public String getID() {
-		return row[VCFMeta.VCFFixedColumns.ID.ordinal()];
+		return row[VCFParser.VCFFixedColumns.ID.ordinal()];
 	}
 
 	public String getRef() {
-		return row[VCFMeta.VCFFixedColumns.REF.ordinal()];
+		return row[VCFParser.VCFFixedColumns.REF.ordinal()];
 	}
 
 	public String getAlt() {
-		return row[VCFMeta.VCFFixedColumns.ALT.ordinal()];
+		return row[VCFParser.VCFFixedColumns.ALT.ordinal()];
 	}
 	
 	public String getFilter() {
-		return row[VCFMeta.VCFFixedColumns.FILTER.ordinal()];
+		return row[VCFParser.VCFFixedColumns.FILTER.ordinal()];
 	}
 	
 	public String getFormat() {
-		return row[VCFMeta.VCFFixedColumns.FORMAT.ordinal()];		
+		return row[VCFParser.VCFFixedColumns.FORMAT.ordinal()];		
 	}
 	
 	public List<String> getRow() {
@@ -129,7 +154,7 @@ public class VCFVariant {
 	}
 	
 	public VCFVariant mergeID(String newID) {
-		int idcol = VCFMeta.VCFFixedColumns.ID.ordinal();
+		int idcol = VCFParser.VCFFixedColumns.ID.ordinal();
 		String oldID = row[idcol];
 		if (!".".equals(oldID)) {
 			if (oldID.equals(newID)) {
@@ -142,11 +167,11 @@ public class VCFVariant {
 	}
 	
 	public String [] getCalls() {
-		int num = row.length - VCFMeta.VCFFixedColumns.SIZE;
+		int num = row.length - VCFParser.VCFFixedColumns.SIZE;
 		if (num <= 0) {
 			return new String[0];
 		} else {
-			return Arrays.copyOfRange(row, VCFMeta.VCFFixedColumns.SIZE, row.length);
+			return Arrays.copyOfRange(row, VCFParser.VCFFixedColumns.SIZE, row.length);
 		}
 	}
 	
@@ -163,13 +188,6 @@ public class VCFVariant {
 
 	public boolean hasInfo(String key) {
 		return info.containsKey(key);
-	}
-
-	private static int indexOf(String key, String [] values) {
-		for (int i = 0; i < values.length; i++) {
-			if (key.equals(values[i])) return i;
-		}
-		return -1;
 	}
 
 }
