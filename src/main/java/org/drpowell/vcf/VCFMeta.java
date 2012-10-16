@@ -17,16 +17,11 @@ import java.util.Map;
  * @see http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41
  * @author bpow
  */
-/**
- * @author bpow
- *
- */
 public class VCFMeta {
 
 	private String metaKey;
 	private LinkedHashMap<String, String> values = null;
 	private String singleValue = null;
-	private String id = null;
 	
 	public String getMetaKey() {
 		return metaKey;
@@ -80,13 +75,10 @@ public class VCFMeta {
 	}
 
 	public String putValue(String key, String value) {
-		if ("ID".equals(key)) {
-			id = key;
-		}
 		return values.put(key, value);
 	}
 	
 	public String getId() {
-		return id;
+		return values.get("ID");
 	}
 }

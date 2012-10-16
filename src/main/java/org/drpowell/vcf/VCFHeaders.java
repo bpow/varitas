@@ -16,7 +16,7 @@ public class VCFHeaders extends AbstractList<VCFMeta> {
 	
 	public VCFHeaders(ArrayList<VCFMeta> headerList, String[] samples) {
 		headers = new ArrayList<VCFMeta>(headerList.size());
-		headers.addAll(headerList);
+		addAll(headerList);
 		this.samples = samples;
 	}
 
@@ -39,7 +39,7 @@ public class VCFHeaders extends AbstractList<VCFMeta> {
 		} else if ("FORMAT".equals(m.getMetaKey())) {
 			formats.put(m.getId(), m);
 		}
-		return super.add(m);
+		return headers.add(m);
 	}
 	
 	@Override
