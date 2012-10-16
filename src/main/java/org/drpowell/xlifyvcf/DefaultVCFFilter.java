@@ -17,7 +17,7 @@ public class DefaultVCFFilter extends FilteringIterator<VCFVariant> {
 		return "HIGH".equals(effect) || "MODERATE".equals(effect);
 	}
 	
-	public static final boolean filterAF(VCFVariant v, String key, double cutoff) {
+	public static final boolean filterLessThan(VCFVariant v, String key, double cutoff) {
 		String afString = v.getInfoField(key);
 		if (afString == null || afString.isEmpty() || ".".equals(afString)) return true;
 		try {
@@ -34,9 +34,9 @@ public class DefaultVCFFilter extends FilteringIterator<VCFVariant> {
 		double cutoff = 0.01;
 		return (("PASS".equals(vFilter) || ".".equals(vFilter)) &&
 				filterImpact(v) &&
-				filterAF(v, "NIEHSAF", cutoff) &&
-				filterAF(v, "NIEHSIAF", cutoff) &&
-				filterAF(v, "TGAF", cutoff)
+				filterLessThan(v, "NIEHSAF", cutoff) &&
+				filterLessThan(v, "NIEHSIAF", cutoff) &&
+				filterLessThan(v, "TGAF", cutoff)
 				); 
 	}
 	
