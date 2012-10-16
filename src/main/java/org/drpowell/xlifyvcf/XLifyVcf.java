@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -244,7 +245,9 @@ public class XLifyVcf {
 	}
 	
 	public void doWork() {
-		Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
+		Reader r = new InputStreamReader(ClassLoader.getSystemResourceAsStream("defaultVariantFilter.js"));
+		Iterator<VCFVariant> variants = new ScriptVCFFilter(vcfParser.iterator(), r);
+		//Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
 		if (applyBiallelicFilter) {
 			variants = new CompoundMutationFilter(variants);
 		}
