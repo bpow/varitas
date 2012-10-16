@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,35 +22,15 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		public static final int SIZE = values().length;
 	}
 
-	private StringBuffer metaHeaders = new StringBuffer();
-	private ArrayList<VCFMeta> parsedHeaders = new ArrayList<VCFMeta>();
-	private Map<String, VCFMeta> infoHeaders = new LinkedHashMap<String, VCFMeta>();
-	private Map<String, VCFMeta> formatHeaders = new LinkedHashMap<String, VCFMeta>();
-	private String colHeaders;
+	private VCFHeaders headers;
 	private String fileName;
 	private BufferedReader reader;
 	private String [] samples;
 	private boolean alreadyProvidedIterator = false;
 	private String nextLine;
 	
-	public String getMetaHeaders() {
-		return metaHeaders.toString();
-	}
-	
-	public Map<String, VCFMeta> infos() {
-		return Collections.unmodifiableMap(infoHeaders);
-	}
-
-	public Map<String, VCFMeta> formats() {
-		return Collections.unmodifiableMap(formatHeaders);
-	}
-
-	public String getColHeaderLine() {
-		return colHeaders;
-	}
-	
-	public String [] samples() {
-		return samples;
+	public VCFHeaders getHeaders() {
+		return headers;
 	}
 	
 	public VCFParser(BufferedReader reader) throws IOException {
@@ -67,12 +45,24 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	}
 	
 	private void parseHeaders() throws IOException {
+		ArrayList<VCFMeta> parsedHeaders = new ArrayList<VCFMeta>();
+
 		String line;
 		while ((line = reader.readLine()) != null) {
 			if (line.startsWith("##")) {
-				addMeta(line);
+				parsedHeaders.add(parseVCFMeta(line));
 			} else if (line.startsWith("#CHROM")) {
-				parseColHeader(line);
+				if (!line.startsWith(VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
+					throw new RuntimeException("Problem reading VCF file\nExpected: " +
+							VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
+				}
+				String [] colheaders = line.split("\t", -1);
+				int numFixed = VCFFixedColumns.values().length;
+				samples = new String[colheaders.length - numFixed];
+				for (int i = numFixed; i < colheaders.length; i++) {
+					samples[i-numFixed] = colheaders[i];
+				}
+				headers = new VCFHeaders(parsedHeaders, samples);
 				readNext();
 				return;
 			} else {
@@ -114,7 +104,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		}
 		int eq = line.indexOf("=");
 		if (eq <= 0) {
-			return new VCFMeta(line, (LinkedHashMap<String, String>) null);
+			return new VCFMeta(line);
 		}
 		String metaKey = line.substring(0, eq);
 		String remainder = line.substring(eq+1);
@@ -122,35 +112,6 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 			return new VCFMeta(metaKey, parseMultipleMetaValues(remainder.substring(1, remainder.length()-1)));
 		}
 		return new VCFMeta(metaKey, remainder);
-	}
-	
-	// FIXME - this belongs in a VCFVariantCollection, if anywhere...
-	public VCFMeta addMeta(String line) {
-		// FIXME - use system eol character
-		metaHeaders.append(line).append('\n');
-		VCFMeta meta = parseVCFMeta(line);
-		parsedHeaders.add(meta);
-		if ("INFO".equals(meta.getMetaKey())) {
-			infoHeaders.put(meta.getValue("ID"), meta);
-		}
-		if ("FORMAT".equals(meta.getMetaKey())) {
-			formatHeaders.put(meta.getValue("ID"), meta);
-		}
-		return meta;
-	}
-	
-	private void parseColHeader(String line) {
-		if (!line.startsWith(VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
-			throw new RuntimeException("Problem reading VCF file\nExpected: " +
-					VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS + "Found:    " + line);
-		}
-		colHeaders = line;
-		String [] headers = line.split("\t", -1);
-		int numFixed = VCFFixedColumns.values().length;
-		samples = new String[headers.length - numFixed];
-		for (int i = numFixed; i < headers.length; i++) {
-			samples[i-numFixed] = headers[i];
-		}
 	}
 
 	@Override

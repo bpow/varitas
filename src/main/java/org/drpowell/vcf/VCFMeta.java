@@ -17,6 +17,10 @@ import java.util.Map;
  * @see http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41
  * @author bpow
  */
+/**
+ * @author bpow
+ *
+ */
 public class VCFMeta {
 
 	private String metaKey;
@@ -38,15 +42,27 @@ public class VCFMeta {
 		return singleValue;
 	}
 
+	/**
+	 * Constructor for metadata that is just a key
+	 */
+	public VCFMeta(String line) {
+		this.metaKey = line;
+	}
+
+	/**
+	 * Constructor for simple ##key=value line  (like the initial VCF line)
+	 */
 	public VCFMeta(String metaKey, String value) {
 		this.metaKey = metaKey;
 		singleValue = value;
 	}
 	
+	/**
+	 * Constructor for a line where a key points to a dictionary (like INFO and FORMAT lines)
+	 */
 	public VCFMeta(String metaKey, LinkedHashMap<String, String> values) {
 		this.metaKey = metaKey;
 		this.values = values;
-		id = values.get("ID");
 	}
 	
 	public String toString() {

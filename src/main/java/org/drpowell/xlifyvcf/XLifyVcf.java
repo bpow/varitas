@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
@@ -30,6 +31,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.drpowell.varitas.CompoundMutationFilter;
+import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFVariant;
@@ -40,7 +42,7 @@ public class XLifyVcf {
 	private final CreationHelper createHelper;
 	private final Map<String, VCFMeta> infos;
 	private final Map<String, VCFMeta> formats;
-	private final String [] samples;
+	private final List<String> samples;
 	private final String [] headers;
 	private final Sheet dataSheet;
 	private int rowNum = 0;
@@ -66,16 +68,17 @@ public class XLifyVcf {
 		workbook = new HSSFWorkbook();
 		createHelper = workbook.getCreationHelper();
 		vcfParser = input;
-		formats = vcfParser.formats();
+		VCFHeaders vcfHeaders = input.getHeaders();
+		formats = vcfParser.getHeaders().formats();
 		// TODO - fix this kludge in adding filter for biallelic mutations within genes
-		if (vcfParser.samples().length == 3) {
+		if (vcfParser.getHeaders().getSamples().size() == 3) {
 			applyBiallelicFilter = true;
-			vcfParser.addMeta("##INFO=<ID=BIALLELIC,Number=0,Type=Flag,Description=\"variant participates in biallelic non-reference inheritance in a gene\">");
+			vcfHeaders.add(VCFParser.parseVCFMeta("##INFO=<ID=BIALLELIC,Number=0,Type=Flag,Description=\"variant participates in biallelic non-reference inheritance in a gene\">"));
 		} else {
 			applyBiallelicFilter = false;
 		}
-		infos = vcfParser.infos();
-		samples = vcfParser.samples();
+		infos = vcfParser.getHeaders().infos();
+		samples = vcfHeaders.getSamples();
 		headers = makeHeaders();
 		makeMetaSheet();
 		dataSheet = setupDataSheet();
@@ -83,7 +86,7 @@ public class XLifyVcf {
 	
 	private String [] makeHeaders() {
 		numericColumns = new BitSet();
-		ArrayList<String> out = new ArrayList<String>(Arrays.asList(vcfParser.getColHeaderLine().split("\t", -1)));
+		ArrayList<String> out = new ArrayList<String>(Arrays.asList(vcfParser.getHeaders().getColumnHeaderLine().split("\t", -1)));
 		numericColumns.set(1);
 		numericColumns.set(5);
 		headerComments = new HashMap<String, String>();
@@ -163,9 +166,9 @@ public class XLifyVcf {
 	
 	private void makeMetaSheet() {
 		Sheet metaSheet = workbook.createSheet("metadata");
-		String [] headers = vcfParser.getMetaHeaders().split("\n");
-		for (int i = 0; i < headers.length; i++) {
-			metaSheet.createRow(i).createCell(0).setCellValue(headers[i]);
+		List<VCFMeta> headers = vcfParser.getHeaders();
+		for (int i = 0; i < headers.size(); i++) {
+			metaSheet.createRow(i).createCell(0).setCellValue(headers.get(i).toString());
 		}
 	}
 	
@@ -174,7 +177,7 @@ public class XLifyVcf {
 		ArrayList<String> data = new ArrayList<String>(headers.length);
 		Row r = dataSheet.createRow(rowNum);
 		data.addAll(Arrays.asList(v.toString().split("\t", -1)));
-		for (String i : vcfParser.infos().keySet()) {
+		for (String i : vcfParser.getHeaders().infos().keySet()) {
 			data.add(v.getInfoField(i));
 		}
 		String [] calls = v.getCalls();
@@ -183,7 +186,7 @@ public class XLifyVcf {
 		for (int i = 0; i < callFormat.length; i++) {
 			formatIndices.put(callFormat[i], i);
 		}
-		if (calls.length == samples.length) {
+		if (calls.length == samples.size()) {
 			for (String call: calls) {
 				String [] subfields = call.split(":");
 				for (String k: formats.keySet()) {

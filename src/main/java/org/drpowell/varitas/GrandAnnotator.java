@@ -20,6 +20,7 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.drpowell.tabix.TabixReader;
+import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFVariant;
 
@@ -111,14 +112,16 @@ public class GrandAnnotator {
 	
 	public void annotateVCFFile(BufferedReader input) throws IOException {
 		VCFParser parser = new VCFParser(input);
-		System.out.print(parser.getMetaHeaders());
+		for (VCFMeta meta: parser.getHeaders()) {
+			System.out.println(meta);
+		}
 		// add additional info lines
 		for (Annotator annotator: annotators) {
 			for (String infoLine: annotator.infoLines()) {
 				System.out.println(infoLine);
 			}
 		}
-		System.out.println(parser.getColHeaderLine());
+		System.out.println(parser.getHeaders().getColumnHeaderLine());
 
 		for (VCFVariant variant: parser) {
 			for (Annotator annotator: annotators) {
