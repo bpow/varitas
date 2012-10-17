@@ -2,6 +2,7 @@ package org.drpowell.xlifyvcf;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -31,29 +32,42 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.drpowell.varitas.CLIRunnable;
 import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFVariant;
 
-public class XLifyVcf {
+import com.sampullara.cli.Args;
+import com.sampullara.cli.Argument;
+
+public class XLifyVcf implements CLIRunnable {
 	public final Workbook workbook;
-	public final VCFParser vcfParser;
+	private VCFParser vcfParser;
 	private final CreationHelper createHelper;
-	private final Map<String, VCFMeta> infos;
-	private final Map<String, VCFMeta> formats;
-	private final List<String> samples;
-	private final String [] headers;
-	private final Sheet dataSheet;
+	private Map<String, VCFMeta> infos;
+	private Map<String, VCFMeta> formats;
+	private List<String> samples;
+	private String [] headers;
+	private Sheet dataSheet;
 	private int rowNum = 0;
 	private BitSet numericColumns;
 	private CellStyle hlink_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
-	private final boolean applyBiallelicFilter;
+	private boolean applyBiallelicFilter;
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	private Map<String, String> headerComments;
+	
+	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
+	private String[] filters;
+	
+	@Argument(alias = "i", description = "input file of variants (VCF format)")
+	private String input;
+	
+	@Argument(alias = "o", description = "output (.xls) file")
+	private String output;
 	
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
@@ -65,11 +79,14 @@ public class XLifyVcf {
 		HyperlinkColumn(String url) { this.url = url; };
 	}
 	
-	public XLifyVcf(VCFParser input) {
+	public XLifyVcf() {
 		workbook = new HSSFWorkbook();
 		createHelper = workbook.getCreationHelper();
-		vcfParser = input;
-		VCFHeaders vcfHeaders = input.getHeaders();
+	}
+	
+	protected XLifyVcf initialize(VCFParser parser) {
+		vcfParser = parser;
+		VCFHeaders vcfHeaders = parser.getHeaders();
 		formats = vcfParser.getHeaders().formats();
 		// TODO - fix this kludge in adding filter for biallelic mutations within genes
 		if (vcfParser.getHeaders().getSamples().size() == 3) {
@@ -83,6 +100,7 @@ public class XLifyVcf {
 		headers = makeHeaders();
 		makeMetaSheet();
 		dataSheet = setupDataSheet();
+		return this;
 	}
 	
 	private String [] makeHeaders() {
@@ -245,8 +263,13 @@ public class XLifyVcf {
 	}
 	
 	public void doWork() {
-		Reader r = new InputStreamReader(ClassLoader.getSystemResourceAsStream("defaultVariantFilter.js"));
-		Iterator<VCFVariant> variants = new ScriptVCFFilter(vcfParser.iterator(), r);
+		Iterator<VCFVariant> variants = vcfParser.iterator();
+		if (filters != null) {
+			for (String filter : filters) {
+				Reader r = new InputStreamReader(ClassLoader.getSystemResourceAsStream(filter));
+				variants = new ScriptVCFFilter(variants, r);
+			}
+		}
 		//Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
 		if (applyBiallelicFilter) {
 			variants = new CompoundMutationFilter(variants);
@@ -267,24 +290,38 @@ public class XLifyVcf {
 		workbook.write(out);
 	}
 	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) throws IOException {
-        FileOutputStream output = new FileOutputStream(args[0]);
-        BufferedReader input;
-        if (args.length > 1) {
-            if (args[1].endsWith(".gz")) {
-                input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(args[1]))));
-            } else {
-                input = new BufferedReader(new FileReader(args[1]));
-            }
-        } else {
-            input = new BufferedReader(new InputStreamReader(System.in));
-        }
-		XLifyVcf xlv = new XLifyVcf(new VCFParser(input));
-		xlv.doWork();
-		xlv.writeOutput(output);
+	public void doMain(List<String> extraArgs) {
+		if (input == null && !extraArgs.isEmpty()) {
+			input = extraArgs.remove(0);
+		}
+		if (input == null) {
+			input = "-";
+		}
+		if (output == null && !extraArgs.isEmpty()) {
+			output = extraArgs.remove(0);
+		}
+		if (input == null || output == null) {
+			Args.usage(this);
+			System.exit(1);
+		}
+		try {
+			BufferedReader reader;
+			if ("-".equals(input)) {
+				reader = new BufferedReader(new InputStreamReader(System.in));
+			}
+			if (input.endsWith(".gz")) {
+				reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(input))));
+			} else {
+				reader = new BufferedReader(new FileReader(input));
+			}
+			initialize(new VCFParser(reader)).doWork();
+			OutputStream os = new FileOutputStream(output);
+			writeOutput(os);
+			os.close();
+		} catch (Exception e) {
+			System.err.println(e);
+			Args.usage(this);
+		}
 	}
 
 }

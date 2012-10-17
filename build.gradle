@@ -5,7 +5,7 @@ apply plugin: 'application'
 sourceCompatibility = '1.6'
 targetCompatibility = '1.6'
 
-mainClassName = 'org.drpowell.varitas.GrandAnnotator'
+mainClassName = 'org.drpowell.varitas.Main'
 
 repositories {
 	mavenCentral()
@@ -13,6 +13,7 @@ repositories {
 
 dependencies {
 	compile files(file('lib').listFiles())
+	compile 'com.github.spullara.cli-parser:cli-parser:1.1'
 	compile 'org.apache.poi:poi:3.8'
 }
 
@@ -22,5 +23,5 @@ task wrapper(type: Wrapper) {
 
 jar {
 	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-	manifest { attributes 'Main-Class': 'org.drpowell.varitas.GrandAnnotator' }
+	manifest { attributes 'Main-Class': 'org.drpowell.varitas.Main' }
 }
