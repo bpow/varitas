@@ -1,10 +1,10 @@
 package org.drpowell.vcf;
 
-import java.util.AbstractCollection;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class VCFMemoryCollection extends AbstractCollection<VCFVariant> {
+public class VCFMemoryCollection extends AbstractList<VCFVariant> {
 	private final ArrayList<VCFVariant> variants = new ArrayList<VCFVariant>();
 	private VCFHeaders headers;
 	
@@ -27,6 +27,11 @@ public class VCFMemoryCollection extends AbstractCollection<VCFVariant> {
 	@Override
 	public int size() {
 		return variants.size();
+	}
+
+	@Override
+	public VCFVariant get(int index) {
+		return variants.get(index);
 	}
 
 }
