@@ -84,10 +84,6 @@ dbNSFP2.0b3_variant.gz: dbNSFP2.0b3.zip
 		unzip -p $< dbNSFP2.0b3_variant.chr$$chrom | tr -d \\r ; \
 	done | bgzip -c > $@
 
-dbNSFP2.0b3: dbNSFP2.0b3_variant.gz
-	tabix -s1 -b2 -e2 $<
-	date >>dbNSFP2.0b3
-
 dbNSFP1.3.zip:
 	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP1.3.zip)
 	echo "URL: $($@_URL)" >> dbNSFP1.3.dllog
