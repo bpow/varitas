@@ -6,7 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
+
+import org.drpowell.vcf.VCFVariant;
 
 public class GenePresenceAnnotator extends Annotator {
 	public final String fileName;

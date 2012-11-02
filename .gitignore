@@ -1,3 +1,9 @@
 /nbproject/private/
 /dist/
 /build/
+/.gradle/
+data/*.gz
+data/*.tbi
+data/*.dllog
+/*.iml
+/.*

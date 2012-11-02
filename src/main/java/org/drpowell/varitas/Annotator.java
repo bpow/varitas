@@ -1,6 +1,7 @@
 package org.drpowell.varitas;
 
-import java.util.Map;
+import org.drpowell.vcf.VCFVariant;
+
 
 public abstract class Annotator {
 	

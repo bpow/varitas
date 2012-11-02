@@ -1,16 +1,19 @@
 package org.drpowell.varitas;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.drpowell.vcf.VCFVariant;
+
 public class GeneAnnotator extends Annotator {
-	public final String fileName;
+	public final URL fileURL;
 	public final String annotatorName;
 	private final HashMap<String, Map<String, String> > data = new HashMap<String, Map<String, String> >();
 	private int keyColumn = 0;
@@ -19,9 +22,9 @@ public class GeneAnnotator extends Annotator {
 	private boolean hasHeader = false;
 	private String [] headers;
 	
-	public GeneAnnotator(String annotatorName, String inputFile) throws IOException {
+	public GeneAnnotator(String annotatorName, URL input) throws IOException {
 		this.annotatorName = annotatorName;
-		fileName = inputFile;
+		fileURL = input;
 	}
 	
 	private final void ensureUninitialized() {
@@ -38,14 +41,14 @@ public class GeneAnnotator extends Annotator {
 			}
 			FixedKeysMapFactory<String, String> mapFactory = new FixedKeysMapFactory<String, String>(fieldMap.values());
 			try {
-				BufferedReader br = new BufferedReader(new FileReader(fileName));
+				BufferedReader reader = new BufferedReader(new InputStreamReader(fileURL.openStream()));
 				String line = null;
 				if (hasHeader) {
-					if ((line = br.readLine()) != null) {
+					if ((line = reader.readLine()) != null) {
 						headers = line.split("\\t", -1);
 					}
 				}
-				while ((line = br.readLine()) != null) {
+				while ((line = reader.readLine()) != null) {
 					String [] row = line.split("\\t", -1);
 					// FIXME - use apache CSV or something else to allow for more than just tsv files
 					Map<String, String> map = mapFactory.newMap();
@@ -54,7 +57,7 @@ public class GeneAnnotator extends Annotator {
 					}
 					data.put(row[keyColumn], map);
 				}
-				br.close();
+				reader.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 				throw new RuntimeException(e);
@@ -113,13 +116,12 @@ public class GeneAnnotator extends Annotator {
 		LinkedList<String> l = new LinkedList<String>();
 		for (Entry<Integer, String> field : fieldMap.entrySet()) {
 			int colIndex = field.getKey();
-			String description = "column " + Integer.toString(colIndex + 1) + " from " + fileName; 
 			StringBuilder sb = new StringBuilder(100);
 			sb.append("##INFO=<ID=").append(field.getValue()).append(",Number=1,Type=String,Description=\"");
 			if (headers != null && headers.length >= colIndex) {
 				sb.append(headers[colIndex]).append(", ");
 			}
-			sb.append("column ").append(field.getKey()+1).append(" from ").append(fileName).append("\">");
+			sb.append("column ").append(field.getKey()+1).append(" from ").append(fileURL.getFile()).append("\">");
 			l.add(sb.toString());
 		}
 		return l;
@@ -127,7 +129,7 @@ public class GeneAnnotator extends Annotator {
 	
 	@Override
 	public String toString() {
-		return "GeneAnnotator: " + fileName;
+		return "GeneAnnotator: " + fileURL;
 	}
 
 }

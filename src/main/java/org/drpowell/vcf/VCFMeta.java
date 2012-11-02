@@ -1,4 +1,4 @@
-package org.drpowell.varitas;
+package org.drpowell.vcf;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,7 +18,7 @@ import java.util.Map;
  * @author bpow
  */
 public class VCFMeta {
-	
+
 	private String metaKey;
 	private LinkedHashMap<String, String> values = null;
 	private String singleValue = null;
@@ -32,60 +32,32 @@ public class VCFMeta {
 		return this;
 	}
 	
-	/**
-	 * 
-	 * @param key
-	 * @return
-	 */
 	public String getValue(String key) {
 		if (values != null) return values.get(key);
 		return singleValue;
 	}
 
-	private VCFMeta(String keyOnly) {
-		this.metaKey = keyOnly;
-		values = null;
+	/**
+	 * Constructor for metadata that is just a key
+	 */
+	public VCFMeta(String line) {
+		this.metaKey = line;
 	}
-	
-	private VCFMeta(String metaKey, String value) {
+
+	/**
+	 * Constructor for simple ##key=value line  (like the initial VCF line)
+	 */
+	public VCFMeta(String metaKey, String value) {
 		this.metaKey = metaKey;
-		if (value.startsWith("<") && value.endsWith(">")) {
-			values = parseMultipleValues(value.substring(1, value.length()-1));
-		} else {
-			singleValue = value;
-		}
+		singleValue = value;
 	}
 	
 	/**
-	 * 
-	 * @param values
+	 * Constructor for a line where a key points to a dictionary (like INFO and FORMAT lines)
 	 */
 	public VCFMeta(String metaKey, LinkedHashMap<String, String> values) {
 		this.metaKey = metaKey;
 		this.values = values;
-	}
-	
-	private LinkedHashMap<String, String> parseMultipleValues(String multiValues) {
-		String [] keyvalues = multiValues.split(",");
-		LinkedHashMap<String, String> result = new LinkedHashMap<String, String>(keyvalues.length * 5 % 4);
-		String prev = null;
-		for (String s : keyvalues) {
-			if (prev != null) {
-				s = prev + "," + s;
-				prev = null;
-			}
-			if ((s.indexOf('"') >= 0 ) && ((s.endsWith("\\\"") || !s.endsWith("\"")))) {
-				prev = s;
-			} else {
-				int eq = s.indexOf("=");
-				if (eq > 0) {
-					result.put(s.substring(0, eq), s.substring(eq+1));
-				} else {
-					result.put(s, "");
-				}
-			}
-		}
-		return result;
 	}
 	
 	public String toString() {
@@ -102,31 +74,11 @@ public class VCFMeta {
 		return sb.toString();
 	}
 
-	/**
-	 * 
-	 * @param line
-	 * @return
-	 */
-	public static VCFMeta fromLine(String line) {
-		if (line.startsWith("##")) {
-			line = line.substring(2);
-		}
-		int eq = line.indexOf("=");
-		if (eq <= 0) {
-			return new VCFMeta(line);
-		}
-		String metaKey = line.substring(0, eq);
-		String remainder = line.substring(eq+1);
-		return new VCFMeta(metaKey, remainder);
-	}
-
-	/**
-	 * 
-	 * @param key
-	 * @param value
-	 * @return
-	 */
 	public String putValue(String key, String value) {
 		return values.put(key, value);
+	}
+	
+	public String getId() {
+		return values.get("ID");
 	}
 }

@@ -11,7 +11,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Reader;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
@@ -19,18 +21,30 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-public class GrandAnnotator {
+import org.drpowell.tabix.TabixReader;
+import org.drpowell.vcf.VCFMeta;
+import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFVariant;
+
+import com.sampullara.cli.Args;
+import com.sampullara.cli.Argument;
+
+public class Varitas implements CLIRunnable {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
 	private static Logger logger = Logger.getLogger("org.drpowell.varitas.GrandAnnotator");
-	private final File configFile;
-	private final File configParent;
 
-	public GrandAnnotator(String configFileName) throws IOException, ScriptException {
+	@Argument(alias = "c", description = "Configuration file (javascript)")
+	private String config;
+	
+	private File configFile;
+	private File configParent;
+
+	protected void initialize(String configFileName) throws IOException, ScriptException {
 		configFile = new File(configFileName);
 		configParent = configFile.getParentFile();
 		annotators = readConfigFromJS(new BufferedReader(new FileReader(configFile)));
 	}
-
+	
 	private ArrayList<Annotator> readConfigFromJS(Reader jsReader) throws ScriptException {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
@@ -43,31 +57,15 @@ public class GrandAnnotator {
 		return annotators;
 	}
 	
-	private String findExistingFile(String f) {
-		if (new File(f).exists()) return f;
-		File attempt = new File(configParent, f);
-		logger.config("Trying " + attempt.getPath());
-		if (attempt.exists()) return attempt.getPath();
-		attempt = new File(System.getProperty("user.dir"), f);
-		logger.config("Trying " + attempt.getPath());
-		if (attempt.exists()) return attempt.getPath();
-		attempt = new File(System.getProperty("user.home"), f);
-		logger.config("Trying " + attempt.getPath());
-		if (attempt.exists()) return attempt.getPath();
-		
-		// give up and return f-- this will probably error later
-		return f;
-	}
-	
 	public GeneAnnotator addGeneAnnotator(String id, String fileName) {
-		fileName = findExistingFile(fileName);
+		URL url = Main.findExistingFile(fileName);
 		try {
-			GeneAnnotator annotator = new GeneAnnotator(id, fileName);
+			GeneAnnotator annotator = new GeneAnnotator(id, url);
 			annotators.add(annotator);
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			logger.severe(ioe.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
 	}
@@ -80,41 +78,43 @@ public class GrandAnnotator {
 	}
 
 	public TabixVCFAnnotator addVCFAnnotator(String fileName, String fieldString) {
-		fileName = findExistingFile(fileName);
+		URL url = Main.findExistingFile(fileName);
 		try {
-			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(fileName), fieldString);
+			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(url.getFile()), fieldString);
 			annotators.add(annotator);
 			return annotator;
 		} catch (IOException e) {
 			e.printStackTrace();
-			logger.severe(e.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + e.toString());
 		}
 		return null;
 	}
 
 	public TabixTSVAnnotator addTSVAnnotator(String fileName, String fieldString) {
-		fileName = findExistingFile(fileName);
+		URL url = Main.findExistingFile(fileName);
 		try {
-			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(fileName), fieldString);
+			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(url.getFile()), fieldString);
 			annotators.add(annotator);
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			logger.severe(ioe.toString());
+			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
 	}
 	
 	public void annotateVCFFile(BufferedReader input) throws IOException {
 		VCFParser parser = new VCFParser(input);
-		System.out.print(parser.getMetaHeaders());
+		for (VCFMeta meta: parser.getHeaders()) {
+			System.out.println(meta);
+		}
 		// add additional info lines
 		for (Annotator annotator: annotators) {
 			for (String infoLine: annotator.infoLines()) {
 				System.out.println(infoLine);
 			}
 		}
-		System.out.println(parser.getColHeaders());
+		System.out.println(parser.getHeaders().getColumnHeaderLine());
 
 		for (VCFVariant variant: parser) {
 			for (Annotator annotator: annotators) {
@@ -125,27 +125,31 @@ public class GrandAnnotator {
 		System.out.flush();
 	}
 
-	public static void main(String[] args) throws Exception {
-		GrandAnnotator annotator = new GrandAnnotator(args[0]);
+	public void doMain(List<String> extraArgs) {
+		Varitas annotator = new Varitas();
 
 		FileOutputStream fdout = new FileOutputStream(FileDescriptor.out);
 		BufferedOutputStream bos = new BufferedOutputStream(fdout, 1024);
 		PrintStream ps = new PrintStream(bos, false);
 		System.setOut(ps);
 		
-		BufferedReader input;
-		if (args.length > 1) {
-			if (args[1].endsWith(".gz")) {
-				input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(args[1]))));
+		try {
+			BufferedReader input;
+			if (extraArgs.size() > 1) {
+				if (extraArgs.get(1).endsWith(".gz")) {
+					input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(extraArgs.get(1)))));
+				} else {
+					input = new BufferedReader(new FileReader(extraArgs.get(1)));
+				}
 			} else {
-				input = new BufferedReader(new FileReader(args[1]));
+				input = new BufferedReader(new InputStreamReader(System.in));
 			}
-		} else {
-			input = new BufferedReader(new InputStreamReader(System.in));
+			annotator.annotateVCFFile(input);
+			ps.close();
+		} catch (Exception e) {
+			System.err.println(e);
+			Args.usage(this);
 		}
-		annotator.annotateVCFFile(input);
-		ps.close();
 	}
-
 
 }

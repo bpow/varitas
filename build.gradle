@@ -1,0 +1,27 @@
+defaultTasks 'install'
+
+apply plugin: 'application'
+
+sourceCompatibility = '1.6'
+targetCompatibility = '1.6'
+
+mainClassName = 'org.drpowell.varitas.Main'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile files(file('lib').listFiles())
+	compile 'com.github.spullara.cli-parser:cli-parser:1.1'
+	compile 'org.apache.poi:poi:3.8'
+}
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '1.2'
+}
+
+jar {
+	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+	manifest { attributes 'Main-Class': 'org.drpowell.varitas.Main' }
+}
