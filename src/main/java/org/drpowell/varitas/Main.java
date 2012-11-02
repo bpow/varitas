@@ -17,11 +17,17 @@ public class Main {
 		XLifyVcf.class
 	};
 	
-	public static URL findExistingFile(String f) {
+	public static URL findExistingFile(String f, File... otherDirectories) {
 		try {
 			if (new File(f).exists()) return new File(f).toURI().toURL();
 			Logger logger = Logger.getLogger("VARITAS");
-			File attempt = new File(System.getProperty("user.dir"), f);
+			File attempt;
+			for (File dir : otherDirectories) {
+				attempt = new File(dir, f);
+				logger.config("Trying " + attempt.getPath());
+				if (attempt.exists()) return attempt.toURI().toURL();
+			}
+			attempt = new File(System.getProperty("user.dir"), f);
 			logger.config("Trying " + attempt.getPath());
 			if (attempt.exists()) return attempt.toURI().toURL();
 

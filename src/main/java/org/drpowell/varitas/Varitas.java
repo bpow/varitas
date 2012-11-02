@@ -5,6 +5,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -36,6 +37,12 @@ public class Varitas implements CLIRunnable {
 	@Argument(alias = "c", description = "Configuration file (javascript)")
 	private String config;
 	
+	@Argument(alias = "i", description = "Input file (VCF format, default is stdin)")
+	private String infile;
+	
+	@Argument(alias = "o", description = "Output file (VCF format, default is stdout)")
+	private String outfile;
+	
 	private File configFile;
 	private File configParent;
 
@@ -58,7 +65,7 @@ public class Varitas implements CLIRunnable {
 	}
 	
 	public GeneAnnotator addGeneAnnotator(String id, String fileName) {
-		URL url = Main.findExistingFile(fileName);
+		URL url = Main.findExistingFile(fileName, configParent);
 		try {
 			GeneAnnotator annotator = new GeneAnnotator(id, url);
 			annotators.add(annotator);
@@ -78,7 +85,7 @@ public class Varitas implements CLIRunnable {
 	}
 
 	public TabixVCFAnnotator addVCFAnnotator(String fileName, String fieldString) {
-		URL url = Main.findExistingFile(fileName);
+		URL url = Main.findExistingFile(fileName, configParent);
 		try {
 			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(url.getFile()), fieldString);
 			annotators.add(annotator);
@@ -91,7 +98,7 @@ public class Varitas implements CLIRunnable {
 	}
 
 	public TabixTSVAnnotator addTSVAnnotator(String fileName, String fieldString) {
-		URL url = Main.findExistingFile(fileName);
+		URL url = Main.findExistingFile(fileName, configParent);
 		try {
 			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(url.getFile()), fieldString);
 			annotators.add(annotator);
@@ -126,25 +133,35 @@ public class Varitas implements CLIRunnable {
 	}
 
 	public void doMain(List<String> extraArgs) {
-		Varitas annotator = new Varitas();
 
-		FileOutputStream fdout = new FileOutputStream(FileDescriptor.out);
-		BufferedOutputStream bos = new BufferedOutputStream(fdout, 1024);
-		PrintStream ps = new PrintStream(bos, false);
+		PrintStream ps;
+		if (outfile != null) {
+			try {
+				ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(outfile), 1024));
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+				throw new RuntimeException("Unable to write to " + outfile);
+			}
+		} else {
+			FileOutputStream fdout = new FileOutputStream(FileDescriptor.out);
+			BufferedOutputStream bos = new BufferedOutputStream(fdout, 1024);
+			ps = new PrintStream(bos, false);
+		}
 		System.setOut(ps);
 		
 		try {
 			BufferedReader input;
-			if (extraArgs.size() > 1) {
-				if (extraArgs.get(1).endsWith(".gz")) {
-					input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(extraArgs.get(1)))));
+			if (infile != null) {
+				if (infile.endsWith(".gz")) {
+					input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(infile))));
 				} else {
-					input = new BufferedReader(new FileReader(extraArgs.get(1)));
+					input = new BufferedReader(new FileReader(infile));
 				}
 			} else {
 				input = new BufferedReader(new InputStreamReader(System.in));
 			}
-			annotator.annotateVCFFile(input);
+			initialize(config);
+			annotateVCFFile(input);
 			ps.close();
 		} catch (Exception e) {
 			System.err.println(e);
