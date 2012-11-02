@@ -46,8 +46,13 @@ public class Main {
 					CLIRunnable command = (CLIRunnable) c.newInstance();
 					String [] commandArgs = new String[args.length - 1];
 					System.arraycopy(args, 1, commandArgs, 0, commandArgs.length);
-					List<String> extras = Args.parse(command, commandArgs);
-					command.doMain(extras);
+					try {
+						List<String> extras = Args.parse(command, commandArgs);
+						command.doMain(extras);
+					} catch (IllegalArgumentException iae) {
+						Args.usage(System.err, command);
+						System.exit(-1);
+					}
 					System.exit(0);
 				}
 			}
