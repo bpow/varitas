@@ -327,7 +327,7 @@ public class TabixReader
 				if ((s = readLine()) != null) {
 					curr_off = mFp.getFilePointer();
 					if (s.length() == 0 || s.startsWith(meta)) continue;
-					String [] row = s.split("\t",-1);
+					String [] row = s.split("\t");
 					TIntv intv;
 					try {
 						intv = getIntv(row);
