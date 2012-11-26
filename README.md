@@ -21,6 +21,12 @@ VARITAS aims to be:
   R-tree based interval indexing. Some trade-offs for speed were made to
   maintain portability.
 
+Compilation
+-----------
+
+A [gradle](http://gradle.org) build wrapper is provided. After code is checkout out from github, from within the working directory one can run:
+    ./gradlew
+(or `gradlew.bat` for windows systems). This will create an executatble .jar file as `build/libs/varitas.jar`. This jar file includes all of the library dependencies, so it can be copied elsewhere (or to a different computer) and still run fine.
 
 Usage:
 ------
