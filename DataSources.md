@@ -70,7 +70,7 @@ License:
 ESP6500 (NIEHS GO ESP)
 ----------------------
 
-URL: http://evs.gs.washington.edu/evs_bulk_data/ESP6500.snps.vcf.tar.gz
+URL: http://evs.gs.washington.edu/evs_bulk_data/ESP6500SI.snps_indels.vcf.tar.gz
 
 PostProcess: untgz, combine, bgzip, index
 
@@ -102,11 +102,11 @@ Info: http://evs.gs.washington.edu/niehsExome/
 dbNSFP
 ------
 
-URL: http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b3.zip
+URL: http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b4.zip
 
 PostProcess: unzip, combine, bgzip, index
 
-README: http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b3.readme.txt
+README: http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b4.readme.txt
 
 Info: https://sites.google.com/site/jpopgen/dbNSFP
 

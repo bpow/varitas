@@ -1,6 +1,6 @@
 .PHONY: all
 
-.SECONDARY: dbNSFP2.0b3.zip dbNSFP1.3.zip ESP6500.snps.vcf.tar.gz
+.SECONDARY: dbNSFP2.0b4.zip dbNSFP1.3.zip ESP6500SI.snps_indels.vcf.tar.gz
 
 all: TGwMAF ncbiSNP137 CG54 ESP6500 dbNSFP2.0b3
 	@echo WARNING-- not making target niehs95 because it requires manual downloads
@@ -59,30 +59,35 @@ niehs.95samples.polymorphic.filtered.indels.vcf.gz niehs.95samples.polymorphic.f
 
 ESP6500: ESP6500.vcf.dllog
 
-ESP6500.vcf.gz:
-	$(eval $@_URL:=http://evs.gs.washington.edu/evs_bulk_data/ESP6500.snps.vcf.tar.gz)
+ESP6500SI.snps_indels.vcf.tar.gz:
+	$(eval $@_URL:=http://evs.gs.washington.edu/evs_bulk_data/ESP6500SI.snps_indels.vcf.tar.gz)
 	echo "URL: $($@_URL)" >> ESP6500.vcf.dllog
 	curl -O "$($@_URL)"
+
+ESP6500.vcf.gz: ESP6500SI.snps_indels.vcf.tar.gz
 	TMPDIR=$(shell mktemp -d) && \
-	tar -C $$TMPDIR xzf ESP6500.snps.vcf.tar.gz && \
-	for chrom in `seq 1 22` X ; do \
-		cat "$$TMPDIR/ESP6500.chr$${chrom}.snps.vcf"; \
+	tar -C $$TMPDIR -xzf ESP6500SI.snps_indels.vcf.tar.gz && \
+	for chrom in `seq 1 22` X Y; do \
+		cat "$$TMPDIR/ESP6500SI.chr$${chrom}.snps_indels.vcf"; \
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 
-dbNSFP2.0b3: dbNSFP2.0b3_variant.dllog
+dbNSFP2.0b4: dbNSFP2.0b4_variant.dllog
 
-dbNSFP2.0b3.zip:
-	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b3.zip)
-	echo "URL: $($@_URL)" >> dbNSFP2.0b3_variant.dllog
+dbNSFP2.0b4.zip:
+	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b4.zip)
+	echo "URL: $($@_URL)" >> dbNSFP2.0b4_variant.dllog
 	curl -A "UA" -O "$($@_URL)"
-	echo "md5sum of download:" >> dbNSFP2.0b3_variant.dllog
-	md5sum $@ >> dbNSFP2.0b3_variant.dllog
+	echo "md5sum of download:" >> dbNSFP2.0b4_variant.dllog
+	md5sum $@ >> dbNSFP2.0b4_variant.dllog
 
-dbNSFP2.0b3_variant.gz: dbNSFP2.0b3.zip
+dbNSFP2.0b4_variant.gz: dbNSFP2.0b4.zip
 	for chrom in `seq 1 22` X Y; do \
-		unzip -p $< dbNSFP2.0b3_variant.chr$$chrom | tr -d \\r ; \
+		unzip -p $< dbNSFP2.0b4_variant.chr$$chrom | tr -d \\r ; \
 	done | bgzip -c > $@
+
+dbNSFP2.0b4_variant.gz.tbi: dbNSFP2.0b4_variant.gz
+	tabix -s1 -b2 -e2 $<
 
 dbNSFP1.3.zip:
 	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP1.3.zip)
