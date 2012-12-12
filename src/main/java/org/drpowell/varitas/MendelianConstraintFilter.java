@@ -9,12 +9,12 @@ import org.drpowell.util.FilteringIterator;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
 public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 
-	// index into the sample array
-	private int child = -1, father = -1, mother = -1;
+	private List<int []> trios;
 	
 	/**
 	 * PL and GL fields in VCF/BCF are defined to have ordering:
@@ -50,28 +50,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	}
 	
 	public MendelianConstraintFilter parsePedigree(VCFHeaders headers) {
-		List<String> samples = headers.getSamples();
-		for (VCFMeta meta : headers) {
-			if ("PEDIGREE".equals(meta.getMetaKey())) {
-				int childId = samples.indexOf(meta.getValue("Child"));
-				int fatherId = samples.indexOf(meta.getValue("Father"));
-				int motherId = samples.indexOf(meta.getValue("Mother"));
-				if (childId >= 0 &&
-					fatherId >= 0 &&
-					motherId >= 0) {
-					child = childId;
-					father = fatherId;
-					mother = motherId;
-					return this;
-				}
-			}
-		}
-		// FIXME-- should log or throw exception if unsuccessful?
-		if (samples.size() != 3) {
-			throw new RuntimeException("Unable to infer pedigree relationship");
-		}
-		// FIXME-- hack for the lazy who do not want to put pedigree lines in
-		child = 0; father = 1; mother = 2;
+		trios = VCFUtils.getTrioIndices(headers);
 		return this;
 	}
 
@@ -83,64 +62,71 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	 */
 	@Override
 	public boolean filter(VCFVariant element) {
+		boolean any = false; // will be set to true if any trios return true;
+		// FIXME - have option to only return variants with at least one MV
 		String [] calls = element.getCalls();
 		int plIndex = findPL(element.getFormat().split(":"));
 		if (plIndex < 0) {
 			//FIXME - should I log this?
-			return true;
+			return true; // or false?
 		}
-		int [] childPL = callToPL(calls[child], plIndex);
-		int [] fatherPL = callToPL(calls[father], plIndex);
-		int [] motherPL = callToPL(calls[mother], plIndex);
-		if (null == childPL || null == fatherPL || null == motherPL) {
-			// at least one of the family members does not have PL information
-			element.putInfo("NOPL", null);
-			return true;
-		}
+		// FIXME - handle GL instead of PL when available (for freebayes)
+		for (int [] trio : trios) {
+			int [] childPL = callToPL(calls[trio[0]], plIndex);
+			int [] fatherPL = callToPL(calls[trio[1]], plIndex);
+			int [] motherPL = callToPL(calls[trio[2]], plIndex);
+			if (null == childPL || null == fatherPL || null == motherPL) {
+				// at least one of the family members does not have PL information
+				element.putInfo("NOPL", null);
+				continue;
+			}
 
-		long minUnconstrained = Long.MAX_VALUE;
-		int [] gtUnconstrained = {0, 0, 0};
-		long minConstrained = Long.MAX_VALUE;
-		int [] gtConstrained = {0, 0, 0};
-		
-		ArrayList<Double> constrainedLikelihoods = new ArrayList<Double>(30);
-		ArrayList<Double> unconstrainedLikelihoods = new ArrayList<Double>(30);
-		
-		// FIXME - could skip this for common cases (look if the zeros in plc, plf, plm do not violate mendelian constraints)
-		for (int c = 0; c < childPL.length; c++) {
-			int ca = PL_TO_ALLELES[c];
-			for (int f = 0; f < fatherPL.length; f++) {
-				int fa = PL_TO_ALLELES[f];
-				for (int m = 0; m < motherPL.length; m++) {
-					int ma = PL_TO_ALLELES[m];
-					int sum = childPL[c] + fatherPL[f] + motherPL[m];
-					if ( (((fa|ma)&ca) == ca) && (fa&ca) > 0 && (ma&ca) > 0 ) {
-						// OK by mendelian rules
-						// if (sum == 0) return true; // special-case: ML genotype is not mendelian violation
-						if (sum < minConstrained) {
-							minConstrained = sum;
-							gtConstrained[0] = c; gtConstrained[1] = f; gtConstrained[2] = m;
+			long minUnconstrained = Long.MAX_VALUE;
+			int [] gtUnconstrained = {0, 0, 0};
+			long minConstrained = Long.MAX_VALUE;
+			int [] gtConstrained = {0, 0, 0};
+			
+			ArrayList<Double> constrainedLikelihoods = new ArrayList<Double>(30);
+			ArrayList<Double> unconstrainedLikelihoods = new ArrayList<Double>(30);
+			
+			// FIXME - could skip this for common cases (look if the zeros in plc, plf, plm do not violate mendelian constraints)
+			for (int c = 0; c < childPL.length; c++) {
+				int ca = PL_TO_ALLELES[c];
+				for (int f = 0; f < fatherPL.length; f++) {
+					int fa = PL_TO_ALLELES[f];
+					for (int m = 0; m < motherPL.length; m++) {
+						int ma = PL_TO_ALLELES[m];
+						int sum = childPL[c] + fatherPL[f] + motherPL[m];
+						if ( (((fa|ma)&ca) == ca) && (fa&ca) > 0 && (ma&ca) > 0 ) {
+							// OK by mendelian rules
+							// if (sum == 0) return true; // special-case: ML genotype is not mendelian violation
+							if (sum < minConstrained) {
+								minConstrained = sum;
+								gtConstrained[0] = c; gtConstrained[1] = f; gtConstrained[2] = m;
+							}
+							constrainedLikelihoods.add(sum/-10.0);
+						} else {
+							// violation
+							if (sum < minUnconstrained) {
+								minUnconstrained = sum;
+								gtUnconstrained[0] = c; gtUnconstrained[1] = f; gtUnconstrained[2] = m;
+							}
+							unconstrainedLikelihoods.add(sum/10.0);
 						}
-						constrainedLikelihoods.add(sum/-10.0);
-					} else {
-						// violation
-						if (sum < minUnconstrained) {
-							minUnconstrained = sum;
-							gtUnconstrained[0] = c; gtUnconstrained[1] = f; gtUnconstrained[2] = m;
-						}
-						unconstrainedLikelihoods.add(sum/10.0);
 					}
 				}
 			}
+			// FIXME - need to handle multiple trios better
+			if (minConstrained > minUnconstrained) {
+				any = true;
+				element.putInfo("MVCLR", minConstrained - minUnconstrained);
+				// FIXME-- this is not doing what I think it should...
+				element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
+				element.putInfo("UNCGT", joinGenotypes(gtUnconstrained));
+				element.putInfo("CONGT", joinGenotypes(gtConstrained));
+			}			
 		}
-		if (minConstrained > minUnconstrained) {
-			element.putInfo("MVCLR", minConstrained - minUnconstrained);
-			// FIXME-- this is not doing what I think it should...
-			element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
-			element.putInfo("UNCGT", joinGenotypes(gtUnconstrained));
-			element.putInfo("CONGT", joinGenotypes(gtConstrained));
-		}
-		return true;
+		return true; // should probably be 'return any;'
 	}
 
 	private double calcLogLikelihoodRatio(ArrayList<Double> constrainedSums, ArrayList<Double> unconstrainedSums) {

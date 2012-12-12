@@ -4,19 +4,29 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.drpowell.util.Grouper;
+import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
 public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	
 	private final Grouper<String, VCFVariant> grouper;
 	private Iterator<VCFVariant> filteredVariants;
+	private final int [] trioIndices;
 
-	public CompoundMutationFilter(Iterator<VCFVariant> delegate) {
+	public CompoundMutationFilter(Iterator<VCFVariant> delegate, int [] trioIndices) {
+		this.trioIndices = trioIndices;
 		grouper = new VCFGeneGrouper().setDelegate(delegate);
 		advanceGroup();
+	}
+
+	// FIXME - handle multiple trios somehow...
+	public CompoundMutationFilter(Iterator<VCFVariant> delegate, VCFHeaders headers) {
+		this(delegate, VCFUtils.getTrioIndices(headers).get(0));
 	}
 	
 	private void advanceGroup() {
@@ -27,12 +37,12 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		int transmitted[] = {0, 0};
 		for (VCFVariant v : groupedVariants) {
 			String [] calls = v.getCalls();
-			int alt0 = countAltAlleles(calls[0]);
+			int alt0 = countAltAlleles(calls[trioIndices[0]]);
 			if (alt0 == 0) {
 				continue;
 				// proband unknown or homozygous reference
 			}
-			int alt1 = countAltAlleles(calls[1]), alt2 = countAltAlleles(calls[2]);
+			int alt1 = countAltAlleles(calls[trioIndices[1]]), alt2 = countAltAlleles(calls[trioIndices[2]]);
 			if (alt0 == 2) {
 				if (alt1 < 2 && alt2 < 2) {
 					transmitted[0]++;
@@ -105,7 +115,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		VCFParser p = new VCFParser(argv[0]);
 		
 		int yes = 0, no = 0;
-		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator()); cmf.hasNext();) {
+		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), p.getHeaders()); cmf.hasNext();) {
 			VCFVariant v = cmf.next();
 			if (v.hasInfo("BIALLELIC")) {
 				System.out.println(v);

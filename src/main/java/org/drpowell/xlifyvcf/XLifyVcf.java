@@ -272,7 +272,7 @@ public class XLifyVcf implements CLIRunnable {
 		}
 		//Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
 		if (applyBiallelicFilter) {
-			variants = new CompoundMutationFilter(variants);
+			variants = new CompoundMutationFilter(variants, vcfParser.getHeaders());
 		}
 		while (variants.hasNext()) {
 			writeRow(variants.next());
