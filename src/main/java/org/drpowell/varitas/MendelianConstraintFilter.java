@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.drpowell.util.FilteringIterator;
 import org.drpowell.vcf.VCFHeaders;
-import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;

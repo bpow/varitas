@@ -1,7 +1,6 @@
 package org.drpowell.util;
 
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
 	private final Iterator<E> delegate;
