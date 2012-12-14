@@ -23,6 +23,7 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import org.drpowell.tabix.TabixReader;
+import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFVariant;
@@ -152,17 +153,14 @@ public class Varitas implements CLIRunnable {
 		try {
 			BufferedReader input;
 			if (infile != null) {
-				if (infile.endsWith(".gz")) {
-					input = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(infile))));
-				} else {
-					input = new BufferedReader(new FileReader(infile));
-				}
+				input = GunzipIfGZipped.filenameToBufferedReader(infile);
 			} else {
 				input = new BufferedReader(new InputStreamReader(System.in));
 			}
 			initialize(config);
 			annotateVCFFile(input);
 			ps.close();
+			input.close();
 		} catch (Exception e) {
 			System.err.println(e);
 			Args.usage(this);

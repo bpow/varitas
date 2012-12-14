@@ -1,11 +1,13 @@
 package org.drpowell.varitas;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.drpowell.util.FilteringIterator;
+import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
@@ -199,7 +201,8 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	}
 	
 	public static void main(String argv[]) throws IOException {
-		VCFParser p = new VCFParser(argv[0]);
+		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
+		VCFParser p = new VCFParser(br);
 		
 		int yes = 0, no = 0;
 		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p.iterator(), p.getHeaders());
@@ -212,6 +215,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				no++;
 			}
 		}
+		br.close();
 		System.out.println(String.format("%d mendelian violations,  %d otherwise", yes, no));
 	}
 

@@ -1,11 +1,13 @@
 package org.drpowell.varitas;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
 import org.drpowell.util.Grouper;
+import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
@@ -111,7 +113,8 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	}
 	
 	public static void main(String argv[]) throws IOException {
-		VCFParser p = new VCFParser(argv[0]);
+		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
+		VCFParser p = new VCFParser(br);
 		
 		int yes = 0, no = 0;
 		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), p.getHeaders()); cmf.hasNext();) {
@@ -123,6 +126,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 				no++;
 			}
 		}
+		br.close();
 		System.out.println(String.format("%d biallelic mutations,  %d otherwise", yes, no));
 	}
 
