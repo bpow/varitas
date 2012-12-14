@@ -3,43 +3,21 @@ package org.drpowell.util;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public abstract class FilteringIterator<E> implements Iterator<E> {
-	private E nextValue;
+public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
 	private final Iterator<E> delegate;
 	
 	public abstract boolean filter(E element);
 	
 	public FilteringIterator(Iterator<E> client) {
 		delegate = client;
-		advance();
 	}
-	
-	private E advance() {
-		E curr = nextValue;
-		nextValue = null;
+
+	protected E computeNext() {
 		while (delegate.hasNext()) {
-			nextValue = delegate.next();
-			if (filter(nextValue)) break;
-			nextValue = null;
+			E nextValue = delegate.next();
+			if (filter(nextValue)) return nextValue;
 		}
-		return curr;
-	}
-
-	@Override
-	public boolean hasNext() {
-		return nextValue != null;
-	}
-
-	@Override
-	public E next() {
-		E res = advance();
-		if (res == null) throw new NoSuchElementException();
-		return res;
-	}
-
-	@Override
-	public void remove() {
-		throw new UnsupportedOperationException();
+		return endOfData();
 	}
 
 }

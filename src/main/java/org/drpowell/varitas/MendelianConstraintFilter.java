@@ -45,15 +45,11 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		32800, 32832, 32896, 33024, 33280, 33792, 34816, 36864, 40960,
 		49152, 32768 };
 	
-	public MendelianConstraintFilter(Iterator<VCFVariant> client) {
+	public MendelianConstraintFilter(Iterator<VCFVariant> client, VCFHeaders headers) {
 		super(client);
+		trios = VCFUtils.getTrioIndices(headers);
 	}
 	
-	public MendelianConstraintFilter parsePedigree(VCFHeaders headers) {
-		trios = VCFUtils.getTrioIndices(headers);
-		return this;
-	}
-
 	/**
 	 * executed for its side effect of annotating with constrained vs. unconstrained likelihood ratio
 	 * 
@@ -72,6 +68,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		}
 		// FIXME - handle GL instead of PL when available (for freebayes)
 		for (int [] trio : trios) {
+			if (trio[0] < 0 || trio[1] < 1 || trio[2] < 0) continue;
 			int [] childPL = callToPL(calls[trio[0]], plIndex);
 			int [] fatherPL = callToPL(calls[trio[1]], plIndex);
 			int [] motherPL = callToPL(calls[trio[2]], plIndex);
@@ -206,7 +203,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		VCFParser p = new VCFParser(argv[0]);
 		
 		int yes = 0, no = 0;
-		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p.iterator()).parsePedigree(p.getHeaders());
+		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p.iterator(), p.getHeaders());
 				mcf.hasNext();) {
 			VCFVariant v = mcf.next();
 			if (v.hasInfo("MENDELLR")) {
