@@ -18,7 +18,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 
 	private List<int []> trios;
 	
-	private static VCFMeta[] additionalHeaders = {
+	public static VCFMeta[] ADDITIONAL_HEADERS = {
 			VCFParser.parseVCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
@@ -177,6 +177,10 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	public static void main(String argv[]) throws IOException {
 		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
 		VCFParser p = new VCFParser(br);
+		VCFHeaders h = p.getHeaders();
+		for (VCFMeta m : ADDITIONAL_HEADERS) { h.add(m); }
+		System.out.print(h.toString());
+		System.out.print(h.dataHeader());
 		
 		int yes = 0, no = 0;
 		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p.iterator(), p.getHeaders());

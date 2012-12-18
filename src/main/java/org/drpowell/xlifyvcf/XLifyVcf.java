@@ -33,9 +33,11 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.drpowell.varitas.CLIRunnable;
 import org.drpowell.varitas.CompoundMutationFilter;
+import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
 import com.sampullara.cli.Args;
@@ -54,7 +56,6 @@ public class XLifyVcf implements CLIRunnable {
 	private BitSet numericColumns;
 	private CellStyle hlink_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
-	private boolean applyBiallelicFilter;
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	private Map<String, String> headerComments;
@@ -67,6 +68,12 @@ public class XLifyVcf implements CLIRunnable {
 	
 	@Argument(alias = "o", description = "output (.xls) file")
 	private String output;
+	
+	@Argument(alias = "b", description = "apply biallelic filter")
+	private static Boolean applyBiallelic = false;
+	
+	@Argument(alias = "m", description = "apply mendelian constraint filter")
+	private static Boolean applyMendelianConstraint = false;
 	
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
@@ -86,15 +93,14 @@ public class XLifyVcf implements CLIRunnable {
 	protected XLifyVcf initialize(VCFParser parser) {
 		vcfParser = parser;
 		VCFHeaders vcfHeaders = parser.getHeaders();
-		formats = vcfParser.getHeaders().formats();
-		// TODO - fix this kludge in adding filter for biallelic mutations within genes
-		if (vcfParser.getHeaders().getSamples().size() == 3) {
-			applyBiallelicFilter = true;
-			vcfHeaders.add(VCFParser.parseVCFMeta("##INFO=<ID=BIALLELIC,Number=0,Type=Flag,Description=\"variant participates in biallelic non-reference inheritance in a gene\">"));
-		} else {
-			applyBiallelicFilter = false;
+		if (applyBiallelic) {
+			vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADER));
 		}
-		infos = vcfParser.getHeaders().infos();
+		if (applyMendelianConstraint) {
+			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
+		}
+		formats = vcfHeaders.formats();
+		infos = vcfHeaders.infos();
 		samples = vcfHeaders.getSamples();
 		headers = makeHeaders();
 		makeMetaSheet();
@@ -269,10 +275,18 @@ public class XLifyVcf implements CLIRunnable {
 				variants = new ScriptVCFFilter(variants, r);
 			}
 		}
-		//Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
-		if (applyBiallelicFilter) {
-			variants = new CompoundMutationFilter(variants, vcfParser.getHeaders());
+		if (applyBiallelic) {
+			VCFHeaders headers = vcfParser.getHeaders();
+			List<int []> trios = VCFUtils.getTrioIndices(headers);
+			// FIXME-- only handles a single trio
+			if (!trios.isEmpty()) {
+				variants = new CompoundMutationFilter(variants, trios.get(0));
+			}
 		}
+		if (applyMendelianConstraint) {
+			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
+		}
+		//Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
 		while (variants.hasNext()) {
 			writeRow(variants.next());
 			// TODO: progress

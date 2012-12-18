@@ -9,6 +9,7 @@ import java.util.Iterator;
 import org.drpowell.util.Grouper;
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
@@ -18,6 +19,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	private final Grouper<String, VCFVariant> grouper;
 	private Iterator<VCFVariant> filteredVariants;
 	private final int [] trioIndices;
+	public static final VCFMeta ADDITIONAL_HEADER = VCFParser.parseVCFMeta("##INFO=<ID=BIALLELIC,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant inherited from each parent.\">");
 
 	public CompoundMutationFilter(Iterator<VCFVariant> delegate, int [] trioIndices) {
 		this.trioIndices = trioIndices;
@@ -115,9 +117,13 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	public static void main(String argv[]) throws IOException {
 		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
 		VCFParser p = new VCFParser(br);
+		VCFHeaders headers = p.getHeaders();
+		headers.add(ADDITIONAL_HEADER);
+		System.out.print(headers);
+		System.out.print(headers.dataHeader());
 		
 		int yes = 0, no = 0;
-		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), p.getHeaders()); cmf.hasNext();) {
+		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), headers); cmf.hasNext();) {
 			VCFVariant v = cmf.next();
 			if (v.hasInfo("BIALLELIC")) {
 				System.out.println(v);

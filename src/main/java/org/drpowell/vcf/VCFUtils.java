@@ -29,12 +29,13 @@ public class VCFUtils {
 	public static List<int []> getTrioIndices(VCFHeaders headers) {
 		List<int []> output = new LinkedList<int []>();
 		List<String> samples = headers.getSamples();
+		METALINE:
 		for (VCFMeta meta : headers) {
 			if ("PEDIGREE".equals(meta.getMetaKey())) {
 				FamilialTrio trio = new FamilialTrio(meta.getValue("Child"), meta.getValue("Father"), meta.getValue("Mother"));
 				int [] indices = trio.getIndices(samples);
 				for (int i = 0; i < indices.length; i++) {
-					if (indices[i] < 0) continue;
+					if (indices[i] < 0) continue METALINE;
 				}
 				output.add(indices);
 			}
