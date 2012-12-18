@@ -41,4 +41,14 @@ public class VCFUtils {
 		}
 		return output;
 	}
+	
+	public static double[] parseDoubleList(String csv) {
+		if (".".equals(csv)) return new double[0];
+		String [] stringVals = csv.split(",");
+		double [] res = new double[stringVals.length];
+		for (int i = 0; i < res.length; i++) {
+			res[i] = Double.parseDouble(stringVals[i]);
+		}
+		return res;
+	}
 }

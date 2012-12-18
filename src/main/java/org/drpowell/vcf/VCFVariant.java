@@ -20,6 +20,7 @@ public class VCFVariant {
 	private int start; // fixme should this be final?
 	private int end;
 	private static final Boolean INFO_FLAG_TRUE = new Boolean(true);
+	private volatile double [][] logLikelihoods;
 	
 	public VCFVariant(String line) {
 		this(line.split("\t", -1));
@@ -147,6 +148,73 @@ public class VCFVariant {
 	
 	public String getFormat() {
 		return row[VCFParser.VCFFixedColumns.FORMAT.ordinal()];		
+	}
+	
+	private final int findFormatItemIndex(String key) {
+		String [] format = getFormat().split(":");
+		for (int i = 0; i < format.length; i++) {
+			if (key.equals(format[i])) return i;
+		}
+		return -1;
+	}
+	
+	public static int[] PLfromGL(double [] GLs) {
+	    final int[] pls = new int[GLs.length];
+	    int min = 255;
+	    for ( int i = 0; i < GLs.length; i++ ) {
+	        pls[i] = Math.min((int) Math.round(-10 * GLs[i]), 255);
+	        min = Math.min(pls[i], min);
+	    }
+	    for ( int i = 0; i < GLs.length; i++ ) {
+	    	pls[i] -= min;
+	    }
+	    return pls;
+	}
+	
+	private double [][] extractLikelihoods() {
+		// i indexes sample, j indexes individual likelihood
+		boolean foundGL = false;
+		int index = findFormatItemIndex("GL");
+		if (index >= 0) {
+			foundGL = true;
+		} else {
+			index = findFormatItemIndex("PL");
+			if (index < 0) {
+				// didn't find GL or PL... but if we were to return 'null', someone might try again
+				return new double[0][0];
+			}
+		}
+		String [] calls = getCalls();
+		double [][] res = new double[calls.length][];
+		for (int i = 0; i < res.length; i++) {
+			String [] callFields = calls[i].split(":");
+			if (index >= callFields.length) {
+				// no call for this sample
+				res[i] = null;
+			} else {
+				res[i] = VCFUtils.parseDoubleList(callFields[index]);
+				if (!foundGL) {
+					for (int j = 0; j < res[i].length; j++) {
+						res[i][j] /= -10.0;
+					}
+				}
+			}
+		}
+		return res;
+	}
+	
+	public double [][] getGenotypeLikelihoods() {
+		double [][] result = logLikelihoods;
+		if (null == result) {
+			synchronized(this) {
+				result = logLikelihoods;
+				if (null == result) {
+					result = logLikelihoods = extractLikelihoods();
+				}
+			}
+		}
+		if (result.length == 0) return null;
+		return result;
 	}
 	
 	public List<String> getRow() {
