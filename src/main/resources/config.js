@@ -10,7 +10,7 @@ addVCFAnnotator("data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vc
     "AMR_AF,ASN_AF,AFR_AF,EUR_AF,AF=TGAF")
 addVCFAnnotator("data/ncbiSNP137.vcf.gz", 
     "SCS,GMAF,PM,G5A,G5").setCopyID(true)
-addVCFAnnotator("data/ESP6500.vcf.gz",
+addVCFAnnotator("data/ESP6500SI.vcf.gz",
     "MAF=ESPMAF,GTS,EA_GTC,AA_GTC,FG,GM,AA,AAC,PP,CDP,CG,GS,CA,DP=ESPDP,GL=ESPGL")
 addVCFAnnotator("data/Complete_Public_Genomes_54genomes_VQHIGH.vcf.gz",
     "AF=CG54AF").setAddChr(true).setRequirePass(true)
