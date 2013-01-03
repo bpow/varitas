@@ -321,8 +321,7 @@ public class XLifyVcf implements CLIRunnable {
 			BufferedReader reader;
 			if ("-".equals(input)) {
 				reader = new BufferedReader(new InputStreamReader(System.in));
-			}
-			if (input.endsWith(".gz")) {
+			} else if (input.endsWith(".gz")) {
 				reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(input))));
 			} else {
 				reader = new BufferedReader(new FileReader(input));
