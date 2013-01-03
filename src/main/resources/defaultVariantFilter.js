@@ -14,15 +14,15 @@ function filter(v) {
 importClass(java.lang.System)
 
 function filterImpact(v) {
-	var impact = v.getInfoField("IMPACT");
+	var impact = v.getInfoValue("IMPACT");
 	//System.err.println("impact: " + impact)
 	if (impact == null) return false;
 	return (impact.equals("HIGH") || impact.equals("MODERATE"))
 }
 
 function filterLessThan(v, key, cutoff) {
-	var val = v.getInfoField(key)
+	var val = v.getInfoValue(key)
 	//System.err.println(key + ": " + val)
 	// the convoluted use of "not greater than" to cause NaN values to result in "true"
-	return !(parseFloat(v.getInfoField(key)) > cutoff)
+	return !(parseFloat(v.getInfoValue(key)) > cutoff)
 }
