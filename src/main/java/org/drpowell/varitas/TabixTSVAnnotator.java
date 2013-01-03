@@ -48,7 +48,6 @@ public class TabixTSVAnnotator extends Annotator {
 		String [] row;
 		String ref = variant.getRef();
 		String alt = variant.getAlt();
-		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
 		Iterator<String []> iterator = tabix.getIndex().query(tid, variant.getStart()-1, variant.getEnd());
 		while ((row = iterator.next()) != null) {
@@ -62,7 +61,7 @@ public class TabixTSVAnnotator extends Annotator {
 						// FIXME -- "." is frequently used to represent missing data, but consider whether I should pass it along
 						// FIXME -- think about the best way to handle semicolons in fields (which VCF doesn't like)
 						value = value.replace(";", ",");
-						info.put(entry.getValue(), value);
+						variant.putInfo(entry.getValue(), value);
 					}
 				}
 			}

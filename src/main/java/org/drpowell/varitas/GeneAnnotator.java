@@ -96,13 +96,13 @@ public class GeneAnnotator extends Annotator {
 	
 	@Override
 	public VCFVariant annotate(VCFVariant variant) {
-		String varGenes = (String) variant.getInfo().get("Gene_name");
+		String varGenes = variant.getInfoValue("Gene_name");
 		if (varGenes != null) {
 			for (String vg: varGenes.split(",")) {
 				if (data.containsKey(vg)) {
 					// FIXME - handle multiple matches
 					for (Entry<String, String> entry : data.get(vg).entrySet()) {
-						variant.getInfo().put(entry.getKey(), entry.getValue());
+						variant.putInfo(entry.getKey(), entry.getValue());
 					}
 				}
 			}

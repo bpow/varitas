@@ -62,7 +62,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		}
 		if (transmitted[0] != 0 && transmitted[1] != 0) {
 			for (int i = variantsNotInAParent.size() - 1; i >= 0; i--) {
-				variantsNotInAParent.get(i).putInfo("BIALLELIC", null);
+				variantsNotInAParent.get(i).putInfo("BIALLELIC");
 			}
 		}
 		filteredVariants = groupedVariants.iterator();
@@ -89,7 +89,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	public static class VCFGeneGrouper extends Grouper<String, VCFVariant> {
 		@Override
 		public String keyForValue(VCFVariant v) {
-			String gene = v.getInfoField("Gene_name");
+			String gene = v.getInfoValue("Gene_name");
 			if (gene.isEmpty()) gene = null;
 			return gene;
 		}

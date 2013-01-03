@@ -1,5 +1,8 @@
 package org.drpowell.vcf;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -8,19 +11,25 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
+import java.util.logging.Logger;
+
 /**
  * Representation of a single row of a VCF file
+ * 
+ * INFO flag fields will have a 'null' value if set
  * 
  * @author bpow
  */
 public class VCFVariant {
-	private Map<String, Object> info;
+	private Map<String, String[]> info;
 	private String qual;
 	private String [] row;
 	private int start; // fixme should this be final?
 	private int end;
-	private static final Boolean INFO_FLAG_TRUE = new Boolean(true);
+	private boolean urlEncode = true;
 	private volatile double [][] logLikelihoods;
+	private static final String URL_ENCODING = "UTF-8";
+	private static final String [] FLAG_INFO = new String[0];
 	
 	public VCFVariant(String line) {
 		this(line.split("\t", -1));
@@ -33,8 +42,8 @@ public class VCFVariant {
 		info = splitInfoField(row[VCFParser.VCFFixedColumns.INFO.ordinal()]);
 	}
 
-	public static Map<String, Object> splitInfoField(String info) {
-		Map<String, Object> map = new LinkedHashMap<String, Object>();
+	public static Map<String, String[]> splitInfoField(String info) {
+		Map<String, String[]> map = new LinkedHashMap<String, String[]>();
 		if (".".equals(info)) {
 			return map;
 		}
@@ -45,24 +54,24 @@ public class VCFVariant {
 				throw new RuntimeException("Unable to deal with duplicated keys in the INFO field of a VCF");
 			}
 			if (keyvalue.length == 1) {
-				map.put(keyvalue[0], INFO_FLAG_TRUE);
+				map.put(keyvalue[0], FLAG_INFO);
 			} else {
-				map.put(keyvalue[0], keyvalue[1]);
+				map.put(keyvalue[0], keyvalue[1].split(","));
 			}
 		}
 		return map;
 	}
 
-	public static String joinInfo(Map<String, Object> info) {
+	public static String joinInfo(Map<String, String []> info) {
 		if (info.size() == 0) {
 			return ".";
 		}
 		StringBuilder sb = new StringBuilder();
-		for (Entry<String, Object> e: info.entrySet()) {
-			if (e.getValue() == INFO_FLAG_TRUE) {
+		for (Entry<String, String[]> e: info.entrySet()) {
+			if (e.getValue() == FLAG_INFO) {
 				sb.append(e.getKey()).append(";");
 			} else {
-				sb.append(e.getKey()).append("=").append(e.getValue()).append(";");
+				sb.append(e.getKey()).append("=").append(join(",",decodeInfo(false, e.getValue()))).append(";");
 			}
 		}
 		return sb.substring(0, sb.length()-1); // no need for the last semicolon
@@ -75,21 +84,14 @@ public class VCFVariant {
 	 * @param value - if null, then the key is treated as a FLAG field
 	 * @return this VCFVariant, to facilitate chaining
 	 */
-	public VCFVariant putInfo(String key, Object value) {
-		if (value == null) value = INFO_FLAG_TRUE;
-		info.put(key, value);
+	public VCFVariant putInfo(String key, String... values) {
+		if (null != values) {
+			values = encodeInfo(urlEncode, values);
+		}
+		info.put(key, values);
 		return this;
 	}
 
-	/**
-	 * Returns the contents of the info field as a map. This is a reference to the actual map used
-	 * in this VCFVariant, so modifications are not threadsafe and should only be undertaken if you
-	 * really know what you are doing.
-	 */
-	public Map<String, Object> getInfo() {
-		return info;
-	}
-	
 	public Double getQual() {
 		return Double.valueOf(qual);
 	}
@@ -243,19 +245,73 @@ public class VCFVariant {
 		}
 	}
 	
-	public String getInfoField(String key) {
-		Object o = info.get(key);
-		if (o == null) {
-			return "";
-		}
-		if (o == INFO_FLAG_TRUE) {
-			return key;
-		}
-		return o.toString();
+	public String [] getInfoValues(boolean urlDecode, String key) {
+		return decodeInfo(urlDecode, info.get(key));
+	}
+
+	public String getInfoValue(String key) {
+		return getInfoValue(key, true);
+	}
+	
+	/**
+	 * Return the value within the INFO dictionary for a given key, optionally performing urlDecoding
+	 * 
+	 * @param key
+	 * @return null if key not present, "" for flag fields, the encoded value otherwise
+	 */
+	public String getInfoValue(String key, boolean urlDecode) {
+		String [] vals = info.get(key);
+		if (vals == FLAG_INFO) return "";
+		if (vals == null) return null;
+		vals = decodeInfo(urlDecode, vals);
+		return join(",", vals);
 	}
 
 	public boolean hasInfo(String key) {
 		return info.containsKey(key);
 	}
+	
+	public static final String [] decodeInfo(boolean urlDecode, String... values) {
+		if (urlDecode) {
+			String [] decoded = new String[values.length];
+			for (int i = 0; i < values.length; i++) {
+				try {
+					decoded[i] = URLDecoder.decode(values[i], URL_ENCODING);
+				} catch (UnsupportedEncodingException e) {
+					Logger logger = Logger.getLogger("VARITAS");
+					logger.warning("Unable to URL-decode the string: '" + values[i] + "', it will be returned as-is.\n" + e.getMessage());
+					decoded[i] = values[i];
+				}
+			}
+			values = decoded;
+		}
+		return values;
+	}
+	
+	public static final String [] encodeInfo(boolean urlEncode, String... values) {
+		if (urlEncode) {
+			String [] encoded = new String[values.length];
+			for (int i = 0; i < values.length; i++) {
+				try {
+					encoded[i] = URLEncoder.encode(values[i], URL_ENCODING);
+				} catch (UnsupportedEncodingException e) {
+					Logger logger = Logger.getLogger("VARITAS");
+					logger.warning("Unable to URL-encode the string: '" + values[i] + "', it will be returned as-is.\n" + e.getMessage());
+					encoded[i] = values[i];
+				}
+			}
+			values = encoded;
+		}
+		return values;
+	}
 
+	private static String join(String sep, String... strings) {
+		if (strings.length == 0) return "";
+		if (strings.length == 1) return strings[0];
+		StringBuilder sb = new StringBuilder();
+		for (String s: strings) {
+			sb.append(",").append(s);
+		}
+		return sb.substring(1);
+	}
 }

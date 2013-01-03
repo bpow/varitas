@@ -37,12 +37,12 @@ public class GenePresenceAnnotator extends Annotator {
 	
 	@Override
 	public VCFVariant annotate(VCFVariant variant) {
-		String varGenes = (String) variant.getInfo().get("Gene_name");
+		String varGenes = variant.getInfoValue("Gene_name");
 		if (varGenes != null) {
 			for (String vg: varGenes.split(",")) {
 				if (geneNames.contains(vg)) {
 					// FIXME - handle multiple matches
-					variant.getInfo().put(annotatorName, vg);
+					variant.putInfo(annotatorName, vg);
 				}
 			}
 		}

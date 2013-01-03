@@ -12,13 +12,13 @@ public class DefaultVCFFilter extends FilteringIterator<VCFVariant> {
 	}
 
 	public static final boolean filterImpact(VCFVariant v) {
-		String effect = v.getInfoField("IMPACT");
+		String effect = v.getInfoValue("IMPACT");
 		if (effect == null) return false;
 		return "HIGH".equals(effect) || "MODERATE".equals(effect);
 	}
 	
 	public static final boolean filterLessThan(VCFVariant v, String key, double cutoff) {
-		String afString = v.getInfoField(key);
+		String afString = v.getInfoValue(key);
 		if (afString == null || afString.isEmpty() || ".".equals(afString)) return true;
 		try {
 			double d = Double.valueOf(afString);

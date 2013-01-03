@@ -58,7 +58,6 @@ public class TabixVCFAnnotator extends Annotator {
 		int end = variant.getEnd();
 		String ref = variant.getRef();
 		String alt = variant.getAlt();
-		Map<String, Object> info = variant.getInfo();
 		// when using this query form, tabix expects space-based (0-based) coordinates
 		Iterator<String []> iterator = tabix.getIndex().query(tid, start-1, end);
 		while ((resultRow = iterator.next()) != null) {
@@ -72,11 +71,10 @@ public class TabixVCFAnnotator extends Annotator {
 					continue;
 				}
 				// found a match!
-				Map<String, Object> targetInfo = target.getInfo();
 				for (Entry<String, String> e: fieldMap.entrySet()) {
-					if (targetInfo.containsKey(e.getKey())) {
+					if (target.hasInfo(e.getKey())) {
 						// FIXME- should check to prevent duplicates being overwritten
-						info.put(e.getValue(), targetInfo.get(e.getKey()));
+						variant.putInfo(e.getValue(), target.getInfoValue(e.getKey()));
 						if (copyID) {
 							variant.mergeID(target.getID());
 						}

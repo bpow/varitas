@@ -111,17 +111,16 @@ public class SnpEffAnnotationSplitter extends Annotator {
 
 	@Override
 	public VCFVariant annotate(VCFVariant variant) {
-		Map<String, Object> info = variant.getInfo();
-		String effects = (String) info.get(SNPEFF_INFO_TAG);
+		String effects = variant.getInfoValue(SNPEFF_INFO_TAG);
 		if (effects != null) {
 			ArrayList<SNPEffectVCFInfo> effList = new ArrayList<SNPEffectVCFInfo>();
 			for (String s: effects.split(",")) {
 				effList.add(new SNPEffectVCFInfo(s));
 			}
 			Collections.sort(effList);
-			info.put("EFFECT", effList.get(0).effect.toString());
-			info.put("Gene_name", effList.get(0).get(SnpEffAnnotationField.GENE_NAME));
-			info.put("IMPACT", effList.get(0).get(SnpEffAnnotationField.IMPACT));
+			variant.putInfo("EFFECT", effList.get(0).effect.toString());
+			variant.putInfo("Gene_name", effList.get(0).get(SnpEffAnnotationField.GENE_NAME));
+			variant.putInfo("IMPACT", effList.get(0).get(SnpEffAnnotationField.IMPACT));
 			// FIXME = include others in addition to the first...
 		}
 		return variant;

@@ -81,7 +81,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			for (int i = 0; i < trioLL.length; i++) {
 				if (trio[i] >= logLikelihoods.length || (trioLL[i] = logLikelihoods[trio[i]]) == null) {
 					// no likelihood data for this sample
-					element.putInfo("NOPL", null);
+					element.putInfo("NOPL");
 					continue TRIO;
 				}
 			}
