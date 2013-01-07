@@ -162,7 +162,7 @@ public class Varitas implements CLIRunnable {
 			ps.close();
 			input.close();
 		} catch (Exception e) {
-			System.err.println(e);
+			e.printStackTrace();
 			Args.usage(this);
 		}
 	}
