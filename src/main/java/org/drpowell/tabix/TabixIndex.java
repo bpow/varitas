@@ -162,19 +162,19 @@ public class TabixIndex {
 					hyphen >= 0? Integer.parseInt(reg.substring(hyphen+1)) : 0x7fffffff);
 	}
 
-    public GenomicInterval getInterval(final String s[]) {
-		int sequenceId = getIdForChromosome(s[config.seqCol-1]);
+    public GenomicInterval getInterval(final List<String> s) {
+		int sequenceId = getIdForChromosome(s.get(config.seqCol-1));
 		// begin
-		int beg = Integer.parseInt(s[config.beginCol-1]);
+		int beg = Integer.parseInt(s.get(config.beginCol-1));
 		int end = beg;
 		if ((config.preset&TBX_FLAG_UCSC) != 0) ++end;
 		else --beg;
 		if (beg < 0) beg = 0;
 		if (end < 1) end = 1;
 		if ((config.preset&0xffff) == 0) { // generic
-			end = Integer.parseInt(s[config.endCol-1]);
+			end = Integer.parseInt(s.get(config.endCol-1));
 		} else if ((config.preset&0xffff) == TBX_PRESET_SAM) { // SAM
-			String cigar = s[5];
+			String cigar = s.get(5);
 			int cigarLen = 0, i, j;
 			for (i = j = 0; i < cigar.length(); ++i) {
 				if (cigar.charAt(i) > '9') {
@@ -185,10 +185,10 @@ public class TabixIndex {
 			}
 			end = beg + cigarLen;
 		} else if ((config.preset&0xffff) == TBX_PRESET_VCF) { // VCF
-			String ref = s[3];
+			String ref = s.get(3);
 			if (ref.length() > 0) end = beg + ref.length();
 			// check in the INFO field for an END
-			String info = s[7];
+			String info = s.get(7);
 			int endOffsetInInfo = -1;
 			if (info.startsWith("END=")) {
 				endOffsetInInfo = 4;

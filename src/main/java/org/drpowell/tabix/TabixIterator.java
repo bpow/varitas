@@ -48,7 +48,6 @@ import org.drpowell.tabix.TabixIndex.Chunk;
  */
 public class TabixIterator implements Iterator<String []>{
 	private int i;
-	private int tid, beg, end;
 	private long curr_off;
 	private boolean iseof;
 	private final TabixIndex tabix;
@@ -159,7 +158,7 @@ public class TabixIterator implements Iterator<String []>{
 			if ((s = indexedStream.readLine()) != null) {
 				curr_off = indexedStream.getFilePointer();
 				if (s.length() == 0 || s.startsWith(tabix.config.commentString)) continue;
-				String [] row = s.split("\t", -1);
+				DelimitedString row = new DelimitedString(s, '\t');
 				GenomicInterval candidate;
 				try {
 					candidate = tabix.getInterval(row);
@@ -169,7 +168,10 @@ public class TabixIterator implements Iterator<String []>{
 					continue;
 				}
 				if (candidate.getSequenceId() != intv.getSequenceId() || candidate.getBegin() >= intv.getEnd()) break; // no need to proceed
-				else if (candidate.getEnd() > intv.getBegin() && candidate.getBegin() < candidate.getEnd()) return row; // overlap; return
+				else if (candidate.getEnd() > intv.getBegin() && candidate.getBegin() < candidate.getEnd()) {
+					// overlap; return
+					return row.toArray(new String[row.size()]);
+				}
 			} else break; // end of file
 		}
 		} catch (IOException ioe) {

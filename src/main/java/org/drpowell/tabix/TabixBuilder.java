@@ -40,7 +40,6 @@ import org.drpowell.tabix.TabixIndex.TabixConfig;
 
 public class TabixBuilder {
 	private final TabixIndex tabix;
-	private final int maxColOfInterest;
 	private int tidCurr = -1;
 	private BinIndex currBinningIndex = new BinIndex();
 	private LinearIndex currLinearIndex = new LinearIndex();
@@ -50,12 +49,10 @@ public class TabixBuilder {
 	
 	private TabixBuilder(String fileName, TabixConfig config) throws IOException {
 		this.tabix = new TabixIndex(config, new File(fileName));
-		maxColOfInterest = calcMaxCol();
 	}
 
 	private void addLine(final String line, final long startOffset, final long endOffset) {
-		String [] row = new String[maxColOfInterest];
-		StringUtil.split(line, row, '\t');
+		DelimitedString row = new DelimitedString(line, '\t');
 		GenomicInterval intv = tabix.getInterval(row);
 		if (intv.getSequenceId() != tidCurr && tidCurr >= 0) {
 			finishPrevChromosome(tidCurr);
@@ -96,17 +93,6 @@ public class TabixBuilder {
 		// make things as compact as possible...
 		tabix.binningIndex.set(tidPrev, new BinIndex(currBinningIndex));
 		currBinningIndex = new BinIndex();
-	}
-	
-	private final int calcMaxCol() {
-		// as an optimization, what is the largest column which will be used in indexing?
-		if (tabix.config.preset == TabixIndex.TBX_PRESET_VCF) {
-			return 8; // VCF files use the INFO field for ends of structural variants
-		}
-		int max = tabix.config.seqCol;
-		max = Math.max(max, tabix.config.beginCol);
-		max = Math.max(max, tabix.config.endCol);
-		return max;
 	}
 	
 	public void finish() throws IOException {
