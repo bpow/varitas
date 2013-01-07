@@ -44,7 +44,7 @@ public class DelimitedString extends AbstractList<String> {
 			temp[currDelim++] = off;
 			off++;
 		}
-		temp[currDelim] = s.length();
+		temp[currDelim++] = s.length();
 		int [] out = new int[currDelim];
 		System.arraycopy(temp, 0, out, 0, currDelim);
 		return out;
