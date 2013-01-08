@@ -87,6 +87,8 @@ public class VCFVariant {
 	public VCFVariant putInfo(String key, String... values) {
 		if (null != values) {
 			values = encodeInfo(urlEncode, values);
+		} else {
+			values = FLAG_INFO;
 		}
 		info.put(key, values);
 		return this;

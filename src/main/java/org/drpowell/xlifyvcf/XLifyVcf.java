@@ -217,7 +217,11 @@ public class XLifyVcf implements CLIRunnable {
 		Row r = dataSheet.createRow(rowNum);
 		data.addAll(Arrays.asList(v.toString().split("\t", -1)));
 		for (String i : vcfParser.getHeaders().infos().keySet()) {
-			data.add(v.getInfoValue(i, true));
+			String value = v.getInfoValue(i, true);
+			if ("".equals(value)) {
+				value = i; // flag fields should display as something.
+			}
+			data.add(value);
 		}
 		String [] calls = v.getCalls();
 		String [] callFormat = v.getFormat().split(":", -1);
