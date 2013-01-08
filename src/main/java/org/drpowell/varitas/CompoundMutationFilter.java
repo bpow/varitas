@@ -90,7 +90,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		@Override
 		public String keyForValue(VCFVariant v) {
 			String gene = v.getInfoValue("Gene_name");
-			if (gene.isEmpty()) gene = null;
+			if (gene == null || gene.isEmpty()) gene = null;
 			return gene;
 		}
 	}
