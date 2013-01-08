@@ -59,6 +59,7 @@ public class XLifyVcf implements CLIRunnable {
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	private Map<String, String> headerComments;
+	private Iterator<VCFVariant> variants;
 	
 	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
 	private String[] filters;
@@ -93,18 +94,32 @@ public class XLifyVcf implements CLIRunnable {
 	protected XLifyVcf initialize(VCFParser parser) {
 		vcfParser = parser;
 		VCFHeaders vcfHeaders = parser.getHeaders();
-		if (applyBiallelic) {
-			vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADER));
-		}
-		if (applyMendelianConstraint) {
-			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
-		}
 		formats = vcfHeaders.formats();
 		infos = vcfHeaders.infos();
 		samples = vcfHeaders.getSamples();
 		headers = makeHeaders();
 		makeMetaSheet();
 		dataSheet = setupDataSheet();
+		variants = vcfParser.iterator();
+		if (filters != null) {
+			for (String filter : filters) {
+				Reader r = new InputStreamReader(ClassLoader.getSystemResourceAsStream(filter));
+				variants = new ScriptVCFFilter(variants, r);
+			}
+		}
+		if (applyBiallelic) {
+			VCFHeaders headers = vcfParser.getHeaders();
+			List<int []> trios = VCFUtils.getTrioIndices(headers);
+			// FIXME-- only handles a single trio
+			if (!trios.isEmpty()) {
+				variants = new CompoundMutationFilter(variants, trios.get(0));
+				vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADER));
+			}
+		}
+		if (applyMendelianConstraint) {
+			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
+			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
+		}
 		return this;
 	}
 	
@@ -268,25 +283,6 @@ public class XLifyVcf implements CLIRunnable {
 	}
 	
 	public void doWork() {
-		Iterator<VCFVariant> variants = vcfParser.iterator();
-		if (filters != null) {
-			for (String filter : filters) {
-				Reader r = new InputStreamReader(ClassLoader.getSystemResourceAsStream(filter));
-				variants = new ScriptVCFFilter(variants, r);
-			}
-		}
-		if (applyBiallelic) {
-			VCFHeaders headers = vcfParser.getHeaders();
-			List<int []> trios = VCFUtils.getTrioIndices(headers);
-			// FIXME-- only handles a single trio
-			if (!trios.isEmpty()) {
-				variants = new CompoundMutationFilter(variants, trios.get(0));
-			}
-		}
-		if (applyMendelianConstraint) {
-			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
-		}
-		//Iterator<VCFVariant> variants = new DefaultVCFFilter(vcfParser.iterator());
 		while (variants.hasNext()) {
 			writeRow(variants.next());
 			// TODO: progress
