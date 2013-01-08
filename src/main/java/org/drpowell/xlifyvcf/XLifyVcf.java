@@ -327,7 +327,7 @@ public class XLifyVcf implements CLIRunnable {
 			writeOutput(os);
 			os.close();
 		} catch (Exception e) {
-			System.err.println(e);
+			e.printStackTrace();
 			Args.usage(this);
 		}
 	}
