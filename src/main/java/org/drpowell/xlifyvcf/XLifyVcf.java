@@ -94,12 +94,6 @@ public class XLifyVcf implements CLIRunnable {
 	protected XLifyVcf initialize(VCFParser parser) {
 		vcfParser = parser;
 		VCFHeaders vcfHeaders = parser.getHeaders();
-		formats = vcfHeaders.formats();
-		infos = vcfHeaders.infos();
-		samples = vcfHeaders.getSamples();
-		headers = makeHeaders();
-		makeMetaSheet();
-		dataSheet = setupDataSheet();
 		variants = vcfParser.iterator();
 		if (filters != null) {
 			for (String filter : filters) {
@@ -120,6 +114,12 @@ public class XLifyVcf implements CLIRunnable {
 			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
 			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
 		}
+		formats = vcfHeaders.formats();
+		infos = vcfHeaders.infos();
+		samples = vcfHeaders.getSamples();
+		headers = makeHeaders();
+		makeMetaSheet();
+		dataSheet = setupDataSheet();
 		return this;
 	}
 	
