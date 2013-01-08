@@ -120,7 +120,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		VCFHeaders headers = p.getHeaders();
 		headers.add(ADDITIONAL_HEADER);
 		System.out.print(headers);
-		System.out.print(headers.dataHeader());
+		System.out.println(headers.getColumnHeaderLine());
 		
 		int yes = 0, no = 0;
 		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), headers); cmf.hasNext();) {
@@ -133,7 +133,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 			}
 		}
 		br.close();
-		System.out.println(String.format("%d biallelic mutations,  %d otherwise", yes, no));
+		System.err.println(String.format("%d biallelic mutations,  %d otherwise", yes, no));
 	}
 
 }

@@ -68,13 +68,5 @@ public class VCFHeaders extends AbstractList<VCFMeta> {
 		}
 		return sb.toString();
 	}
-	
-	public String dataHeader() {
-		StringBuilder sb = new StringBuilder(VCFParser.VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS);
-		for (String s : samples) {
-			sb.append(s).append("\t");
-		}
-		return sb.append(String.format("%n")).toString();
-	}
 
 }

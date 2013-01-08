@@ -180,7 +180,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		VCFHeaders h = p.getHeaders();
 		for (VCFMeta m : ADDITIONAL_HEADERS) { h.add(m); }
 		System.out.print(h.toString());
-		System.out.print(h.dataHeader());
+		System.out.println(h.getColumnHeaderLine());
 		
 		int yes = 0, no = 0;
 		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p.iterator(), p.getHeaders());
@@ -194,7 +194,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			}
 		}
 		br.close();
-		System.out.println(String.format("%d mendelian violations,  %d otherwise", yes, no));
+		System.err.println(String.format("%d mendelian violations,  %d otherwise", yes, no));
 	}
 
 
