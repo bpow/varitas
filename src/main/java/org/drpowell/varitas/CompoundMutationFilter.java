@@ -32,37 +32,69 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		this(delegate, VCFUtils.getTrioIndices(headers).get(0));
 	}
 	
+	private static final int [] splitAlleles(String call) {
+		// FIXME - assumes GT FORMAT type is present (per VCF spec, if present must be first)
+		if (call.startsWith(".")) {
+			return new int [] {-1, -1};
+		}
+		int gtEnd = call.indexOf(':');
+		if (gtEnd >= 0) {
+			call = call.substring(0, gtEnd);
+		}
+		int delim = call.indexOf('/');
+		if (delim < 0) delim = call.indexOf('|');
+		if (delim < 0) return new int[] {-1, -1};
+		return new int [] { Integer.parseInt(call.substring(0, delim)), Integer.parseInt(call.substring(delim+1)) };
+	}
+	
+	private int indexOf(int needle, int [] haystack) {
+		for (int i = 0; i < haystack.length; i++) {
+			if (needle == haystack[i]) return i;
+		}
+		return -1;
+	}
+	
 	private void advanceGroup() {
 		// time to get the next group of variants...
 		Collection<VCFVariant> groupedVariants = grouper.next();
 		
-		ArrayList<VCFVariant> variantsNotInAParent = new ArrayList<VCFVariant>(groupedVariants.size());
-		int transmitted[] = {0, 0};
+		// FIXME - use predetermined phase information if available
+		
+		// weird negative thinking-- these lists keep track of sites that have a variant that _didn't_ come from either dad or mom
+		ArrayList<VCFVariant> nonPaternal = new ArrayList<VCFVariant>(groupedVariants.size());
+		ArrayList<VCFVariant> nonMaternal = new ArrayList<VCFVariant>(groupedVariants.size());
 		for (VCFVariant v : groupedVariants) {
 			String [] calls = v.getCalls();
-			int alt0 = countAltAlleles(calls[trioIndices[0]]);
-			if (alt0 == 0) {
+			int [] childCall = splitAlleles(calls[trioIndices[0]]);
+			if (childCall[0] <= 0 && childCall[1] <= 0) {
 				continue;
 				// proband unknown or homozygous reference
 			}
-			int alt1 = countAltAlleles(calls[trioIndices[1]]), alt2 = countAltAlleles(calls[trioIndices[2]]);
-			if (alt0 == 2) {
-				if (alt1 < 2 && alt2 < 2) {
-					transmitted[0]++;
-					transmitted[1]++;
-					variantsNotInAParent.add(v);
+			if (childCall[0] > 0 && childCall[1] > 0) {
+				nonPaternal.add(v);
+				nonMaternal.add(v);
+				// FIXME -these may not be all that interesting if one of the parents was already homalt
+			} else {
+				int [] fatherCall = splitAlleles(calls[trioIndices[1]]);
+				int [] motherCall = splitAlleles(calls[trioIndices[2]]);
+				for (int allele: childCall) {
+					if (allele > 0) { // only care about transmission of alt alleles
+						if (indexOf(allele, fatherCall) < 0) {
+							nonPaternal.add(v);
+						}
+						if (indexOf(allele, motherCall) < 0) {
+							nonMaternal.add(v);
+						}
+					}
 				}
-			} else if (alt0 == alt1 && alt0 != alt2) {
-				transmitted[0]++;
-				variantsNotInAParent.add(v);
-			} else if (alt0 == alt2 && alt0 != alt1) {
-				transmitted[1]++;
-				variantsNotInAParent.add(v);
 			}
 		}
-		if (transmitted[0] != 0 && transmitted[1] != 0) {
-			for (int i = variantsNotInAParent.size() - 1; i >= 0; i--) {
-				variantsNotInAParent.get(i).putInfo("BIALLELIC");
+		if (!nonPaternal.isEmpty() && !nonMaternal.isEmpty()) {
+			for (VCFVariant v : nonPaternal) {
+				v.putInfo("BIALLELIC");
+			}
+			for (VCFVariant v : nonMaternal) {
+				v.putInfo("BIALLELIC");
 			}
 		}
 		filteredVariants = groupedVariants.iterator();
@@ -93,25 +125,6 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 			if (gene == null || gene.isEmpty()) gene = null;
 			return gene;
 		}
-	}
-	
-	private static final int countAltAlleles(String call) {
-		int altCount = 0;
-		for (int i = 0, n = call.length(); i < n; i++) {
-			switch (call.charAt(i)) {
-			case ':':
-				return altCount;
-			case '0':
-			case '.':
-			case '/':
-			case '|':
-				break;
-			default:
-				altCount++;
-				break;
-			}
-		}
-		return altCount;
 	}
 	
 	public static void main(String argv[]) throws IOException {
