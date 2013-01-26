@@ -73,6 +73,14 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		return (genotype > 0) && ((genotype & (genotype-1)) == 0);
 	}
 	
+	private String [] stringsFromInts(int [] in) {
+		String [] out = new String[in.length];
+		for (int i = 0; i < out.length; i++) {
+			out[i] = Integer.toString(in[i]);
+		}
+		return out;
+	}
+	
 	/**
 	 * executed for its side effect of annotating with constrained vs. unconstrained likelihood ratio
 	 * 
@@ -95,7 +103,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			for (int i = 0; i < trioLL.length; i++) {
 				if (trio[i] >= logLikelihoods.length || (trioLL[i] = logLikelihoods[trio[i]]) == null) {
 					// no likelihood data for this sample
-					element.putInfo("NOPL", null);
+					element.putInfo("NOPL", (String []) null);
 					continue TRIO;
 				}
 			}
@@ -166,13 +174,13 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				element.putInfo("MVCLR", String.format("%.3g", maxUnconstrained - maxConstrained));
 				// FIXME-- this is not doing what I think it should...
 				element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
-				element.putInfo("UNCGT", joinGenotypes(gtUnconstrained, null));
-				element.putInfo("CONGT", joinGenotypes(gtConstrained, phase));
+				element.putInfo("UNCGT", getGenotypes(gtUnconstrained, null));
+				element.putInfo("CONGT", getGenotypes(gtConstrained, phase));
 			} else {
 				element = element.setPhases(trio, phase);
 			}
 			if (phase[0] != 0 && phase[1] != 0 && phase[2] != 0) {
-				element.putInfo("TRIOPHASE", String.format("%d,%d,%d", phase[0], phase[1], phase[2]));
+				element.putInfo("TRIOPHASE", stringsFromInts(phase));
 				// FIXME - actually change the VCFVariant to reflect the new phase info
 			}
 		}
@@ -200,16 +208,16 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		return max + Math.log10(sum);
 	}
 
-	private String joinGenotypes(int[] genotypePLindices, int [] phase) {
-		StringBuffer sb = new StringBuffer(genotypePLindices.length * 4);
+	private String [] getGenotypes(int[] genotypePLindices, int [] phase) {
+		String [] gts = new String[genotypePLindices.length];
 		for (int i = 0; i < genotypePLindices.length; i++) {
 			if (phase != null && i < phase.length) {
-				sb.append(plIndexToAlleles(genotypePLindices[i], phase[i])).append(",");
+				gts[i] = plIndexToAlleles(genotypePLindices[i], phase[i]);
 			} else {
-				sb.append(plIndexToAlleles(genotypePLindices[i], 0)).append(",");
+				gts[i] = plIndexToAlleles(genotypePLindices[i], 0);
 			}
 		}
-		return sb.substring(0, sb.length()-1);
+		return gts;
 	}
 
 	private final String plIndexToAlleles(int i, int phase) {
