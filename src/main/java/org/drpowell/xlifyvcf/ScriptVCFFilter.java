@@ -34,16 +34,16 @@ public class ScriptVCFFilter extends FilteringIterator<VCFVariant> {
 	}
 
 	@Override
-	public boolean filter(VCFVariant variant) {
-		if (invocable == null) return true;
+	public VCFVariant filter(VCFVariant variant) {
+		if (invocable == null) return variant;
 		try {
-			return (Boolean) invocable.invokeFunction("filter", variant);
+			return (VCFVariant) invocable.invokeFunction("filter", variant);
 		} catch (NoSuchMethodException e) {
 			e.printStackTrace();
-			return true;
+			return variant;
 		} catch (ScriptException e) {
 			e.printStackTrace();
-			return true;
+			return variant;
 		}
 	}
 

@@ -11,37 +11,37 @@ public class DefaultVCFFilter extends FilteringIterator<VCFVariant> {
 		super(variants);
 	}
 
-	public static final boolean filterImpact(VCFVariant v) {
+	public static final VCFVariant filterImpact(VCFVariant v) {
 		String effect = v.getInfoValue("IMPACT");
-		if (effect == null) return false;
-		return "HIGH".equals(effect) || "MODERATE".equals(effect);
+		if (effect == null) return null;
+		return ("HIGH".equals(effect) || "MODERATE".equals(effect)) ? v : null;
 	}
 	
-	public static final boolean filterLessThan(VCFVariant v, String key, double cutoff) {
+	public static final VCFVariant filterLessThan(VCFVariant v, String key, double cutoff) {
 		String afString = v.getInfoValue(key);
-		if (afString == null || afString.isEmpty() || ".".equals(afString)) return true;
+		if (afString == null || afString.isEmpty() || ".".equals(afString)) return v;
 		try {
 			double d = Double.valueOf(afString);
-			return d <= cutoff;
+			return (d <= cutoff) ? v : null;
 		} catch (NumberFormatException nfe) {
 			// nothing to do
 		}
-		return true;
+		return v;
 	}
 	
-	public static boolean filterCombo(VCFVariant v) {
+	public static VCFVariant filterCombo(VCFVariant v) {
 		String vFilter = v.getFilter();
 		double cutoff = 0.01;
 		return (("PASS".equals(vFilter) || ".".equals(vFilter)) &&
-				filterImpact(v) &&
-				filterLessThan(v, "NIEHSAF", cutoff) &&
-				filterLessThan(v, "NIEHSIAF", cutoff) &&
-				filterLessThan(v, "TGAF", cutoff)
-				); 
+				filterImpact(v) != null &&
+				filterLessThan(v, "NIEHSAF", cutoff) != null &&
+				filterLessThan(v, "NIEHSIAF", cutoff) != null &&
+				filterLessThan(v, "TGAF", cutoff) != null
+				) ? v : null;
 	}
 	
 	@Override
-	public boolean filter(VCFVariant v) {
+	public VCFVariant filter(VCFVariant v) {
 		return filterCombo(v);
 	}
 

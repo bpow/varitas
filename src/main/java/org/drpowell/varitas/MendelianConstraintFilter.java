@@ -80,11 +80,10 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	 * @return
 	 */
 	@Override
-	public boolean filter(VCFVariant element) {
-		boolean any = false; // will be set to true if any trios return true;
+	public VCFVariant filter(VCFVariant element) {
 		// FIXME - have option to only return variants with at least one MV
 		double [][] logLikelihoods = element.getGenotypeLikelihoods();
-		if (null == logLikelihoods) return true; // no likelihood info, just pass on through. FIXME-- decide whether to pass or fail
+		if (null == logLikelihoods) return element; // no likelihood info, just pass on through. FIXME-- decide whether to pass or fail
 		TRIO:
 		for (int [] trio : trios) {
 			// FIXME - can sometimes phase when a member of trio is missing
@@ -164,7 +163,6 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			}
 			// FIXME - need to handle multiple trios better
 			if (maxConstrained < maxUnconstrained) {
-				any = true;
 				element.putInfo("MVCLR", String.format("%.3g", maxUnconstrained - maxConstrained));
 				// FIXME-- this is not doing what I think it should...
 				element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
@@ -175,7 +173,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				element.putInfo("TRIOPHASE", String.format("%d,%d,%d", phase));
 			}
 		}
-		return true; // should probably be 'return any;'
+		return element;
 	}
 
 	private double calcLogLikelihoodRatio(ArrayList<Double> constrainedSums, ArrayList<Double> unconstrainedSums) {

@@ -5,7 +5,7 @@ import java.util.Iterator;
 public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
 	private final Iterator<E> delegate;
 	
-	public abstract boolean filter(E element);
+	public abstract E filter(E element);
 	
 	public FilteringIterator(Iterator<E> client) {
 		delegate = client;
@@ -14,7 +14,7 @@ public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
 	protected E computeNext() {
 		while (delegate.hasNext()) {
 			E nextValue = delegate.next();
-			if (filter(nextValue)) return nextValue;
+			if (filter(nextValue) != null) return nextValue;
 		}
 		return endOfData();
 	}
