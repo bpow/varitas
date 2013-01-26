@@ -22,7 +22,8 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			VCFParser.parseVCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">")			
+			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
+			VCFParser.parseVCFMeta("##INFO=<ID=TRIOPHASE,Number=3,Type=Integer,Description=\"Phase of constrained trio genotypes (-1=higher allele first, 1=lower allele first or homozygous, 0=unphased")
 	};
 	
 	/**
@@ -54,9 +55,22 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		32800, 32832, 32896, 33024, 33280, 33792, 34816, 36864, 40960,
 		49152, 32768 };
 	
+	public static final int[] GENOTYPE_CARDINALITY = { 1, 2, 1, 2, 2, 1, 2, 2, 2,
+		1, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2,
+		2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2,
+		2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2,
+		2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2,
+		2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+		2, 1 };
+	
 	public MendelianConstraintFilter(Iterator<VCFVariant> client, VCFHeaders headers) {
 		super(client);
 		trios = VCFUtils.getTrioIndices(headers);
+	}
+	
+	private boolean singleAllele(int genotype) {
+		//return Integer.bitCount(genotype) == 1;
+		return (genotype > 0) && ((genotype & (genotype-1)) == 0);
 	}
 	
 	/**
@@ -73,6 +87,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		if (null == logLikelihoods) return true; // no likelihood info, just pass on through. FIXME-- decide whether to pass or fail
 		TRIO:
 		for (int [] trio : trios) {
+			// FIXME - can sometimes phase when a member of trio is missing
 			if (trio[0] < 0 || trio[1] < 0 || trio[2] < 0) continue;
 			
 			// check that we will have all of the likelihoods we will need
@@ -90,6 +105,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			int [] gtUnconstrained = {0, 0, 0};
 			double maxConstrained = Double.NEGATIVE_INFINITY;
 			int [] gtConstrained = {0, 0, 0};
+			int [] phase = {0, 0, 0}; // for a|b, -1 => b<a, 0 => unphased, 1 => a<=b
 			
 			ArrayList<Double> constrainedLikelihoods = new ArrayList<Double>(30);
 			ArrayList<Double> unconstrainedLikelihoods = new ArrayList<Double>(30);
@@ -108,6 +124,31 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 							if (sum > maxConstrained) {
 								maxConstrained = sum;
 								gtConstrained[0] = c; gtConstrained[1] = f; gtConstrained[2] = m;
+								if (singleAllele(ca)) { // GENOTYPE_CARDINALITY[c] == 1
+									// child homozygous
+									phase[0] = 1;
+									phase[1] = (fa^ca) >= ca ? 1 : -1;
+									phase[2] = (ma^ca) >= ca ? 1 : -1;
+								} else {
+									int father_transmitted = 0;
+									int mother_transmitted = 0;
+									if (singleAllele(fa&ca)) {
+										// only one allele could have come from father
+										father_transmitted = ca&fa;
+										mother_transmitted = ca^father_transmitted;
+									} else if (singleAllele(ma&ca)) {
+										// only one allele could have come from mother
+										mother_transmitted = ca&ma;
+										father_transmitted = ca^mother_transmitted;
+									}
+									if (mother_transmitted > 0 && father_transmitted > 0) {
+										phase[0] = father_transmitted <= mother_transmitted ? 1 : -1;
+										phase[1] = father_transmitted <= (father_transmitted ^ fa) ? 1 : -1;
+										phase[2] = mother_transmitted <= (mother_transmitted ^ fa) ? 1 : -1;
+									} else {
+										phase[0] = phase[1] = phase[2] = 0;
+									}
+								}
 							}
 							constrainedLikelihoods.add(sum);
 						} else {
@@ -129,7 +170,10 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
 				element.putInfo("UNCGT", joinGenotypes(gtUnconstrained));
 				element.putInfo("CONGT", joinGenotypes(gtConstrained));
-			}			
+			}
+			if (phase[0] != 0 && phase[1] != 0 && phase[2] != 0) {
+				element.putInfo("TRIOPHASE", String.format("%d,%d,%d", phase));
+			}
 		}
 		return true; // should probably be 'return any;'
 	}
@@ -158,16 +202,21 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	private String joinGenotypes(int[] genotypePLindices) {
 		StringBuffer sb = new StringBuffer(genotypePLindices.length * 4);
 		for (int i = 0; i < genotypePLindices.length; i++) {
-			sb.append(plIndexToAlleles(genotypePLindices[i])).append(",");
+			sb.append(plIndexToAlleles(genotypePLindices[i], 0)).append(",");
 		}
 		return sb.substring(0, sb.length()-1);
 	}
 
-	private final String plIndexToAlleles(int i) {
-		double tr = (int) Math.floor(triangularRoot(i));
-		int j = i - (int) tr;
-		int k = (int) Math.round((Math.sqrt(1+8*tr)-1)/2);
-		return Integer.toString(j) + "/" + Integer.toString(k);
+	private final String plIndexToAlleles(int i, int phase) {
+		int k = (int) Math.floor(triangularRoot(i));
+		int j = i - (k * (k + 1)) / 2;
+		if (phase == 0) {
+			return Integer.toString(j) + "/" + Integer.toString(k);
+		}
+		if (phase < 0) {
+			j ^= k; k ^= j; j ^= k; // obscure swap
+		}
+		return Integer.toString(j) + "|" + Integer.toString(k);
 	}
 	
 	private final double triangularRoot(double x) {
