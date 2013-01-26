@@ -23,7 +23,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=TRIOPHASE,Number=3,Type=Integer,Description=\"Phase of constrained trio genotypes (-1=higher allele first, 1=lower allele first or homozygous, 0=unphased")
+			VCFParser.parseVCFMeta("##INFO=<ID=TRIOPHASE,Number=3,Type=Integer,Description=\"Phase of constrained trio genotypes (-1=higher allele first or homozygous, 1=lower allele first, 0=unphased\">")
 	};
 	
 	/**
@@ -95,7 +95,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			for (int i = 0; i < trioLL.length; i++) {
 				if (trio[i] >= logLikelihoods.length || (trioLL[i] = logLikelihoods[trio[i]]) == null) {
 					// no likelihood data for this sample
-					element.putInfo("NOPL");
+					element.putInfo("NOPL", null);
 					continue TRIO;
 				}
 			}
@@ -166,14 +166,17 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				element.putInfo("MVCLR", String.format("%.3g", maxUnconstrained - maxConstrained));
 				// FIXME-- this is not doing what I think it should...
 				element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
-				element.putInfo("UNCGT", joinGenotypes(gtUnconstrained));
-				element.putInfo("CONGT", joinGenotypes(gtConstrained));
+				element.putInfo("UNCGT", joinGenotypes(gtUnconstrained, null));
+				element.putInfo("CONGT", joinGenotypes(gtConstrained, phase));
+			} else {
+				element = element.setPhases(trio, phase);
 			}
 			if (phase[0] != 0 && phase[1] != 0 && phase[2] != 0) {
-				element.putInfo("TRIOPHASE", String.format("%d,%d,%d", phase));
+				element.putInfo("TRIOPHASE", String.format("%d,%d,%d", phase[0], phase[1], phase[2]));
+				// FIXME - actually change the VCFVariant to reflect the new phase info
 			}
 		}
-		return element;
+		return element; // FIXME - just returning all variants for now, consider returning only phased or MV
 	}
 
 	private double calcLogLikelihoodRatio(ArrayList<Double> constrainedSums, ArrayList<Double> unconstrainedSums) {
@@ -197,10 +200,14 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		return max + Math.log10(sum);
 	}
 
-	private String joinGenotypes(int[] genotypePLindices) {
+	private String joinGenotypes(int[] genotypePLindices, int [] phase) {
 		StringBuffer sb = new StringBuffer(genotypePLindices.length * 4);
 		for (int i = 0; i < genotypePLindices.length; i++) {
-			sb.append(plIndexToAlleles(genotypePLindices[i], 0)).append(",");
+			if (phase != null && i < phase.length) {
+				sb.append(plIndexToAlleles(genotypePLindices[i], phase[i])).append(",");
+			} else {
+				sb.append(plIndexToAlleles(genotypePLindices[i], 0)).append(",");
+			}
 		}
 		return sb.substring(0, sb.length()-1);
 	}

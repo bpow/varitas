@@ -247,6 +247,45 @@ public class VCFVariant {
 		}
 	}
 	
+	private String phaseCall(String oldCall, int phase) {
+		int delim = oldCall.indexOf('/');
+		if (delim < 0) delim = oldCall.indexOf('|');
+		if (delim < 0) delim = oldCall.indexOf('\\');
+		if (delim < 0) {
+			throw new RuntimeException("Unable to phase [" + oldCall + "] because I could not find a delimiter");
+		}
+		int a = Integer.parseInt(oldCall.substring(0, delim));
+		int b = Integer.parseInt(oldCall.substring(delim+1));
+		if (b < a) {
+			a ^= b; b ^= a; a ^= b; // obscure swap, make sure a is less than b
+		}
+		String outDelim = phase == 0 ? "/" : "|";
+		if (phase < 0) {
+			return Integer.toString(b) + outDelim + Integer.toString(a);
+		} else {
+			return Integer.toString(a) + outDelim + Integer.toString(b);
+		}
+	}
+	
+	public VCFVariant setPhases(int [] sampleIndices, int [] phases) {
+		// TODO - decide if I really want this to be mutable or to return a new VCFVariant
+		if (sampleIndices.length != phases.length) {
+			throw new RuntimeException("attempted to set phases for samplenum != phasenum");
+		}
+		if (!getFormat().startsWith("GT:")) {
+			throw new RuntimeException("GT must be the first element of VCF file per the spec (if present), unable to set phase as requested");
+		}
+		int offset = VCFParser.VCFFixedColumns.SIZE;
+		for (int i = 0; i < phases.length; i++) {
+			String sampleRecord = row[offset + sampleIndices[i]];
+			int colonPos = sampleRecord.indexOf(':');
+			if (colonPos < 0) colonPos = sampleRecord.length();
+			String call = phaseCall(sampleRecord.substring(0, colonPos), phases[i]);
+			row[offset+sampleIndices[i]] = call + sampleRecord.substring(colonPos);
+		}
+		return this;
+	}
+	
 	public String [] getInfoValues(boolean urlDecode, String key) {
 		return decodeInfo(urlDecode, info.get(key));
 	}
