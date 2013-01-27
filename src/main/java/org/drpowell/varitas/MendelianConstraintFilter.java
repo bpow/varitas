@@ -23,7 +23,6 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=TRIOPHASE,Number=3,Type=Integer,Description=\"Phase of constrained trio genotypes (-1=higher allele first or homozygous, 1=lower allele first, 0=unphased\">")
 	};
 	
 	/**
@@ -54,14 +53,6 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		18432, 20480, 24576, 16384, 32769, 32770, 32772, 32776, 32784,
 		32800, 32832, 32896, 33024, 33280, 33792, 34816, 36864, 40960,
 		49152, 32768 };
-	
-	public static final int[] GENOTYPE_CARDINALITY = { 1, 2, 1, 2, 2, 1, 2, 2, 2,
-		1, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2,
-		2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2,
-		2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2,
-		2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2,
-		2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-		2, 1 };
 	
 	public MendelianConstraintFilter(Iterator<VCFVariant> client, VCFHeaders headers) {
 		super(client);
@@ -179,10 +170,6 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			} else {
 				element = element.setPhases(trio, phase);
 			}
-			if (phase[0] != 0 && phase[1] != 0 && phase[2] != 0) {
-				element.putInfo("TRIOPHASE", stringsFromInts(phase));
-				// FIXME - actually change the VCFVariant to reflect the new phase info
-			}
 		}
 		return element; // FIXME - just returning all variants for now, consider returning only phased or MV
 	}
@@ -252,6 +239,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				System.out.println(v);
 				yes++;
 			} else {
+				System.out.println(v);
 				no++;
 			}
 		}
