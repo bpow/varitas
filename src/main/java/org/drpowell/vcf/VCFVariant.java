@@ -1,8 +1,6 @@
 package org.drpowell.vcf;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -10,8 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-
 import java.util.logging.Logger;
+
+import org.drpowell.util.CustomPercentEncoder;
 
 /**
  * Representation of a single row of a VCF file
@@ -30,6 +29,7 @@ public class VCFVariant {
 	private volatile double [][] logLikelihoods;
 	private static final String URL_ENCODING = "UTF-8";
 	private static final String [] FLAG_INFO = new String[0];
+	private static final CustomPercentEncoder INFO_ENCODER = CustomPercentEncoder.allowAsciiPrintable(true).recodeAdditionalCharacters(" ;=".toCharArray());
 	
 	public VCFVariant(String line) {
 		this(line.split("\t", -1));
@@ -316,13 +316,7 @@ public class VCFVariant {
 		if (urlDecode) {
 			String [] decoded = new String[values.length];
 			for (int i = 0; i < values.length; i++) {
-				try {
-					decoded[i] = URLDecoder.decode(values[i], URL_ENCODING);
-				} catch (UnsupportedEncodingException e) {
-					Logger logger = Logger.getLogger("VARITAS");
-					logger.warning("Unable to URL-decode the string: '" + values[i] + "', it will be returned as-is.\n" + e.getMessage());
-					decoded[i] = values[i];
-				}
+				decoded[i] = INFO_ENCODER.decode(values[i]);
 			}
 			values = decoded;
 		}
@@ -333,13 +327,7 @@ public class VCFVariant {
 		if (urlEncode) {
 			String [] encoded = new String[values.length];
 			for (int i = 0; i < values.length; i++) {
-				try {
-					encoded[i] = URLEncoder.encode(values[i], URL_ENCODING);
-				} catch (UnsupportedEncodingException e) {
-					Logger logger = Logger.getLogger("VARITAS");
-					logger.warning("Unable to URL-encode the string: '" + values[i] + "', it will be returned as-is.\n" + e.getMessage());
-					encoded[i] = values[i];
-				}
+				encoded[i] = INFO_ENCODER.encode(values[i]);
 			}
 			values = encoded;
 		}
