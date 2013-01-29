@@ -1,6 +1,5 @@
 package org.drpowell.vcf;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -8,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.drpowell.util.CustomPercentEncoder;
@@ -51,7 +51,9 @@ public class VCFVariant {
 		for (String entry : entries) {
 			String [] keyvalue = entry.split("=",2);
 			if (map.containsKey(keyvalue[0])) {
-				throw new RuntimeException("Unable to deal with duplicated keys in the INFO field of a VCF");
+				String message = "VCF spec does not allow for duplicated keys [ " + keyvalue[0] + " ] in the INFO field of a VCF:\n  " + info;
+				Logger.getLogger(VCFVariant.class.getName()).log(Level.SEVERE, message);
+				//throw new RuntimeException(message);
 			}
 			if (keyvalue.length == 1) {
 				map.put(keyvalue[0], FLAG_INFO);
