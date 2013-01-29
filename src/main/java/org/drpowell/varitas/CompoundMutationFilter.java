@@ -91,10 +91,10 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		}
 		if (!nonPaternal.isEmpty() && !nonMaternal.isEmpty()) {
 			for (VCFVariant v : nonPaternal) {
-				v.putInfo("BIALLELIC");
+				v.putInfo("BIALLELIC", (String []) null);
 			}
 			for (VCFVariant v : nonMaternal) {
-				v.putInfo("BIALLELIC");
+				v.putInfo("BIALLELIC", (String []) null);
 			}
 		}
 		filteredVariants = groupedVariants.iterator();
