@@ -2,12 +2,14 @@ package org.drpowell.xlifyvcf;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -15,6 +17,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -33,6 +36,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.drpowell.varitas.CLIRunnable;
 import org.drpowell.varitas.CompoundMutationFilter;
+import org.drpowell.varitas.Main;
 import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFMeta;
@@ -97,8 +101,14 @@ public class XLifyVcf implements CLIRunnable {
 		variants = vcfParser.iterator();
 		if (filters != null) {
 			for (String filter : filters) {
-				Reader r = new InputStreamReader(ClassLoader.getSystemResourceAsStream(filter));
-				variants = new ScriptVCFFilter(variants, r);
+				URL url = Main.findExistingFile(filter);
+				Reader r;
+				try {
+					r = new InputStreamReader(new FileInputStream(url.getFile()));
+					variants = new ScriptVCFFilter(variants, r);
+				} catch (FileNotFoundException e) {
+					Logger.getLogger("VARITAS").warning("The filter [ " + filter + " ] could not be found and will be ignored");
+				}
 			}
 		}
 		if (applyBiallelic) {
