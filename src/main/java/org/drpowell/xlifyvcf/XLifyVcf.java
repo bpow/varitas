@@ -256,7 +256,7 @@ public class XLifyVcf implements CLIRunnable {
 		}
 		for (int i = 0; i < data.size(); i++) {
 			String d = data.get(i);
-			if (d != null && !".".equals(d)) {
+			if (d != null && !".".equals(d) && !"".equals(d)) {
 				Cell c = r.createCell(i);
 				if (numericColumns.get(i)) {
 					try {
