@@ -18,14 +18,13 @@ function filterImpact(v) {
 	var impact = v.getInfoValue("IMPACT");
 	//System.err.println("impact: " + impact)
 	if (impact == null) return false;
-	if (impact.equals("HIGH") || impact.equals("MODERATE")) return v
-	return null
+	return (impact.equals("HIGH") || impact.equals("MODERATE"))
 }
 
 function filterLessThan(v, key, cutoff) {
 	var val = v.getInfoValue(key)
-	//System.err.println(key + ": " + val)
-	// the convoluted use of "not greater than" to cause NaN values to result in "true"
-	if !(parseFloat(v.getInfoValue(key)) > cutoff) return v
-	return null
+	//if (isNaN(val)) return v
+	//return (parseFloat(val) <= cutoff) ? v : null
+	// weird "not-greater-than" so NaNs will result in 'true'
+	return (!(parseFloat(val) > cutoff))
 }
