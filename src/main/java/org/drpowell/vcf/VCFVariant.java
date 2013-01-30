@@ -256,17 +256,22 @@ public class VCFVariant {
 		if (delim < 0) {
 			throw new RuntimeException("Unable to phase [" + oldCall + "] because I could not find a delimiter");
 		}
-		int a = Integer.parseInt(oldCall.substring(0, delim));
-		int b = Integer.parseInt(oldCall.substring(delim+1));
-		if (b < a) {
-			a ^= b; b ^= a; a ^= b; // obscure swap, make sure a is less than b
+		try {
+			int a = Integer.parseInt(oldCall.substring(0, delim));
+			int b = Integer.parseInt(oldCall.substring(delim+1));
+			if (b < a) {
+				a ^= b; b ^= a; a ^= b; // obscure swap, make sure a is less than b
+			}
+			String outDelim = phase == 0 ? "/" : "|";
+			if (phase < 0) {
+				return Integer.toString(b) + outDelim + Integer.toString(a);
+			} else {
+				return Integer.toString(a) + outDelim + Integer.toString(b);
+			}
+		} catch (NumberFormatException nfe) {
+			Logger.getLogger(VCFVariant.class.getName()).log(Level.WARNING, "Tried to phase a non-numeric call: " + oldCall);
 		}
-		String outDelim = phase == 0 ? "/" : "|";
-		if (phase < 0) {
-			return Integer.toString(b) + outDelim + Integer.toString(a);
-		} else {
-			return Integer.toString(a) + outDelim + Integer.toString(b);
-		}
+		return oldCall;
 	}
 	
 	public VCFVariant setPhases(int [] sampleIndices, int [] phases) {
