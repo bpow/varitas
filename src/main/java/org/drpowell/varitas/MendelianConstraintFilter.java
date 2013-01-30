@@ -23,6 +23,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
+			VCFParser.parseVCFMeta("##INFO=<ID=NOPL,Number=0,Type=Flag,Description=\"At least one member of a trio lacks PL/GL (genotype likelihood) fields.\">")
 	};
 	
 	/**
@@ -53,7 +54,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		18432, 20480, 24576, 16384, 32769, 32770, 32772, 32776, 32784,
 		32800, 32832, 32896, 33024, 33280, 33792, 34816, 36864, 40960,
 		49152, 32768 };
-	
+
 	public MendelianConstraintFilter(Iterator<VCFVariant> client, VCFHeaders headers) {
 		super(client);
 		trios = VCFUtils.getTrioIndices(headers);
@@ -62,14 +63,6 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	private boolean singleAllele(int genotype) {
 		//return Integer.bitCount(genotype) == 1;
 		return (genotype > 0) && ((genotype & (genotype-1)) == 0);
-	}
-	
-	private String [] stringsFromInts(int [] in) {
-		String [] out = new String[in.length];
-		for (int i = 0; i < out.length; i++) {
-			out[i] = Integer.toString(in[i]);
-		}
-		return out;
 	}
 	
 	/**
