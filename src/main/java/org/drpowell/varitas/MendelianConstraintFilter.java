@@ -142,7 +142,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 									if (mother_transmitted > 0 && father_transmitted > 0) {
 										phase[0] = father_transmitted <= mother_transmitted ? 1 : -1;
 										phase[1] = father_transmitted <= (father_transmitted ^ fa) ? 1 : -1;
-										phase[2] = mother_transmitted <= (mother_transmitted ^ fa) ? 1 : -1;
+										phase[2] = mother_transmitted <= (mother_transmitted ^ ma) ? 1 : -1;
 									} else {
 										phase[0] = phase[1] = phase[2] = 0;
 									}
