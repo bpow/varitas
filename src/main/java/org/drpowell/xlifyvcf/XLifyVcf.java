@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
@@ -80,6 +81,9 @@ public class XLifyVcf implements CLIRunnable {
 	@Argument(alias = "m", description = "apply mendelian constraint filter")
 	private static Boolean applyMendelianConstraint = false;
 	
+	@Argument(alias = "a", description = "file with additional headers to add to input vcf file")
+	private String additionalHeaders;
+	
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
 		SNP("http://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=%s"),
@@ -98,22 +102,34 @@ public class XLifyVcf implements CLIRunnable {
 	protected XLifyVcf initialize(VCFParser parser) {
 		vcfParser = parser;
 		VCFHeaders vcfHeaders = parser.getHeaders();
+		if (additionalHeaders != null) {
+			URL url = Main.findExistingFile(additionalHeaders);
+			try {
+				BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					vcfHeaders.add(VCFParser.parseVCFMeta(line));
+				}
+				br.close();
+			} catch (IOException ioe) {
+				Logger.getLogger("VARITAS").log(Level.SEVERE, "Problem reading additional headers from " + url, ioe);
+			}
+		}
 		variants = vcfParser.iterator();
 		if (filters != null) {
 			for (String filter : filters) {
 				URL url = Main.findExistingFile(filter);
 				Reader r;
 				try {
-					r = new InputStreamReader(new FileInputStream(url.getFile()));
+					r = new InputStreamReader(url.openStream());
 					variants = new ScriptVCFFilter(variants, r);
-				} catch (FileNotFoundException e) {
-					Logger.getLogger("VARITAS").warning("The filter [ " + filter + " ] could not be found and will be ignored");
+				} catch (IOException e) {
+					Logger.getLogger("VARITAS").warning("The filter [ " + filter + " ] could not be found and will be ignored (tried [ " + url + " ])");
 				}
 			}
 		}
 		if (applyBiallelic) {
-			VCFHeaders headers = vcfParser.getHeaders();
-			List<int []> trios = VCFUtils.getTrioIndices(headers);
+			List<int []> trios = VCFUtils.getTrioIndices(vcfHeaders);
 			// FIXME-- only handles a single trio
 			if (!trios.isEmpty()) {
 				variants = new CompoundMutationFilter(variants, trios.get(0));
