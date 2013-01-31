@@ -249,12 +249,20 @@ public class VCFVariant {
 		}
 	}
 	
+	public String getGenotype(int sampleIndex) {
+		if (!getFormat().startsWith("GT")) return null; // FIXME log? exception?
+		String call = row[sampleIndex + VCFParser.VCFFixedColumns.SIZE];
+		int colon = call.indexOf(':');
+		return colon < 0 ? call : call.substring(0, colon);
+	}
+
 	private String phaseCall(String oldCall, int phase) {
 		int delim = oldCall.indexOf('/');
 		if (delim < 0) delim = oldCall.indexOf('|');
 		if (delim < 0) delim = oldCall.indexOf('\\');
 		if (delim < 0) {
-			throw new RuntimeException("Unable to phase [" + oldCall + "] because I could not find a delimiter");
+			Logger.getLogger(getClass().getName()).fine("Unable to phase [" + oldCall + "] because I could not find a delimiter");
+			return oldCall;
 		}
 		try {
 			int a = Integer.parseInt(oldCall.substring(0, delim));
@@ -350,4 +358,5 @@ public class VCFVariant {
 		}
 		return sb.substring(1);
 	}
+
 }

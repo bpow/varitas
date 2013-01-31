@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.drpowell.util.FilteringIterator;
 import org.drpowell.util.GunzipIfGZipped;
@@ -23,7 +25,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
 			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=NOPL,Number=0,Type=Flag,Description=\"At least one member of a trio lacks PL/GL (genotype likelihood) fields.\">")
+			VCFParser.parseVCFMeta("##INFO=<ID=TMV,Number=0,Type=Flag,Description=\"The most-likely individual calls show a mendelian violation among a trio.\">")
 	};
 	
 	/**
@@ -65,17 +67,61 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		return (genotype > 0) && ((genotype & (genotype-1)) == 0);
 	}
 	
+	private final int [] phaseTrio(String cgt, String fgt, String mgt) {
+		return phaseTrio(genotypeToAlleleBitmap(cgt),
+						 genotypeToAlleleBitmap(fgt),
+						 genotypeToAlleleBitmap(mgt));
+	}
+	
+	private final int [] phaseTrio(int ca, int fa, int ma) {
+		// fixme -- can sometime phase parent/child even if other parent's data is missing
+		int [] phase = null;
+		if ( (((fa|ma)&ca) == ca) && (fa&ca) > 0 && (ma&ca) > 0 )  {
+			// OK by mendelian...
+			phase = new int[3];
+			//if ((ca&fa&ma) == 0 || singleAllele(ca&fa&ma)) (phaseable) 
+			if (singleAllele(ca)) { // GENOTYPE_CARDINALITY[c] == 1
+				// child homozygous
+				phase[0] = 1;
+				phase[1] = (fa^ca) >= ca ? 1 : -1;
+				phase[2] = (ma^ca) >= ca ? 1 : -1;
+			} else {
+				int father_transmitted = 0;
+				int mother_transmitted = 0;
+				if (singleAllele(fa&ca)) {
+					// only one allele could have come from father
+					father_transmitted = ca&fa;
+					mother_transmitted = ca^father_transmitted;
+				} else if (singleAllele(ma&ca)) {
+					// only one allele could have come from mother
+					mother_transmitted = ca&ma;
+					father_transmitted = ca^mother_transmitted;
+				}
+				if (mother_transmitted > 0 && father_transmitted > 0) {
+					phase[0] = father_transmitted <= mother_transmitted ? 1 : -1;
+					phase[1] = father_transmitted <= (father_transmitted ^ fa) ? 1 : -1;
+					phase[2] = mother_transmitted <= (mother_transmitted ^ ma) ? 1 : -1;
+				} else {
+					// not phaseable
+					phase[0] = phase[1] = phase[2] = 0;
+				}
+			}
+		} else {
+			// Mendelian violation! Will return null!
+		}
+		return phase;
+	}
+	
 	/**
 	 * executed for its side effect of annotating with constrained vs. unconstrained likelihood ratio
 	 * 
-	 * @param element
+	 * @param variant
 	 * @return
 	 */
 	@Override
-	public VCFVariant filter(VCFVariant element) {
+	public VCFVariant filter(VCFVariant variant) {
 		// FIXME - have option to only return variants with at least one MV
-		double [][] logLikelihoods = element.getGenotypeLikelihoods();
-		if (null == logLikelihoods) return element; // no likelihood info, just pass on through. FIXME-- decide whether to pass or fail
+		double [][] logLikelihoods = variant.getGenotypeLikelihoods();
 		TRIO:
 		for (int [] trio : trios) {
 			// FIXME - can sometimes phase when a member of trio is missing
@@ -85,9 +131,17 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			double [][] trioLL = new double[trio.length][];
 			// 0: child    1: father    2:mother
 			for (int i = 0; i < trioLL.length; i++) {
-				if (trio[i] >= logLikelihoods.length || (trioLL[i] = logLikelihoods[trio[i]]) == null) {
+				if (null == logLikelihoods || trio[i] >= logLikelihoods.length || (trioLL[i] = logLikelihoods[trio[i]]) == null) {
 					// no likelihood data for this sample
-					element.putInfo("NOPL", (String []) null);
+					// let's try to phase anyway...
+					int [] phases = phaseTrio(variant.getGenotype(trio[0]),
+											  variant.getGenotype(trio[1]),
+											  variant.getGenotype(trio[2]));
+					if (phases == null) {
+						variant.putInfo("TMV", (String []) null);
+					} else {
+						variant.setPhases(trio, phases);
+					}
 					continue TRIO;
 				}
 			}
@@ -115,31 +169,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 							if (sum > maxConstrained) {
 								maxConstrained = sum;
 								gtConstrained[0] = c; gtConstrained[1] = f; gtConstrained[2] = m;
-								if (singleAllele(ca)) { // GENOTYPE_CARDINALITY[c] == 1
-									// child homozygous
-									phase[0] = 1;
-									phase[1] = (fa^ca) >= ca ? 1 : -1;
-									phase[2] = (ma^ca) >= ca ? 1 : -1;
-								} else {
-									int father_transmitted = 0;
-									int mother_transmitted = 0;
-									if (singleAllele(fa&ca)) {
-										// only one allele could have come from father
-										father_transmitted = ca&fa;
-										mother_transmitted = ca^father_transmitted;
-									} else if (singleAllele(ma&ca)) {
-										// only one allele could have come from mother
-										mother_transmitted = ca&ma;
-										father_transmitted = ca^mother_transmitted;
-									}
-									if (mother_transmitted > 0 && father_transmitted > 0) {
-										phase[0] = father_transmitted <= mother_transmitted ? 1 : -1;
-										phase[1] = father_transmitted <= (father_transmitted ^ fa) ? 1 : -1;
-										phase[2] = mother_transmitted <= (mother_transmitted ^ ma) ? 1 : -1;
-									} else {
-										phase[0] = phase[1] = phase[2] = 0;
-									}
-								}
+								phase = phaseTrio(ca, fa, ma); // will not be null because we already checked above
 							}
 							constrainedLikelihoods.add(sum);
 						} else {
@@ -155,16 +185,17 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			}
 			// FIXME - need to handle multiple trios better
 			if (maxConstrained < maxUnconstrained) {
-				element.putInfo("MVCLR", String.format("%.3g", maxUnconstrained - maxConstrained));
+				variant.putInfo("MVCLR", String.format("%.3g", maxUnconstrained - maxConstrained));
 				// FIXME-- this is not doing what I think it should...
-				element.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
-				element.putInfo("UNCGT", getGenotypes(gtUnconstrained, null));
-				element.putInfo("CONGT", getGenotypes(gtConstrained, phase));
+				variant.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
+				variant.putInfo("UNCGT", getGenotypes(gtUnconstrained, null));
+				variant.putInfo("CONGT", getGenotypes(gtConstrained, phase));
+				variant.putInfo("TMV", (String []) null);
 			} else {
-				element = element.setPhases(trio, phase);
+				variant = variant.setPhases(trio, phase);
 			}
 		}
-		return element; // FIXME - just returning all variants for now, consider returning only phased or MV
+		return variant; // FIXME - just returning all variants for now, consider returning only phased or MV
 	}
 
 	private double calcLogLikelihoodRatio(ArrayList<Double> constrainedSums, ArrayList<Double> unconstrainedSums) {
@@ -198,6 +229,22 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 			}
 		}
 		return gts;
+	}
+	
+	private final int genotypeToAlleleBitmap(String gt) {
+		if (gt.startsWith(".") || gt.endsWith(".")) return -1;
+		int delim = gt.indexOf('|');
+		if (delim < 0) delim = gt.indexOf('/');
+		if (delim < 0) return -1;
+		int alleles = 0;
+		try {
+			alleles |= 1 << Integer.parseInt(gt.substring(0, delim));
+			alleles |= 1 << Integer.parseInt(gt.substring(delim+1));			
+		} catch (NumberFormatException nfe) {
+			Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "Error parsing genotype: [ " + gt + " ]", nfe);
+			return -1;
+		}
+		return alleles;
 	}
 
 	private final String plIndexToAlleles(int i, int phase) {
