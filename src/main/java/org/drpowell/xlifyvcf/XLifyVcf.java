@@ -2,7 +2,6 @@ package org.drpowell.xlifyvcf;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -209,9 +208,9 @@ public class XLifyVcf implements CLIRunnable {
 			if (headerComments.containsKey(headers[c])) {
 				ClientAnchor anchor = createHelper.createClientAnchor();
 				anchor.setCol1(cell.getColumnIndex());
-				anchor.setCol2(cell.getColumnIndex()+3);
+				anchor.setCol2(cell.getColumnIndex()+5);
 				anchor.setRow1(cell.getRowIndex());
-				anchor.setRow2(cell.getRowIndex()+1);
+				anchor.setRow2(cell.getRowIndex()+10);
 				Comment comment = drawing.createCellComment(anchor);
 				comment.setString(createHelper.createRichTextString(headerComments.get(headers[c])));
 				cell.setCellComment(comment);
