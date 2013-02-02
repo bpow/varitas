@@ -6,6 +6,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.logging.Logger;
 
+import org.drpowell.xlifyvcf.ApplyVCFFilters;
 import org.drpowell.xlifyvcf.XLifyVcf;
 
 import com.sampullara.cli.Args;
@@ -13,6 +14,7 @@ import com.sampullara.cli.Args;
 public class Main {
 	
 	public static final Class<?>[] commands = {
+		ApplyVCFFilters.class,
 		Varitas.class,
 		XLifyVcf.class
 	};
