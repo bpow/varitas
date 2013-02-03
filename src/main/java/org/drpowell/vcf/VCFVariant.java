@@ -27,7 +27,6 @@ public class VCFVariant {
 	private int end;
 	private boolean urlEncode = true;
 	private volatile double [][] logLikelihoods;
-	private static final String URL_ENCODING = "UTF-8";
 	private static final String [] FLAG_INFO = new String[0];
 	private static final CustomPercentEncoder INFO_ENCODER = CustomPercentEncoder.allowAsciiPrintable(true).recodeAdditionalCharacters(" ;=".toCharArray());
 	
@@ -52,7 +51,7 @@ public class VCFVariant {
 			String [] keyvalue = entry.split("=",2);
 			if (map.containsKey(keyvalue[0])) {
 				String message = "VCF spec does not allow for duplicated keys [ " + keyvalue[0] + " ] in the INFO field of a VCF:\n  " + info;
-				Logger.getLogger(VCFVariant.class.getName()).log(Level.SEVERE, message);
+				Logger.getLogger(VCFVariant.class.getName()).log(Level.WARNING, message);
 				//throw new RuntimeException(message);
 			}
 			if (keyvalue.length == 1) {
@@ -277,7 +276,7 @@ public class VCFVariant {
 				return Integer.toString(a) + outDelim + Integer.toString(b);
 			}
 		} catch (NumberFormatException nfe) {
-			Logger.getLogger(VCFVariant.class.getName()).log(Level.WARNING, "Tried to phase a non-numeric call: " + oldCall);
+			Logger.getLogger(VCFVariant.class.getName()).log(Level.FINE, "Tried to phase a non-numeric call: " + oldCall);
 		}
 		return oldCall;
 	}
