@@ -59,8 +59,6 @@ public class TabixTSVAnnotator extends Annotator {
 					String value = row[entry.getKey()];
 					if (! ("".equals(value) || ".".equals(value)) ) {
 						// FIXME -- "." is frequently used to represent missing data, but consider whether I should pass it along
-						// FIXME -- think about the best way to handle semicolons in fields (which VCF doesn't like)
-						value = value.replace(";", ",");
 						variant.putInfo(entry.getValue(), value);
 					}
 				}

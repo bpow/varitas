@@ -116,11 +116,11 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 			String [] npHetRec = intsToStrings(npIndices);
 			String [] nmHetRec = intsToStrings(nmIndices);
 			for (VCFVariant v : nonPaternal) {
-				v.putInfo("COMPOUND", (String []) null);
+				v.putInfoFlag("COMPOUND");
 				v.putInfo("MendHetRec", nmHetRec);
 			}
 			for (VCFVariant v : nonMaternal) {
-				v.putInfo("COMPOUND", (String []) null);
+				v.putInfoFlag("COMPOUND");
 				v.putInfo("MendHetRec", npHetRec);
 			}
 		}

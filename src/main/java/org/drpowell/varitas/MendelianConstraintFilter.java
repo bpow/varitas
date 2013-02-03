@@ -138,7 +138,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 											  variant.getGenotype(trio[1]),
 											  variant.getGenotype(trio[2]));
 					if (phases == null) {
-						variant.putInfo("TMV", (String []) null);
+						variant.putInfoFlag("TMV");
 					} else {
 						variant.setPhases(trio, phases);
 					}
@@ -190,7 +190,7 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 				variant.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
 				variant.putInfo("UNCGT", getGenotypes(gtUnconstrained, null));
 				variant.putInfo("CONGT", getGenotypes(gtConstrained, phase));
-				variant.putInfo("TMV", (String []) null);
+				variant.putInfoFlag("TMV");
 			} else {
 				variant = variant.setPhases(trio, phase);
 			}

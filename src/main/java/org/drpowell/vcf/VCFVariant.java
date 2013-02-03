@@ -15,7 +15,7 @@ import org.drpowell.util.CustomPercentEncoder;
 /**
  * Representation of a single row of a VCF file
  * 
- * INFO flag fields will have a 'null' value if set
+ * INFO flag fields will be set to the special value 'FLAG_INFO' if set
  * 
  * @author bpow
  */
@@ -82,16 +82,21 @@ public class VCFVariant {
 	 * Add an item to the VCF variant.
 	 * 
 	 * @param key - the ID of the data, this should be defined in the VCF header
-	 * @param value - if null, then the key is treated as a FLAG field
+	 * @param values - one or more values (if null, this entry will be treated as a Flag)
 	 * @return this VCFVariant, to facilitate chaining
 	 */
 	public VCFVariant putInfo(String key, String... values) {
-		if (null != values) {
-			values = encodeInfo(urlEncode, values);
-		} else {
+		if (null == values || null == values[0]) {
 			values = FLAG_INFO;
+		} else {
+			values = encodeInfo(urlEncode, values);
 		}
 		info.put(key, values);
+		return this;
+	}
+	
+	public VCFVariant putInfoFlag(String key) {
+		info.put(key, FLAG_INFO);
 		return this;
 	}
 
