@@ -3,6 +3,7 @@ package org.drpowell.varitas;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -19,7 +20,12 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	private final Grouper<String, VCFVariant> grouper;
 	private Iterator<VCFVariant> filteredVariants;
 	private final int [] trioIndices;
-	public static final VCFMeta ADDITIONAL_HEADER = VCFParser.parseVCFMeta("##INFO=<ID=BIALLELIC,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant inherited from each parent.\">");
+	private int variantIndex = -1;
+	public static final VCFMeta [] ADDITIONAL_HEADERS = {
+		VCFParser.parseVCFMeta("##INFO=<ID=COMPOUND,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant not inherited from each parent.\">"),
+		VCFParser.parseVCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">"),
+		VCFParser.parseVCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
+	};
 
 	public CompoundMutationFilter(Iterator<VCFVariant> delegate, int [] trioIndices) {
 		this.trioIndices = trioIndices;
@@ -54,6 +60,15 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		return -1;
 	}
 	
+	private String [] intsToStrings(Collection<Integer> ints) {
+		Iterator<Integer> it = ints.iterator();
+		String [] out = new String[ints.size()];
+		for (int i = 0; i < out.length; i++) {
+			out[i] = it.next().toString();
+		}
+		return out;
+	}
+	
 	private void advanceGroup() {
 		// time to get the next group of variants...
 		Collection<VCFVariant> groupedVariants = grouper.next();
@@ -63,38 +78,50 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		// weird negative thinking-- these lists keep track of sites that have a variant that _didn't_ come from either dad or mom
 		ArrayList<VCFVariant> nonPaternal = new ArrayList<VCFVariant>(groupedVariants.size());
 		ArrayList<VCFVariant> nonMaternal = new ArrayList<VCFVariant>(groupedVariants.size());
+		ArrayList<Integer> npIndices = new ArrayList<Integer>(groupedVariants.size()); // indices of nonpaterally-inherited
+		ArrayList<Integer> nmIndices = new ArrayList<Integer>(groupedVariants.size()); // indices of nonmaterally-inherited
 		for (VCFVariant v : groupedVariants) {
+			variantIndex++;
+			v.putInfo("Index", Integer.toString(variantIndex));
 			String [] calls = v.getCalls();
 			int [] childCall = splitAlleles(calls[trioIndices[0]]);
 			if (childCall[0] <= 0 && childCall[1] <= 0) {
 				continue;
 				// proband unknown or homozygous reference
 			}
-			if (childCall[0] > 0 && childCall[1] > 0) {
-				nonPaternal.add(v);
-				nonMaternal.add(v);
+			int [] fatherCall = splitAlleles(calls[trioIndices[1]]);
+			int [] motherCall = splitAlleles(calls[trioIndices[2]]);
+			if (childCall[0] > 0 && childCall[1] > 0 &&
+					(fatherCall[0] <= 0 || fatherCall[0] <= 0) &&
+					(motherCall[0] <= 0 || motherCall[0] <= 0)) {
+				nonPaternal.add(v); npIndices.add(variantIndex);
+				nonMaternal.add(v); nmIndices.add(variantIndex);
 				// FIXME -these may not be all that interesting if one of the parents was already homalt
 			} else {
-				int [] fatherCall = splitAlleles(calls[trioIndices[1]]);
-				int [] motherCall = splitAlleles(calls[trioIndices[2]]);
 				for (int allele: childCall) {
 					if (allele > 0) { // only care about transmission of alt alleles
 						if (indexOf(allele, fatherCall) < 0) {
 							nonPaternal.add(v);
+							npIndices.add(variantIndex);
 						}
 						if (indexOf(allele, motherCall) < 0) {
 							nonMaternal.add(v);
+							nmIndices.add(variantIndex);
 						}
 					}
 				}
 			}
 		}
 		if (!nonPaternal.isEmpty() && !nonMaternal.isEmpty()) {
+			String [] npHetRec = intsToStrings(npIndices);
+			String [] nmHetRec = intsToStrings(nmIndices);
 			for (VCFVariant v : nonPaternal) {
-				v.putInfo("BIALLELIC", (String []) null);
+				v.putInfo("COMPOUND", (String []) null);
+				v.putInfo("MendHetRec", nmHetRec);
 			}
 			for (VCFVariant v : nonMaternal) {
-				v.putInfo("BIALLELIC", (String []) null);
+				v.putInfo("COMPOUND", (String []) null);
+				v.putInfo("MendHetRec", npHetRec);
 			}
 		}
 		filteredVariants = groupedVariants.iterator();
@@ -131,19 +158,19 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
 		VCFParser p = new VCFParser(br);
 		VCFHeaders headers = p.getHeaders();
-		headers.add(ADDITIONAL_HEADER);
+		headers.addAll(Arrays.asList(ADDITIONAL_HEADERS));
 		System.out.print(headers);
 		System.out.println(headers.getColumnHeaderLine());
 		
 		int yes = 0, no = 0;
 		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), headers); cmf.hasNext();) {
 			VCFVariant v = cmf.next();
-			if (v.hasInfo("BIALLELIC")) {
-				System.out.println(v);
+			if (v.hasInfo("COMPOUND")) {
 				yes++;
 			} else {
 				no++;
 			}
+			System.out.println(v);
 		}
 		br.close();
 		System.err.println(String.format("%d biallelic mutations,  %d otherwise", yes, no));

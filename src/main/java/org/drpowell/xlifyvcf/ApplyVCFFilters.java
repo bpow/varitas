@@ -91,7 +91,7 @@ public class ApplyVCFFilters implements CLIRunnable {
 			// FIXME-- only handles a single trio
 			if (!trios.isEmpty()) {
 				variants = new CompoundMutationFilter(variants, trios.get(0));
-				vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADER));
+				vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADERS));
 			}
 		}
 		if (applyMendelianConstraint) {
