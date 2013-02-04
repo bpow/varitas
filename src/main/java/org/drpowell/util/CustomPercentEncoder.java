@@ -72,7 +72,7 @@ public class CustomPercentEncoder {
 	public CustomPercentEncoder recodeAdditionalCharacters(char [] charsToRecode) {
 		BitSet newLeaveAlone = (BitSet) leaveAlone.clone();
 		for (char c : charsToRecode) {
-			newLeaveAlone.set(c);
+			newLeaveAlone.clear(c);
 		}
 		return new CustomPercentEncoder(newLeaveAlone, plusSpaces);
 	}
