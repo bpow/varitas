@@ -75,10 +75,10 @@ public class TabixVCFAnnotator extends Annotator {
 					if (target.hasInfo(e.getKey())) {
 						// FIXME- should check to prevent duplicates being overwritten
 						variant.putInfo(e.getValue(), target.getInfoValue(e.getKey()));
-						if (copyID) {
-							variant.mergeID(target.getID());
-						}
 					}
+				}
+				if (copyID) {
+					variant.mergeID(target.getID());
 				}
 				break;
 			}
