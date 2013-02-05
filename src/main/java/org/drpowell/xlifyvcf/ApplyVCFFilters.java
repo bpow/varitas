@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URL;
@@ -19,6 +20,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
+import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.varitas.CLIRunnable;
 import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.Main;
@@ -102,35 +104,20 @@ public class ApplyVCFFilters implements CLIRunnable {
 	}
 	
 	public void doMain(List<String> extraArgs) {
-		if (input == null && !extraArgs.isEmpty()) {
-			input = extraArgs.remove(0);
-		}
-		if (input == null) {
-			input = "-";
-		}
-		if (output == null && !extraArgs.isEmpty()) {
-			output = extraArgs.remove(0);
-		}
-		if (input == null || output == null) {
-			Args.usage(this);
-			System.exit(1);
-		}
 		try {
 			BufferedReader reader;
-			if ("-".equals(input)) {
-				reader = new BufferedReader(new InputStreamReader(System.in));
-			} else if (input.endsWith(".gz")) {
-				reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(input))));
+			if (input != null) {
+				reader = GunzipIfGZipped.filenameToBufferedReader(input);
 			} else {
-				reader = new BufferedReader(new FileReader(input));
+				reader = new BufferedReader(new InputStreamReader(System.in));
 			}
+			initialize(new VCFParser(reader));
 			PrintWriter outWriter;
-			if ("-".equals(output)) {
+			if (output == null) {
 				outWriter = new PrintWriter(new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024));
 			} else {
 				outWriter = new PrintWriter(new BufferedOutputStream(new FileOutputStream(output), 1024));
 			}
-			initialize(new VCFParser(reader));
 			outWriter.print(vcfParser.getHeaders());
 			outWriter.println(vcfParser.getHeaders().getColumnHeaderLine());
 			while (variants.hasNext()) {

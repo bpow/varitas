@@ -1,6 +1,8 @@
 package org.drpowell.xlifyvcf;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -34,6 +36,7 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.varitas.CLIRunnable;
 import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.Main;
@@ -329,30 +332,20 @@ public class XLifyVcf implements CLIRunnable {
 	}
 	
 	public void doMain(List<String> extraArgs) {
-		if (input == null && !extraArgs.isEmpty()) {
-			input = extraArgs.remove(0);
-		}
-		if (input == null) {
-			input = "-";
-		}
-		if (output == null && !extraArgs.isEmpty()) {
-			output = extraArgs.remove(0);
-		}
-		if (input == null || output == null) {
-			Args.usage(this);
-			System.exit(1);
-		}
 		try {
 			BufferedReader reader;
-			if ("-".equals(input)) {
-				reader = new BufferedReader(new InputStreamReader(System.in));
-			} else if (input.endsWith(".gz")) {
-				reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(input))));
+			if (input != null) {
+				reader = GunzipIfGZipped.filenameToBufferedReader(input);
 			} else {
-				reader = new BufferedReader(new FileReader(input));
+				reader = new BufferedReader(new InputStreamReader(System.in));
 			}
 			initialize(new VCFParser(reader)).doWork();
-			OutputStream os = new FileOutputStream(output);
+			OutputStream os;
+			if (output == null) {
+				os = new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024);
+			} else {
+				os = new BufferedOutputStream(new FileOutputStream(output), 1024);
+			}
 			writeOutput(os);
 			os.close();
 		} catch (Exception e) {

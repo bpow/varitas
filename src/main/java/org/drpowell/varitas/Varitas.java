@@ -144,9 +144,7 @@ public class Varitas implements CLIRunnable {
 				throw new RuntimeException("Unable to write to " + outfile);
 			}
 		} else {
-			FileOutputStream fdout = new FileOutputStream(FileDescriptor.out);
-			BufferedOutputStream bos = new BufferedOutputStream(fdout, 1024);
-			ps = new PrintStream(bos, false);
+			ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024), false);
 		}
 		System.setOut(ps);
 		
