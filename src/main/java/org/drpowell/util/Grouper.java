@@ -105,6 +105,10 @@ public abstract class Grouper<K,V> implements Iterator<Collection <V>> {
 		}
 	}
 	
+	public K getLastGroupedKey() {
+		return prevKey;
+	}
+	
 	public static void main(String argv[]) {
 		String [] tests = {"one", "one", "one", "two", "three", "three", "a", "b"};
 		Grouper<String, String> g = new StringGrouper<String>().setDelegate(Arrays.asList(tests).iterator());
