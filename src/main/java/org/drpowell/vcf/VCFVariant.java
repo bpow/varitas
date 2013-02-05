@@ -86,7 +86,7 @@ public class VCFVariant {
 	 * @return this VCFVariant, to facilitate chaining
 	 */
 	public VCFVariant putInfo(String key, String... values) {
-		if (null == values || null == values[0] || "".equals(values[0])) {
+		if (null == values || null == values[0] || values.length == 0 || "".equals(values[0])) {
 			values = FLAG_INFO;
 		} else {
 			values = encodeInfo(urlEncode, values);
