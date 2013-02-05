@@ -130,7 +130,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 				// FIXME - if there is more than one denovo per gene, then they could be compound hets with each other
 				if (!nonPaternal.isEmpty() && !nonMaternal.isEmpty()) {
 					v.putInfoFlag("COMPOUND");
-					v.putInfo("MendHetRec", intsToStrings(npIndices, nmIndices));
+					v.putInfo("MendHetRec", intsToStrings(npIndices, nmIndices, dnIndices));
 				}
 			}
 			// FIXME - excessive string conversion below (but really, compound vars aren't that common...
