@@ -60,7 +60,8 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		return -1;
 	}
 	
-	private String [] intsToStrings(Collection<Integer>... ints) {
+	@SafeVarargs
+	private final String [] intsToStrings(Collection<Integer>... ints) {
 		int size = 0;
 		for (Collection<Integer> intColl : ints) {
 			size += intColl.size();

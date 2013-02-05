@@ -3,22 +3,17 @@ package org.drpowell.xlifyvcf;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.GZIPInputStream;
 
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.varitas.CLIRunnable;
@@ -35,7 +30,6 @@ import com.sampullara.cli.Argument;
 
 public class ApplyVCFFilters implements CLIRunnable {
 	private VCFParser vcfParser;
-	private Map<String, String> headerComments;
 	private Iterator<VCFVariant> variants;
 	
 	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")

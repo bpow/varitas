@@ -3,7 +3,6 @@ package org.drpowell.varitas;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.drpowell.vcf.VCFVariant;
@@ -92,6 +91,7 @@ public class SnpEffAnnotationSplitter extends Annotator {
 			return annotations[field.ordinal()];
 		}
 		
+		@SuppressWarnings("unused")
 		public SnpEffImpact getImpact() {
 			return SnpEffImpact.valueOf(annotations[SnpEffAnnotationField.IMPACT.ordinal()]);
 		}
