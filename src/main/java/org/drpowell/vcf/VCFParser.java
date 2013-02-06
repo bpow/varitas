@@ -47,6 +47,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 	private void parseHeaders() throws IOException {
 		ArrayList<VCFMeta> parsedHeaders = new ArrayList<VCFMeta>();
 
+		// FIXME -- should verify that VCF version is OK.
 		String line;
 		while ((line = reader.readLine()) != null) {
 			if (line.startsWith("##")) {
@@ -66,13 +67,16 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 				readNext();
 				return;
 			} else {
-				String error = "Error parsing header: \n" + line;
-				if (fileName != null) {
-					error += "\n in file: " + fileName;
-				}
-				throw new RuntimeException(error); 
+				break;
 			}
 		}
+		// we only get here if there is a header line without ## before hitting #CHROM or if there is no #CHROM line
+		String error = "Error parsing header: \n" + (line == null ? "" : line);
+		if (fileName != null) {
+			error += "\n in file: " + fileName;
+		}
+		Logger.getLogger(this.getClass().getName()).severe(error);
+		throw new RuntimeException("Invalid VCF headers");
 	}
 	
 	private static LinkedHashMap<String, String> parseMultipleMetaValues(String multiValues) {
