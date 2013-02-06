@@ -68,6 +68,9 @@ public class XLifyVcf implements CLIRunnable {
 	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
 	private String[] filters;
 	
+	@Argument(alias = "j", description = "javascript to apply to each variant as a filter (if result is true, the variant passes)")
+	private String javascriptFilter;
+	
 	@Argument(alias = "i", description = "input file of variants (VCF format)")
 	private String input;
 	
@@ -115,6 +118,9 @@ public class XLifyVcf implements CLIRunnable {
 			}
 		}
 		variants = vcfParser.iterator();
+		if (javascriptFilter != null && !"".equals(javascriptFilter)) {
+			variants = new JavascriptBooleanVCFFilter(variants, javascriptFilter);
+		}
 		if (filters != null) {
 			for (String filter : filters) {
 				URL url = Main.findExistingFile(filter);
