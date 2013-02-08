@@ -60,22 +60,6 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		return -1;
 	}
 	
-	private final String [] intsToStrings(Collection<Integer>... ints) {
-		int size = 0;
-		for (Collection<Integer> intColl : ints) {
-			size += intColl.size();
-		}
-		String [] out = new String[size];
-		int i = 0;
-		for (Collection<Integer> intColl : ints) {
-			for (Integer oneInt : intColl) {
-				out[i] = oneInt.toString();
-				i++;
-			}
-		}
-		return out;
-	}
-	
 	private void advanceGroup() {
 		// time to get the next group of variants...
 		Collection<VCFVariant> groupedVariants = grouper.next();
@@ -86,9 +70,6 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		ArrayList<VCFVariant> nonPaternal = new ArrayList<VCFVariant>(groupedVariants.size());
 		ArrayList<VCFVariant> nonMaternal = new ArrayList<VCFVariant>(groupedVariants.size());
 		ArrayList<VCFVariant> deNovo = new ArrayList<VCFVariant>(groupedVariants.size());
-		ArrayList<Integer> npIndices = new ArrayList<Integer>(groupedVariants.size()); // indices of nonpaterally-inherited
-		ArrayList<Integer> nmIndices = new ArrayList<Integer>(groupedVariants.size()); // indices of nonmaterally-inherited
-		ArrayList<Integer> dnIndices = new ArrayList<Integer>(groupedVariants.size()); // indices of denovo variants
 		for (VCFVariant v : groupedVariants) {
 			variantIndex++;
 			v.putInfo("Index", Integer.toString(variantIndex));
@@ -103,9 +84,10 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 			if (childCall[0] > 0 && childCall[1] > 0 &&
 					(fatherCall[0] <= 0 || fatherCall[0] <= 0) &&
 					(motherCall[0] <= 0 || motherCall[0] <= 0)) {
-				nonPaternal.add(v); npIndices.add(variantIndex);
-				nonMaternal.add(v); nmIndices.add(variantIndex);
+				nonPaternal.add(v);
+				nonMaternal.add(v);
 				// FIXME -these may not be all that interesting if one of the parents was already homalt
+				// FIXME -this leads to duplicate values in the MendRecHet fields when these vars are paired with denovo
 			} else {
 				for (int allele: childCall) {
 					if (allele > 0) { // only care about transmission of alt alleles
@@ -113,34 +95,58 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 						boolean notInMother = indexOf(allele, motherCall) < 0;
 						if (notInFather && notInMother) {
 							deNovo.add(v);
-							dnIndices.add(variantIndex);
 						} else if (notInFather) {
 							nonPaternal.add(v);
-							npIndices.add(variantIndex);
 						} else if (notInMother) {
 							nonMaternal.add(v);
-							nmIndices.add(variantIndex);
 						}
 					}
 				}
 			}
 		}
-		if (!(deNovo.size() > 1) || (!nonPaternal.isEmpty() && !nonMaternal.isEmpty())) {
+		if ((!nonPaternal.isEmpty() && !nonMaternal.isEmpty()) ||
+				deNovo.size() > 1 || deNovo.size() * (nonMaternal.size() + nonPaternal.size()) > 0) {
 			for (VCFVariant v : deNovo) {
-				// FIXME - if there is more than one denovo per gene, then they could be compound hets with each other
-				if (!nonPaternal.isEmpty() && !nonMaternal.isEmpty()) {
+				ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
+				for (VCFVariant paired_variant : nonPaternal) {
+					indices.add(paired_variant.getInfoValue("Index"));
+				}
+				for (VCFVariant paired_variant : nonMaternal) {
+					indices.add(paired_variant.getInfoValue("Index"));
+				}
+				for (VCFVariant paired_variant : deNovo) {
+					if (paired_variant != v) indices.add(paired_variant.getInfoValue("Index"));
+				}
+				if (!indices.isEmpty()) {
 					v.putInfoFlag("COMPOUND");
-					v.putInfo("MendHetRec", intsToStrings(npIndices, nmIndices, dnIndices));
+					v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
 				}
 			}
-			// FIXME - excessive string conversion below (but really, compound vars aren't that common...
 			for (VCFVariant v : nonPaternal) {
-				v.putInfoFlag("COMPOUND");
-				v.putInfo("MendHetRec", intsToStrings(nmIndices, dnIndices));
+				ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
+				for (VCFVariant paired_variant : nonMaternal) {
+					indices.add(paired_variant.getInfoValue("Index"));
+				}
+				for (VCFVariant paired_variant : deNovo) {
+					indices.add(paired_variant.getInfoValue("Index"));
+				}
+				if (!indices.isEmpty()) {
+					v.putInfoFlag("COMPOUND");
+					v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
+				}
 			}
 			for (VCFVariant v : nonMaternal) {
-				v.putInfoFlag("COMPOUND");
-				v.putInfo("MendHetRec", intsToStrings(npIndices, dnIndices));
+				ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
+				for (VCFVariant paired_variant : nonPaternal) {
+					indices.add(paired_variant.getInfoValue("Index"));
+				}
+				for (VCFVariant paired_variant : deNovo) {
+					indices.add(paired_variant.getInfoValue("Index"));
+				}
+				if (!indices.isEmpty()) {
+					v.putInfoFlag("COMPOUND");
+					v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
+				}
 			}
 		}
 		filteredVariants = groupedVariants.iterator();
