@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -64,6 +65,12 @@ public class XLifyVcf implements CLIRunnable {
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	private Map<String, String> headerComments;
 	private Iterator<VCFVariant> variants;
+
+	// this is really hacky-- most VCF files tend to have the FORMAT header lines in alphabetical
+	// order, which is really obnoxious for viewing. I like this order better...
+	private static final String[] PREFERRED_FORMAT_ORDER = {
+		"GT", "AD", "DP", "RR", "VR", "GQ", "PL", "GL"
+	};
 	
 	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
 	private String[] filters;
@@ -145,7 +152,16 @@ public class XLifyVcf implements CLIRunnable {
 			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
 			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
 		}
-		formats = vcfHeaders.formats();
+		Map<String, VCFMeta> headerFormats = vcfHeaders.formats();
+		// make the formats LinkedHashMap in a special order
+		formats = new LinkedHashMap<String, VCFMeta>(headerFormats.size()*3/2, 0.75f);
+		for (String fkey : PREFERRED_FORMAT_ORDER) {
+			VCFMeta tmpMeta;
+			if ((tmpMeta = headerFormats.get(fkey)) != null) {
+				formats.put(fkey, tmpMeta);
+			}
+		}
+		formats.putAll(headerFormats);
 		infos = vcfHeaders.infos();
 		samples = vcfHeaders.getSamples();
 		headers = makeHeaders();
