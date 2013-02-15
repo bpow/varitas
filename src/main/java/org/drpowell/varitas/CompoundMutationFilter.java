@@ -82,8 +82,8 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 			int [] fatherCall = splitAlleles(calls[trioIndices[1]]);
 			int [] motherCall = splitAlleles(calls[trioIndices[2]]);
 			if (childCall[0] > 0 && childCall[1] > 0 &&
-					(fatherCall[0] <= 0 || fatherCall[0] <= 0) &&
-					(motherCall[0] <= 0 || motherCall[0] <= 0)) {
+					(fatherCall[0] <= 0 || fatherCall[1] <= 0) &&
+					(motherCall[0] <= 0 || motherCall[1] <= 0)) {
 				nonPaternal.add(v);
 				nonMaternal.add(v);
 				// FIXME -these may not be all that interesting if one of the parents was already homalt
