@@ -109,6 +109,17 @@ dbNSFP1.3.gz.tbi: dbNSFP1.3.gz
 
 dbNSFP1.3: dbNSFP1.3.dllog
 
+genetestsgenes:
+	$(eval $@_URL:=ftp://ftp.ncbi.nih.gov/pub/GeneTests/data_to_build_custom_reports.txt)
+	echo "URL: $($@_URL)" >> $@.dllog
+	curl "$($@_URL)" | \
+		awk -F$$'\t' '$$6 != "na"' | \
+		cut -f 5 | sed 's/|/\n/g' | sort | uniq | \
+		grep -wv 'Gene Symbols' | grep -wv 'na' | grep -wv 'Not appliciable' > $@
+	md5sum $@ >> $@.dllog
+	date >> $@.dllog
+	echo '------------' >> $@.dllog
+
 %.vcf.gz.tbi: %.vcf.gz
 	tabix -p vcf $<
 

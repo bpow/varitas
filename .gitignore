@@ -5,5 +5,6 @@
 data/*.gz
 data/*.tbi
 data/*.dllog
+data/*genes
 /*.iml
 /.*

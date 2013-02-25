@@ -2,6 +2,7 @@ addSnpEffSplitter()
 addGeneAnnotator("in_omim", "data/omimgenes")
 addGeneAnnotator("in_hgmd", "data/hgmdgenes")
 addGeneAnnotator("in_cosmic", "data/cosmicgenes")
+addGeneAnnotator("in_genetests", "data/genetestsgenes")
 addGeneAnnotator("exclusion", "data/fajardogenes")
 addGeneAnnotator("hgnclinks", "data/hgnc.txt").hasHeader(true).setKeyColumn(2).
     setOutputColumns("3=HGNC_NAME")
