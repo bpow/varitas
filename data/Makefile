@@ -1,8 +1,8 @@
 .PHONY: all
 
-.SECONDARY: dbNSFP2.0b4.zip dbNSFP1.3.zip ESP6500SI.snps_indels.vcf.tar.gz
+.SECONDARY: dbNSFP2.0.zip dbNSFP1.3.zip ESP6500SI.snps_indels.vcf.tar.gz
 
-all: TGwMAF ncbiSNP137 CG54 ESP6500SI dbNSFP2.0b4
+all: TGwMAF ncbiSNP137 CG54 ESP6500SI dbNSFP2.0
 	@echo WARNING-- not making target niehs95 because it requires manual downloads
 
 TGwMAF: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.dllog
@@ -72,7 +72,22 @@ ESP6500SI.vcf.gz: ESP6500SI.snps_indels.vcf.tar.gz
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 
-dbNSFP2.0b4: dbNSFP2.0b4_variant.dllog
+dbNSFP2.0: dbNSFP2.0_variant.dllog
+
+dbNSFP2.0.zip:
+	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0.zip)
+	echo "URL: $($@_URL)" >> dbNSFP2.0_variant.dllog
+	curl -A "UA" -O "$($@_URL)"
+	echo "md5sum of download:" >> dbNSFP2.0b4_variant.dllog
+	md5sum $@ >> dbNSFP2.0b4_variant.dllog
+
+dbNSFP2.0_variant.gz: dbNSFP2.0.zip
+	for chrom in `seq 1 22` X Y; do \
+		unzip -p $< dbNSFP2.0_variant.chr$$chrom | tr -d \\r ; \
+	done | bgzip -c > $@
+
+dbNSFP2.0_variant.gz.tbi: dbNSFP2.0_variant.gz
+	tabix -s1 -b2 -e2 $<
 
 dbNSFP2.0b4.zip:
 	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP2.0b4.zip)
@@ -88,26 +103,6 @@ dbNSFP2.0b4_variant.gz: dbNSFP2.0b4.zip
 
 dbNSFP2.0b4_variant.gz.tbi: dbNSFP2.0b4_variant.gz
 	tabix -s1 -b2 -e2 $<
-
-dbNSFP1.3.zip:
-	$(eval $@_URL:=http://dbnsfp.houstonbioinformatics.org/dbNSFPzip/dbNSFP1.3.zip)
-	echo "URL: $($@_URL)" >> dbNSFP1.3.dllog
-	curl -A "UA" -O "$($@_URL)"
-	echo "md5sum of download:" >> dbNSFP1.3.dllog
-	md5sum $@ >> dbNSFP1.3.dllog
-
-dbNSFP1.3.gz: dbNSFP1.3.zip
-	TMPDIR=$(shell mktemp -d) && \
-	unzip -a -d "$$TMPDIR" $< && \
-	for chrom in `seq 1 22` X Y; do \
-		tr -d \\r <$$TMPDIR/dbNSFP1.3.chr$$chrom | sort -n -k2 -S1G ; \
-	done | bgzip -c > $@ && \
-	rm -rf $$TMPDIR
-
-dbNSFP1.3.gz.tbi: dbNSFP1.3.gz
-	tabix -s1 -b2 -e2 $<
-
-dbNSFP1.3: dbNSFP1.3.dllog
 
 genetestsgenes:
 	$(eval $@_URL:=ftp://ftp.ncbi.nih.gov/pub/GeneTests/data_to_build_custom_reports.txt)
