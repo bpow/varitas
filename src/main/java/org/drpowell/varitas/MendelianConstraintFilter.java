@@ -21,11 +21,11 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 	private List<int []> trios;
 	
 	public static VCFMeta[] ADDITIONAL_HEADERS = {
-			VCFParser.parseVCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
-			VCFParser.parseVCFMeta("##INFO=<ID=TMV,Number=0,Type=Flag,Description=\"The most-likely individual calls show a mendelian violation among a trio.\">")
+			new VCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
+			new VCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
+			new VCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
+			new VCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
+			new VCFMeta("##INFO=<ID=TMV,Number=0,Type=Flag,Description=\"The most-likely individual calls show a mendelian violation among a trio.\">")
 	};
 	
 	/**

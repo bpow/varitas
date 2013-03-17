@@ -21,6 +21,7 @@ import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.Main;
 import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
@@ -65,7 +66,7 @@ public class ApplyVCFFilters implements CLIRunnable {
 				BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
 				String line = null;
 				while ((line = br.readLine()) != null) {
-					vcfHeaders.add(VCFParser.parseVCFMeta(line));
+					vcfHeaders.add(new VCFMeta(line));
 				}
 				br.close();
 			} catch (IOException ioe) {

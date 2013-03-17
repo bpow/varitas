@@ -22,9 +22,9 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 	private final int [] trioIndices;
 	private int variantIndex = -1;
 	public static final VCFMeta [] ADDITIONAL_HEADERS = {
-		VCFParser.parseVCFMeta("##INFO=<ID=COMPOUND,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant not inherited from each parent.\">"),
-		VCFParser.parseVCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">"),
-		VCFParser.parseVCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
+		new VCFMeta("##INFO=<ID=COMPOUND,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant not inherited from each parent.\">"),
+		new VCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">"),
+		new VCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
 	};
 
 	public CompoundMutationFilter(Iterator<VCFVariant> delegate, int [] trioIndices) {

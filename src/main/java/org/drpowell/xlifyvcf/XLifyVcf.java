@@ -117,7 +117,7 @@ public class XLifyVcf implements CLIRunnable {
 				BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
 				String line = null;
 				while ((line = br.readLine()) != null) {
-					vcfHeaders.add(VCFParser.parseVCFMeta(line));
+					vcfHeaders.add(new VCFMeta(line));
 				}
 				br.close();
 			} catch (IOException ioe) {

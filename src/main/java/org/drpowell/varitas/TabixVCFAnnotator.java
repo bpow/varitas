@@ -10,7 +10,6 @@ import java.util.Map.Entry;
 
 import org.drpowell.tabix.TabixReader;
 import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFVariant;
 
 public class TabixVCFAnnotator extends Annotator {
@@ -103,10 +102,10 @@ public class TabixVCFAnnotator extends Annotator {
 		try {
 			for (String metaLine : tabix.readHeaders()) {
 				String newId = null; 
-				VCFMeta meta = VCFParser.parseVCFMeta(metaLine);
+				VCFMeta meta = new VCFMeta(metaLine);
 				String oldId = meta.getValue("ID");
 				if ("INFO".equals(meta.getMetaKey()) && (newId = fieldMap.get(oldId)) != null) {
-					meta.putValue("ID", newId);
+					meta = meta.cloneExcept("ID", newId);
 					newInfos.put(newId, meta.toString());
 				}
 			}

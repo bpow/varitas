@@ -5,7 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,7 +50,7 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		String line;
 		while ((line = reader.readLine()) != null) {
 			if (line.startsWith("##")) {
-				parsedHeaders.add(parseVCFMeta(line));
+				parsedHeaders.add(new VCFMeta(line));
 			} else if (line.startsWith("#CHROM")) {
 				if (!line.startsWith(VCFFixedColumns.VCF_FIXED_COLUMN_HEADERS)) {
 					throw new RuntimeException("Problem reading VCF file\nExpected: " +
@@ -79,45 +78,6 @@ public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
 		throw new RuntimeException("Invalid VCF headers");
 	}
 	
-	private static LinkedHashMap<String, String> parseMultipleMetaValues(String multiValues) {
-		String [] keyvalues = multiValues.split(",");
-		LinkedHashMap<String, String> result = new LinkedHashMap<String, String>(keyvalues.length * 5 % 4);
-		String prev = null;
-		for (String s : keyvalues) {
-			if (prev != null) {
-				s = prev + "," + s;
-				prev = null;
-			}
-			if ((s.indexOf('"') >= 0 ) && ((s.endsWith("\\\"") || !s.endsWith("\"")))) {
-				prev = s;
-			} else {
-				int eq = s.indexOf("=");
-				if (eq > 0) {
-					result.put(s.substring(0, eq), s.substring(eq+1));
-				} else {
-					result.put(s, "");
-				}
-			}
-		}
-		return result;
-	}
-	
-	public static VCFMeta parseVCFMeta(String line) {
-		if (line.startsWith("##")) {
-			line = line.substring(2);
-		}
-		int eq = line.indexOf("=");
-		if (eq <= 0) {
-			return new VCFMeta(line);
-		}
-		String metaKey = line.substring(0, eq);
-		String remainder = line.substring(eq+1);
-		if (remainder.startsWith("<") && remainder.endsWith(">")) {
-			return new VCFMeta(metaKey, parseMultipleMetaValues(remainder.substring(1, remainder.length()-1)));
-		}
-		return new VCFMeta(metaKey, remainder);
-	}
-
 	@Override
 	public Iterator<VCFVariant> iterator() {
 		if (alreadyProvidedIterator) {
