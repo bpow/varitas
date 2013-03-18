@@ -14,6 +14,7 @@ import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.logging.Logger;
 
 import javax.script.ScriptEngine;
@@ -53,13 +54,11 @@ public class Varitas implements CLIRunnable {
 	
 	private ArrayList<Annotator> readConfigFromJS(Reader jsReader) throws ScriptException {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
-		engine.eval("importPackage(" + this.getClass().getPackage().getName() + ");");
-		engine.put("ga", this);
-		engine.eval("addGeneAnnotator = function(id, file) { return ga.addGeneAnnotator(id, file); }");
-		engine.eval("addSnpEffSplitter = function() { return ga.addSnpEffAnnotationSplitter(); }");
-		engine.eval("addVCFAnnotator = function(file, fields) { return ga.addVCFAnnotator(file, fields); }");
-		engine.eval("addTSVAnnotator = function(file, fields) { return ga.addTSVAnnotator(file, fields); }");
-		engine.eval(jsReader);
+		Scanner s = new Scanner(jsReader);
+		String jsString = s.useDelimiter("\\A").next();
+		s.close();
+		engine.put("__varitas", this);
+		engine.eval("with (__varitas) {" + jsString + "}");
 		return annotators;
 	}
 	
@@ -76,7 +75,7 @@ public class Varitas implements CLIRunnable {
 		return null;
 	}
 	
-	public SnpEffAnnotationSplitter addSnpEffAnnotationSplitter() {
+	public SnpEffAnnotationSplitter addSnpEffSplitter() {
 		// FIXME -- we really only need one of these
 		SnpEffAnnotationSplitter a = new SnpEffAnnotationSplitter();
 		annotators.add(0, a);
