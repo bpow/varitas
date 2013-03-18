@@ -1,4 +1,4 @@
-package org.drpowell.varitas;
+package org.drpowell.util;
 
 import java.util.AbstractMap;
 import java.util.AbstractSet;

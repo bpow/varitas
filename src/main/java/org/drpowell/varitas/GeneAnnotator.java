@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.drpowell.util.FixedKeysMapFactory;
 import org.drpowell.vcf.VCFVariant;
 
 public class GeneAnnotator extends Annotator {
