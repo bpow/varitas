@@ -8,3 +8,4 @@ data/*.dllog
 data/*genes
 /*.iml
 /.*
+/*.jar
