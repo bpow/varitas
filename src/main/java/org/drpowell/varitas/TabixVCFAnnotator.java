@@ -101,12 +101,14 @@ public class TabixVCFAnnotator extends Annotator {
 		HashMap<String, String> newInfos = new HashMap<String, String>();
 		try {
 			for (String metaLine : tabix.readHeaders()) {
-				String newId = null; 
+				String newId = null;
 				VCFMeta meta = new VCFMeta(metaLine);
-				String oldId = meta.getValue("ID");
-				if ("INFO".equals(meta.getMetaKey()) && (newId = fieldMap.get(oldId)) != null) {
-					meta = meta.cloneExcept("ID", newId);
-					newInfos.put(newId, meta.toString());
+				if ("INFO".equals(meta.getMetaKey())) {
+					String oldId = meta.getValue("ID");
+					if ((newId = fieldMap.get(oldId)) != null) {
+						meta = meta.cloneExcept("ID", newId);
+						newInfos.put(newId, meta.toString());
+					}
 				}
 			}
 			// looping twice so we can iterate through the LinkedHashMap in its order
