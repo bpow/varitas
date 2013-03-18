@@ -1,4 +1,4 @@
-package org.drpowell.xlifyvcf;
+package org.drpowell.vcffilters;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -16,9 +16,7 @@ import java.util.logging.Logger;
 
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.varitas.CLIRunnable;
-import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.Main;
-import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;

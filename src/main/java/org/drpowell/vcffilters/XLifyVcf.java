@@ -1,4 +1,4 @@
-package org.drpowell.xlifyvcf;
+package org.drpowell.vcffilters;
 
 import java.io.IOException;
 import java.io.OutputStream;

@@ -1,6 +1,5 @@
-package org.drpowell.xlifyvcf;
+package org.drpowell.vcffilters;
 
-import org.drpowell.varitas.VCFFilteringIterator;
 import org.drpowell.vcf.VCFVariant;
 
 public class DefaultVCFFilter extends VCFFilteringIterator {

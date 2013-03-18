@@ -1,4 +1,4 @@
-package org.drpowell.varitas;
+package org.drpowell.vcffilters;
 
 import java.util.Iterator;
 

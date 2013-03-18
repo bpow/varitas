@@ -1,4 +1,4 @@
-package org.drpowell.xlifyvcf;
+package org.drpowell.vcffilters;
 
 import java.io.Reader;
 
@@ -7,7 +7,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.drpowell.varitas.VCFFilteringIterator;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFVariant;
 

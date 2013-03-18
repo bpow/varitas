@@ -6,7 +6,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.drpowell.xlifyvcf.ApplyVCFFilters;
+import org.drpowell.vcffilters.ApplyVCFFilters;
 
 import com.sampullara.cli.Args;
 
