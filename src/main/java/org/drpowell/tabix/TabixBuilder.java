@@ -34,7 +34,6 @@ import java.util.List;
 import net.sf.samtools.util.BlockCompressedFilePointerUtil;
 import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
-import net.sf.samtools.util.StringUtil;
 
 import org.drpowell.tabix.TabixIndex.TabixConfig;
 
