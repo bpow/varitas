@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +39,7 @@ import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.Main;
 import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
@@ -64,7 +64,7 @@ public class XLifyVcf implements CLIRunnable {
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	private Map<String, String> headerComments;
-	private Iterator<VCFVariant> variants;
+	private VCFIterator variants;
 
 	// this is really hacky-- most VCF files tend to have the FORMAT header lines in alphabetical
 	// order, which is really obnoxious for viewing. I like this order better...
@@ -124,7 +124,7 @@ public class XLifyVcf implements CLIRunnable {
 				Logger.getLogger("VARITAS").log(Level.SEVERE, "Problem reading additional headers from " + url, ioe);
 			}
 		}
-		variants = vcfParser.iterator();
+		variants = vcfParser;
 		if (javascriptFilter != null && !"".equals(javascriptFilter)) {
 			variants = new JavascriptBooleanVCFFilter(variants, javascriptFilter);
 		}
@@ -145,12 +145,12 @@ public class XLifyVcf implements CLIRunnable {
 			// FIXME-- only handles a single trio
 			if (!trios.isEmpty()) {
 				variants = new CompoundMutationFilter(variants, trios.get(0));
-				vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADERS));
+				vcfHeaders = variants.getHeaders();
 			}
 		}
 		if (applyMendelianConstraint) {
-			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
 			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
+			vcfHeaders = variants.getHeaders();
 		}
 		Map<String, VCFMeta> headerFormats = vcfHeaders.formats();
 		// make the formats LinkedHashMap in a special order

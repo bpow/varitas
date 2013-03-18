@@ -12,7 +12,7 @@ import java.util.logging.Logger;
  *
  * @author bpow
  */
-public class VCFParser implements Iterable<VCFVariant>, Iterator<VCFVariant> {
+public class VCFParser implements Iterable<VCFVariant>, VCFIterator {
 	
 	public enum VCFFixedColumns {
 		CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT;

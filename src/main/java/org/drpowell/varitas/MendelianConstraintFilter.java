@@ -3,12 +3,12 @@ package org.drpowell.varitas;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.drpowell.util.FilteringIterator;
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFMeta;
@@ -16,11 +16,11 @@ import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
-public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
+public class MendelianConstraintFilter extends VCFFilteringIterator {
 
 	private List<int []> trios;
 	
-	public static VCFMeta[] ADDITIONAL_HEADERS = {
+	private static VCFMeta[] ADDITIONAL_HEADERS = {
 			new VCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
 			new VCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
 			new VCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
@@ -58,8 +58,15 @@ public class MendelianConstraintFilter extends FilteringIterator<VCFVariant> {
 		49152, 32768 };
 
 	public MendelianConstraintFilter(Iterator<VCFVariant> client, VCFHeaders headers) {
-		super(client);
+		super(client, headers);
 		trios = VCFUtils.getTrioIndices(headers);
+	}
+	
+	@Override
+	public VCFHeaders getHeaders() {
+		VCFHeaders newHeaders = new VCFHeaders(originalHeaders); // FIXME - possibly store as lazy loaded
+		newHeaders.addAll(Arrays.asList(ADDITIONAL_HEADERS));
+		return newHeaders;
 	}
 	
 	private boolean singleAllele(int genotype) {

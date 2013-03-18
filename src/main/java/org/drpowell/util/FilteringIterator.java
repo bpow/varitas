@@ -3,7 +3,7 @@ package org.drpowell.util;
 import java.util.Iterator;
 
 public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
-	private final Iterator<E> delegate;
+	protected final Iterator<E> delegate;
 	
 	public abstract E filter(E element);
 	

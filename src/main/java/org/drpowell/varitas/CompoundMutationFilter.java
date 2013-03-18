@@ -10,34 +10,39 @@ import java.util.Iterator;
 import org.drpowell.util.Grouper;
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
-public class CompoundMutationFilter implements Iterator<VCFVariant> {
+public class CompoundMutationFilter implements VCFIterator {
 	
 	private final Grouper<String, VCFVariant> grouper;
 	private Iterator<VCFVariant> filteredVariants;
 	private final int [] trioIndices;
 	private int variantIndex = -1;
-	public static final VCFMeta [] ADDITIONAL_HEADERS = {
+	private final VCFHeaders headers;
+	private static final VCFMeta [] ADDITIONAL_HEADERS = {
 		new VCFMeta("##INFO=<ID=COMPOUND,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant not inherited from each parent.\">"),
 		new VCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">"),
 		new VCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
 	};
 
-	public CompoundMutationFilter(Iterator<VCFVariant> delegate, int [] trioIndices) {
+	// FIXME - handle multiple trios somehow...
+	public CompoundMutationFilter(VCFIterator delegate, int [] trioIndices) {
 		this.trioIndices = trioIndices;
+		this.headers = new VCFHeaders(delegate.getHeaders());
+		headers.addAll(Arrays.asList(ADDITIONAL_HEADERS));
 		grouper = new VCFGeneGrouper().setDelegate(delegate);
 		advanceGroup();
 	}
-
-	// FIXME - handle multiple trios somehow...
-	public CompoundMutationFilter(Iterator<VCFVariant> delegate, VCFHeaders headers) {
-		this(delegate, VCFUtils.getTrioIndices(headers).get(0));
-	}
 	
+	@Override
+	public VCFHeaders getHeaders() {
+		return headers;
+	}
+
 	private static final int [] splitAlleles(String call) {
 		// FIXME - assumes GT FORMAT type is present (per VCF spec, if present must be first)
 		if (call.startsWith(".")) {
@@ -188,7 +193,7 @@ public class CompoundMutationFilter implements Iterator<VCFVariant> {
 		System.out.println(headers.getColumnHeaderLine());
 		
 		int yes = 0, no = 0;
-		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p.iterator(), headers); cmf.hasNext();) {
+		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p, VCFUtils.getTrioIndices(p.getHeaders()).get(0)); cmf.hasNext();) {
 			VCFVariant v = cmf.next();
 			if (v.hasInfo("COMPOUND")) {
 				yes++;

@@ -1,17 +1,17 @@
 package org.drpowell.xlifyvcf;
 
 import java.io.Reader;
-import java.util.Iterator;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.drpowell.util.FilteringIterator;
+import org.drpowell.varitas.VCFFilteringIterator;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFVariant;
 
-public class ScriptVCFFilter extends FilteringIterator<VCFVariant> {
+public class ScriptVCFFilter extends VCFFilteringIterator {
 
 	private Invocable invocable;
 	
@@ -28,7 +28,7 @@ public class ScriptVCFFilter extends FilteringIterator<VCFVariant> {
 		return (Invocable) engine;
 	}
 
-	public ScriptVCFFilter(Iterator<VCFVariant> client, Reader fileReader) {
+	public ScriptVCFFilter(VCFIterator client, Reader fileReader) {
 		super(client);
 		invocable = initializeEngine(fileReader);
 	}

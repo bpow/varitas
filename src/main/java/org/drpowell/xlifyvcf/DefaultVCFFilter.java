@@ -1,13 +1,11 @@
 package org.drpowell.xlifyvcf;
 
-import java.util.Iterator;
-
-import org.drpowell.util.FilteringIterator;
+import org.drpowell.varitas.VCFFilteringIterator;
 import org.drpowell.vcf.VCFVariant;
 
-public class DefaultVCFFilter extends FilteringIterator<VCFVariant> {
+public class DefaultVCFFilter extends VCFFilteringIterator {
 	
-	public DefaultVCFFilter(Iterator<VCFVariant> variants) {
+	public DefaultVCFFilter(VCFFilteringIterator variants) {
 		super(variants);
 	}
 

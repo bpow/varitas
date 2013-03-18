@@ -19,6 +19,17 @@ public class VCFHeaders extends AbstractList<VCFMeta> {
 		addAll(headerList);
 		this.samples = samples;
 	}
+	
+	/**
+	 * Cloning constructor, can save some time if all you want to do is make a new header set with a few more lines
+	 * @param oldHeaders
+	 */
+	public VCFHeaders(VCFHeaders oldHeaders) {
+		headers = new ArrayList<VCFMeta>(oldHeaders.headers);
+		infos = new LinkedHashMap<String, VCFMeta>(oldHeaders.infos);
+		formats = new LinkedHashMap<String, VCFMeta>(oldHeaders.formats);
+		samples = Arrays.copyOf(oldHeaders.samples, oldHeaders.samples.length);
+	}
 
 	public List<String> getSamples() {
 		return Arrays.asList(samples);

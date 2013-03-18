@@ -1,6 +1,5 @@
 package org.drpowell.xlifyvcf;
 
-import java.util.Iterator;
 import java.util.logging.Logger;
 
 import javax.script.Compilable;
@@ -10,10 +9,11 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import org.drpowell.util.FilteringIterator;
+import org.drpowell.varitas.VCFFilteringIterator;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFVariant;
 
-public class JavascriptBooleanVCFFilter extends FilteringIterator<VCFVariant> {
+public class JavascriptBooleanVCFFilter extends VCFFilteringIterator {
 
 	private final CompiledScript script;
 	private final String filter;
@@ -31,7 +31,7 @@ public class JavascriptBooleanVCFFilter extends FilteringIterator<VCFVariant> {
 		return cs;
 	}
 
-	public JavascriptBooleanVCFFilter(Iterator<VCFVariant> client, String filter) {
+	public JavascriptBooleanVCFFilter(VCFIterator client, String filter) {
 		super(client);
 		this.filter = filter;
 		script = initializeEngine(filter);

@@ -9,8 +9,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,17 +19,17 @@ import org.drpowell.varitas.CompoundMutationFilter;
 import org.drpowell.varitas.Main;
 import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
-import org.drpowell.vcf.VCFVariant;
 
 import com.sampullara.cli.Args;
 import com.sampullara.cli.Argument;
 
 public class ApplyVCFFilters implements CLIRunnable {
 	private VCFParser vcfParser;
-	private Iterator<VCFVariant> variants;
+	private VCFIterator variants;
 	
 	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
 	private String[] filters;
@@ -73,7 +71,7 @@ public class ApplyVCFFilters implements CLIRunnable {
 				Logger.getLogger("VARITAS").log(Level.SEVERE, "Problem reading additional headers from " + url, ioe);
 			}
 		}
-		variants = vcfParser.iterator();
+		variants = vcfParser;
 		if (javascriptFilter != null && !"".equals(javascriptFilter)) {
 			variants = new JavascriptBooleanVCFFilter(variants, javascriptFilter);
 		}
@@ -94,12 +92,12 @@ public class ApplyVCFFilters implements CLIRunnable {
 			// FIXME-- only handles a single trio
 			if (!trios.isEmpty()) {
 				variants = new CompoundMutationFilter(variants, trios.get(0));
-				vcfHeaders.addAll(Arrays.asList(CompoundMutationFilter.ADDITIONAL_HEADERS));
+				vcfHeaders = variants.getHeaders();
 			}
 		}
 		if (applyMendelianConstraint) {
-			vcfHeaders.addAll(Arrays.asList(MendelianConstraintFilter.ADDITIONAL_HEADERS));
 			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
+			vcfHeaders = variants.getHeaders();
 		}
 		return this;
 	}
