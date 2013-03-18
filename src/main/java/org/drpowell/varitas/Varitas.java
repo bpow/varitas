@@ -23,6 +23,8 @@ import javax.script.ScriptException;
 
 import org.drpowell.tabix.TabixReader;
 import org.drpowell.util.GunzipIfGZipped;
+import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFVariant;
@@ -30,8 +32,9 @@ import org.drpowell.vcf.VCFVariant;
 import com.sampullara.cli.Args;
 import com.sampullara.cli.Argument;
 
-public class Varitas implements CLIRunnable {
+public class Varitas implements CLIRunnable, VCFIterator {
 	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
+	private VCFIterator variants;
 	private static Logger logger = Logger.getLogger("org.drpowell.varitas.GrandAnnotator");
 
 	@Argument(alias = "c", description = "Configuration file (javascript)")
@@ -62,11 +65,11 @@ public class Varitas implements CLIRunnable {
 		return annotators;
 	}
 	
-	public GeneAnnotator addGeneAnnotator(String id, String fileName) {
+	public GeneAnnotator geneAnnotator(String id, String fileName) {
 		URL url = Main.findExistingFile(fileName, configParent);
 		try {
 			GeneAnnotator annotator = new GeneAnnotator(id, url);
-			annotators.add(annotator);
+			variants = new AnnotatingIterator(variants, annotator);
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -75,18 +78,18 @@ public class Varitas implements CLIRunnable {
 		return null;
 	}
 	
-	public SnpEffAnnotationSplitter addSnpEffSplitter() {
-		// FIXME -- we really only need one of these
+	public SnpEffAnnotationSplitter snpEffSplitter() {
+		// FIXME -- we really only need one of these, and it should go before any gene annotators
 		SnpEffAnnotationSplitter a = new SnpEffAnnotationSplitter();
-		annotators.add(0, a);
+		variants = new AnnotatingIterator(variants, a);
 		return a;
 	}
 
-	public TabixVCFAnnotator addVCFAnnotator(String fileName, String fieldString) {
+	public TabixVCFAnnotator vcfAnnotator(String fileName, String fieldString) {
 		URL url = Main.findExistingFile(fileName, configParent);
 		try {
 			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(url.getFile()), fieldString);
-			annotators.add(annotator);
+			variants = new AnnotatingIterator(variants, annotator);
 			return annotator;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -95,11 +98,11 @@ public class Varitas implements CLIRunnable {
 		return null;
 	}
 
-	public TabixTSVAnnotator addTSVAnnotator(String fileName, String fieldString) {
+	public TabixTSVAnnotator tsvAnnotator(String fileName, String fieldString) {
 		URL url = Main.findExistingFile(fileName, configParent);
 		try {
 			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(url.getFile()), fieldString);
-			annotators.add(annotator);
+			variants = new AnnotatingIterator(variants, annotator);
 			return annotator;
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -152,14 +155,41 @@ public class Varitas implements CLIRunnable {
 			} else {
 				input = new BufferedReader(new InputStreamReader(System.in));
 			}
-			initialize(config);
-			annotateVCFFile(input);
+			variants = new VCFParser(input);
+			initialize(config); // will change variants to incorporate filter chain
+			for (VCFMeta header : variants.getHeaders()) {
+				ps.println(header);
+			}
+			ps.println(variants.getHeaders().getColumnHeaderLine());
+			while (variants.hasNext()) {
+				ps.println(variants.next());
+			}
 			ps.close();
 			input.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 			Args.usage(this);
 		}
+	}
+
+	@Override
+	public boolean hasNext() {
+		return variants.hasNext();
+	}
+
+	@Override
+	public VCFVariant next() {
+		return variants.next();
+	}
+
+	@Override
+	public void remove() {
+		variants.remove();
+	}
+
+	@Override
+	public VCFHeaders getHeaders() {
+		return variants.getHeaders();
 	}
 
 }
