@@ -4,13 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
+import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
 import org.drpowell.vcf.VCFUtils;
@@ -57,9 +57,9 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 		32800, 32832, 32896, 33024, 33280, 33792, 34816, 36864, 40960,
 		49152, 32768 };
 
-	public MendelianConstraintFilter(Iterator<VCFVariant> client, VCFHeaders headers) {
-		super(client, headers);
-		trios = VCFUtils.getTrioIndices(headers);
+	public MendelianConstraintFilter(VCFIterator client) {
+		super(client);
+		trios = VCFUtils.getTrioIndices(client.getHeaders());
 	}
 	
 	@Override
@@ -279,7 +279,7 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 		System.out.println(h.getColumnHeaderLine());
 		
 		int yes = 0, no = 0;
-		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p.iterator(), p.getHeaders());
+		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p);
 				mcf.hasNext();) {
 			VCFVariant v = mcf.next();
 			if (v.hasInfo("MENDELLR")) {

@@ -1,14 +1,7 @@
 package org.drpowell.xlifyvcf;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -16,8 +9,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
@@ -33,24 +24,29 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.drpowell.util.GunzipIfGZipped;
-import org.drpowell.varitas.CLIRunnable;
-import org.drpowell.varitas.CompoundMutationFilter;
-import org.drpowell.varitas.Main;
-import org.drpowell.varitas.MendelianConstraintFilter;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFParser;
-import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
-import com.sampullara.cli.Args;
-import com.sampullara.cli.Argument;
+/**
+ * A file that wraps a VCFIterator to write the variants to a .XLS file.
+ * 
+ * XLifyVcf itself implements VCFIterator, so it can be used as part of a chain of filters.
 
-public class XLifyVcf implements CLIRunnable {
+ * The constructor is given a VCFIterator to wrap, and an OutputStream to which the output should be written.
+ * As each variant is processed (with each call of this.next()), the internal representation of the .XLS
+ * file is made. When the client iterator is depleted (when hasNext() returns false), the file is written.
+ * Because of this behavior, it is important to process through all of the values of the iterator if you
+ * actually want to write a file.
+ * 
+ * @author bpow
+ *
+ */
+public class XLifyVcf implements VCFIterator {
 	public final Workbook workbook;
-	private VCFParser vcfParser;
+	private final VCFIterator variants;
+	private final OutputStream os;
 	private final CreationHelper createHelper;
 	private Map<String, VCFMeta> infos;
 	private Map<String, VCFMeta> formats;
@@ -64,35 +60,13 @@ public class XLifyVcf implements CLIRunnable {
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final int COLUMNS_TO_HIDE[] = {7, 8};
 	private Map<String, String> headerComments;
-	private VCFIterator variants;
 
 	// this is really hacky-- most VCF files tend to have the FORMAT header lines in alphabetical
 	// order, which is really obnoxious for viewing. I like this order better...
 	private static final String[] PREFERRED_FORMAT_ORDER = {
 		"GT", "AD", "DP", "RR", "VR", "GQ", "PL", "GL"
 	};
-	
-	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
-	private String[] filters;
-	
-	@Argument(alias = "j", description = "javascript to apply to each variant as a filter (if result is true, the variant passes)")
-	private String javascriptFilter;
-	
-	@Argument(alias = "i", description = "input file of variants (VCF format)")
-	private String input;
-	
-	@Argument(alias = "o", description = "output (.xls) file")
-	private String output;
-	
-	@Argument(alias = "b", description = "apply biallelic filter")
-	private static Boolean applyBiallelic = false;
-	
-	@Argument(alias = "m", description = "apply mendelian constraint filter")
-	private static Boolean applyMendelianConstraint = false;
-	
-	@Argument(alias = "a", description = "file with additional headers to add to input vcf file")
-	private String additionalHeaders;
-	
+		
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
 		SNP("http://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=%s"),
@@ -103,55 +77,18 @@ public class XLifyVcf implements CLIRunnable {
 		HyperlinkColumn(String url) { this.url = url; };
 	}
 	
-	public XLifyVcf() {
+	/**
+	 * Wrap the variants VCFIterator, planning to write output to the specified OutputStream
+	 * 
+	 * @param variants
+	 * @param os
+	 */
+	public XLifyVcf(VCFIterator variants, OutputStream os) {
+		this.variants = variants;
+		this.os = os;
 		workbook = new HSSFWorkbook();
 		createHelper = workbook.getCreationHelper();
-	}
-	
-	protected XLifyVcf initialize(VCFParser parser) {
-		vcfParser = parser;
-		VCFHeaders vcfHeaders = parser.getHeaders();
-		if (additionalHeaders != null) {
-			URL url = Main.findExistingFile(additionalHeaders);
-			try {
-				BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
-				String line = null;
-				while ((line = br.readLine()) != null) {
-					vcfHeaders.add(new VCFMeta(line));
-				}
-				br.close();
-			} catch (IOException ioe) {
-				Logger.getLogger("VARITAS").log(Level.SEVERE, "Problem reading additional headers from " + url, ioe);
-			}
-		}
-		variants = vcfParser;
-		if (javascriptFilter != null && !"".equals(javascriptFilter)) {
-			variants = new JavascriptBooleanVCFFilter(variants, javascriptFilter);
-		}
-		if (filters != null) {
-			for (String filter : filters) {
-				URL url = Main.findExistingFile(filter);
-				Reader r;
-				try {
-					r = new InputStreamReader(url.openStream());
-					variants = new ScriptVCFFilter(variants, r);
-				} catch (IOException e) {
-					Logger.getLogger("VARITAS").warning("The filter [ " + filter + " ] could not be found and will be ignored (tried [ " + url + " ])");
-				}
-			}
-		}
-		if (applyBiallelic) {
-			List<int []> trios = VCFUtils.getTrioIndices(vcfHeaders);
-			// FIXME-- only handles a single trio
-			if (!trios.isEmpty()) {
-				variants = new CompoundMutationFilter(variants, trios.get(0));
-				vcfHeaders = variants.getHeaders();
-			}
-		}
-		if (applyMendelianConstraint) {
-			variants = new MendelianConstraintFilter(variants, vcfParser.getHeaders());
-			vcfHeaders = variants.getHeaders();
-		}
+		VCFHeaders vcfHeaders = variants.getHeaders();
 		Map<String, VCFMeta> headerFormats = vcfHeaders.formats();
 		// make the formats LinkedHashMap in a special order
 		formats = new LinkedHashMap<String, VCFMeta>(headerFormats.size()*3/2, 0.75f);
@@ -167,12 +104,11 @@ public class XLifyVcf implements CLIRunnable {
 		headers = makeHeaders();
 		makeMetaSheet();
 		dataSheet = setupDataSheet();
-		return this;
 	}
 	
 	private String [] makeHeaders() {
 		numericColumns = new BitSet();
-		ArrayList<String> out = new ArrayList<String>(Arrays.asList(vcfParser.getHeaders().getColumnHeaderLine().split("\t", -1)));
+		ArrayList<String> out = new ArrayList<String>(Arrays.asList(variants.getHeaders().getColumnHeaderLine().split("\t", -1)));
 		numericColumns.set(1);
 		numericColumns.set(5);
 		headerComments = new HashMap<String, String>();
@@ -252,18 +188,18 @@ public class XLifyVcf implements CLIRunnable {
 	
 	private void makeMetaSheet() {
 		Sheet metaSheet = workbook.createSheet("metadata");
-		List<VCFMeta> headers = vcfParser.getHeaders();
+		List<VCFMeta> headers = variants.getHeaders();
 		for (int i = 0; i < headers.size(); i++) {
 			metaSheet.createRow(i).createCell(0).setCellValue(headers.get(i).toString());
 		}
 	}
 	
-	private void writeRow(VCFVariant v) {
+	private VCFVariant writeRow(VCFVariant v) {
 		rowNum++;
 		ArrayList<String> data = new ArrayList<String>(headers.length);
 		Row r = dataSheet.createRow(rowNum);
 		data.addAll(Arrays.asList(v.toString().split("\t", -1)));
-		for (String i : vcfParser.getHeaders().infos().keySet()) {
+		for (String i : variants.getHeaders().infos().keySet()) {
 			String value = v.getInfoValue(i, true);
 			if ("".equals(value)) {
 				value = i; // flag fields should display as something.
@@ -309,6 +245,7 @@ public class XLifyVcf implements CLIRunnable {
 			}
 		}
 		makeHyperlinks(r);
+		return v;
 	}
 	
 	private void makeHyperlinks(Row r) {
@@ -333,44 +270,44 @@ public class XLifyVcf implements CLIRunnable {
 		}
 	}
 	
-	public void doWork() {
-		while (variants.hasNext()) {
-			writeRow(variants.next());
-			// TODO: progress
-		}
+	private void writeOutput() throws IOException {
+		// FIXME - could consider making this public (would need to allow writing only once)
 		for (int i = 0; i < COLUMNS_TO_AUTO_RESIZE.length; i++) {
 			dataSheet.autoSizeColumn(COLUMNS_TO_AUTO_RESIZE[i]);
 		}
 		for (int i = 0; i < COLUMNS_TO_HIDE.length; i++) {
 			dataSheet.setColumnHidden(COLUMNS_TO_HIDE[i], true);
 		}
+		workbook.write(os);
+		os.close();
 	}
-	
-	public void writeOutput(OutputStream out) throws IOException {
-		workbook.write(out);
-	}
-	
-	public void doMain(List<String> extraArgs) {
-		try {
-			BufferedReader reader;
-			if (input != null) {
-				reader = GunzipIfGZipped.filenameToBufferedReader(input);
-			} else {
-				reader = new BufferedReader(new InputStreamReader(System.in));
+
+	@Override
+	public boolean hasNext() {
+		boolean hasNext = variants.hasNext();
+		if (!hasNext) {
+			try {
+				writeOutput();
+			} catch (IOException e) {
+				throw new RuntimeException("Problem writing excel file from VCF variants", e);
 			}
-			initialize(new VCFParser(reader)).doWork();
-			OutputStream os;
-			if (output == null) {
-				os = new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024);
-			} else {
-				os = new BufferedOutputStream(new FileOutputStream(output), 1024);
-			}
-			writeOutput(os);
-			os.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-			Args.usage(this);
 		}
+		return hasNext;
+	}
+
+	@Override
+	public VCFVariant next() {
+		return writeRow(variants.next());
+	}
+
+	@Override
+	public void remove() {
+		variants.remove();
+	}
+
+	@Override
+	public VCFHeaders getHeaders() {
+		return variants.getHeaders();
 	}
 
 }
