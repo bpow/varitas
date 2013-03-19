@@ -15,7 +15,7 @@ vcfAnnotator("data/ESP6500SI.vcf.gz",
     "MAF=ESPMAF,GTS,EA_GTC,AA_GTC,FG,GM,AA,AAC,PP,CDP,CG,GS,CA,DP=ESPDP,GL=ESPGL")
 vcfAnnotator("data/Complete_Public_Genomes_54genomes_VQHIGH.vcf.gz",
     "AF=CG54AF").setAddChr(true).setRequirePass(true)
-tsvAnnotator("data/dbNSFP2.0b4_variant.gz",
+tsvAnnotator("data/dbNSFP2.0_variant.gz",
     "22=SIFT,23=HDIV_SCORE,24=HDIV_PRED,25=HVAR_SCORE,26=HVAR_PRED," +
     "27=LRT_SCORE,28=LRT_PRED,29=MT_SCORE,30=MT_PRED,31=MA_SCORE,32=MA_PRED," +
-    "33=GERP_NR,34=GERP_RS,35=PHYLOP,38=LRT_OMEGA").useHeader(true).checkRef(3).checkAlt(4)
+    "33=FATHMM_SCORE,34=GERP_NR,35=GERP_RS,36=PHYLOP,39=LRT_OMEGA").useHeader(true).checkRef(3).checkAlt(4)
