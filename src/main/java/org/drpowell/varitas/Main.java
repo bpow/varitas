@@ -6,16 +6,15 @@ import java.net.URL;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.drpowell.vcffilters.ApplyVCFFilters;
 
 import com.sampullara.cli.Args;
 
 public class Main {
 	
 	public static final Class<?>[] commands = {
-		ApplyVCFFilters.class,
-		Varitas.class,
+		Varitas.class
 	};
+	// TODO - now just down to one main class, no need for the whole CLIRunnable rigamarole
 	
 	public static URL findExistingFile(String f, File... otherDirectories) {
 		try {

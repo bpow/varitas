@@ -2,170 +2,149 @@ package org.drpowell.varitas;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import org.drpowell.tabix.TabixReader;
 import org.drpowell.util.GunzipIfGZipped;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
 import org.drpowell.vcf.VCFParser;
+import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
+import org.drpowell.vcffilters.CompoundMutationFilter;
+import org.drpowell.vcffilters.JavascriptBooleanVCFFilter;
+import org.drpowell.vcffilters.MendelianConstraintFilter;
+import org.drpowell.vcffilters.ScriptVCFFilter;
+import org.drpowell.vcffilters.XLifyVcf;
 
 import com.sampullara.cli.Args;
 import com.sampullara.cli.Argument;
 
-public class Varitas implements CLIRunnable, VCFIterator {
-	private ArrayList<Annotator> annotators = new ArrayList<Annotator>();
+public class Varitas implements VCFIterator, CLIRunnable {
 	private VCFIterator variants;
-	private static Logger logger = Logger.getLogger("org.drpowell.varitas.GrandAnnotator");
+	
+	@Argument(alias = "f", description = "script file(s) by which to filter variants, delimited by commas", delimiter = ",")
+	private String[] filters;
+	
+	@Argument(alias = "j", description = "javascript to apply to each variant as a filter (if result is true, the variant passes)")
+	private String javascriptFilter;
+	
+	@Argument(alias = "i", description = "input file of variants (VCF format)")
+	private String input;
+	
+	@Argument(alias = "o", description = "output (.vcf) file (if neither -o or -x are provided, will write to stdout)")
+	private String output;
+	
+	@Argument(alias = "x", description = "output (.xls) file")
+	private String xls;
+	
+	@Argument(alias = "b", description = "apply biallelic filter")
+	private static Boolean applyBiallelic = false;
+	
+	@Argument(alias = "m", description = "apply mendelian constraint filter")
+	private static Boolean applyMendelianConstraint = false;
+	
+	@Argument(alias = "a", description = "file with additional headers to add to input vcf file")
+	private String additionalHeaders;
 
-	@Argument(alias = "c", description = "Configuration file (javascript)")
+	@Argument(alias = "c", description = "configuration file (.js) for variant annotation")
 	private String config;
-	
-	@Argument(alias = "i", description = "Input file (VCF format, default is stdin)")
-	private String infile;
-	
-	@Argument(alias = "o", description = "Output file (VCF format, default is stdout)")
-	private String outfile;
-	
-	private File configFile;
-	private File configParent;
 
-	protected void initialize(String configFileName) throws IOException, ScriptException {
-		configFile = new File(configFileName);
-		configParent = configFile.getParentFile();
-		annotators = readConfigFromJS(new BufferedReader(new FileReader(configFile)));
-	}
-	
-	private ArrayList<Annotator> readConfigFromJS(Reader jsReader) throws ScriptException {
-		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
-		Scanner s = new Scanner(jsReader);
-		String jsString = s.useDelimiter("\\A").next();
-		s.close();
-		engine.put("__varitas", this);
-		engine.eval("with (__varitas) {" + jsString + "}");
-		return annotators;
-	}
-	
-	public GeneAnnotator geneAnnotator(String id, String fileName) {
-		URL url = Main.findExistingFile(fileName, configParent);
-		try {
-			GeneAnnotator annotator = new GeneAnnotator(id, url);
-			variants = new AnnotatingIterator(variants, annotator);
-			return annotator;
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
-		}
-		return null;
-	}
-	
-	public SnpEffAnnotationSplitter snpEffSplitter() {
-		// FIXME -- we really only need one of these, and it should go before any gene annotators
-		SnpEffAnnotationSplitter a = new SnpEffAnnotationSplitter();
-		variants = new AnnotatingIterator(variants, a);
-		return a;
-	}
-
-	public TabixVCFAnnotator vcfAnnotator(String fileName, String fieldString) {
-		URL url = Main.findExistingFile(fileName, configParent);
-		try {
-			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(url.getFile()), fieldString);
-			variants = new AnnotatingIterator(variants, annotator);
-			return annotator;
-		} catch (IOException e) {
-			e.printStackTrace();
-			logger.severe("Unable to read file '" + fileName + "':\n" + e.toString());
-		}
-		return null;
-	}
-
-	public TabixTSVAnnotator tsvAnnotator(String fileName, String fieldString) {
-		URL url = Main.findExistingFile(fileName, configParent);
-		try {
-			TabixTSVAnnotator annotator = new TabixTSVAnnotator(new TabixReader(url.getFile()), fieldString);
-			variants = new AnnotatingIterator(variants, annotator);
-			return annotator;
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
-		}
-		return null;
-	}
-	
-	public void annotateVCFFile(BufferedReader input) throws IOException {
-		VCFParser parser = new VCFParser(input);
-		for (VCFMeta meta: parser.getHeaders()) {
-			System.out.println(meta);
-		}
-		// add additional info lines
-		for (Annotator annotator: annotators) {
-			for (String infoLine: annotator.infoLines()) {
-				System.out.println(infoLine);
-			}
-		}
-		System.out.println(parser.getHeaders().getColumnHeaderLine());
-
-		for (VCFVariant variant: parser) {
-			for (Annotator annotator: annotators) {
-				annotator.annotate(variant);
-			}
-			System.out.println(variant);
-		}
-		System.out.flush();
-	}
-
-	public void doMain(List<String> extraArgs) {
-
-		PrintStream ps;
-		if (outfile != null) {
-			try {
-				ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(outfile), 1024));
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-				throw new RuntimeException("Unable to write to " + outfile);
-			}
-		} else {
-			ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024), false);
-		}
-		System.setOut(ps);
+	protected Varitas initialize(VCFIterator variants) {
+		VCFHeaders vcfHeaders = variants.getHeaders();
 		
+		// WARNING-- this modifies the headers in the passed VCFIterator variants...
+		if (additionalHeaders != null) {
+			URL url = Main.findExistingFile(additionalHeaders);
+			try {
+				BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					vcfHeaders.add(new VCFMeta(line));
+				}
+				br.close();
+			} catch (IOException ioe) {
+				Logger.getLogger("VARITAS").log(Level.SEVERE, "Problem reading additional headers from " + url, ioe);
+			}
+		}
+		if (config != null) {
+			variants = new JavascriptConfiguredAnnotator(variants, config);
+		}
+		if (javascriptFilter != null && !"".equals(javascriptFilter)) {
+			variants = new JavascriptBooleanVCFFilter(variants, javascriptFilter);
+		}
+		if (filters != null) {
+			for (String filter : filters) {
+				URL url = Main.findExistingFile(filter);
+				Reader r;
+				try {
+					r = new InputStreamReader(url.openStream());
+					variants = new ScriptVCFFilter(variants, r);
+				} catch (IOException e) {
+					Logger.getLogger("VARITAS").warning("The filter [ " + filter + " ] could not be found and will be ignored (tried [ " + url + " ])");
+				}
+			}
+		}
+		if (applyBiallelic) {
+			List<int []> trios = VCFUtils.getTrioIndices(vcfHeaders);
+			// FIXME-- only handles a single trio
+			if (!trios.isEmpty()) {
+				variants = new CompoundMutationFilter(variants, trios.get(0));
+			}
+		}
+		if (applyMendelianConstraint) {
+			variants = new MendelianConstraintFilter(variants);
+		}
+		this.variants = variants;
+		return this;
+	}
+	
+	public void doMain(List<String> extraArgs) {
 		try {
-			BufferedReader input;
-			if (infile != null) {
-				input = GunzipIfGZipped.filenameToBufferedReader(infile);
+			BufferedReader reader;
+			if (input != null) {
+				reader = GunzipIfGZipped.filenameToBufferedReader(input);
 			} else {
-				input = new BufferedReader(new InputStreamReader(System.in));
+				reader = new BufferedReader(new InputStreamReader(System.in));
 			}
-			variants = new VCFParser(input);
-			initialize(config); // will change variants to incorporate filter chain
-			for (VCFMeta header : variants.getHeaders()) {
-				ps.println(header);
+			initialize(new VCFParser(reader));
+			PrintWriter outWriter = null;
+
+			if (output != null) {
+				outWriter = new PrintWriter(new BufferedOutputStream(new FileOutputStream(output), 1024));
+			} else if (xls == null) { // both output and xls null -- write vcf output to stdout
+				outWriter = new PrintWriter(new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024));
 			}
-			ps.println(variants.getHeaders().getColumnHeaderLine());
-			while (variants.hasNext()) {
-				ps.println(variants.next());
+
+			if (xls != null) {
+				OutputStream os = new BufferedOutputStream(new FileOutputStream(xls), 1024);
+				variants = new XLifyVcf(variants, os);
 			}
-			ps.close();
-			input.close();
+
+			if (outWriter != null) {
+				outWriter.print(variants.getHeaders());
+				outWriter.println(variants.getHeaders().getColumnHeaderLine());
+				while (hasNext()) {
+					outWriter.println(next());
+				}
+				outWriter.close();
+			} else {
+				// need to loop through all of the variants anyway, for XLifyVcf
+				while (variants.hasNext()) {
+					variants.next();
+				}
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			Args.usage(this);
