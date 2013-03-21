@@ -2,6 +2,7 @@ package org.drpowell.varitas;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -17,6 +18,8 @@ import org.drpowell.tabix.TabixReader;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFVariant;
+import org.drpowell.vcffilters.JavascriptBooleanVCFFilter;
+import org.drpowell.vcffilters.ScriptVCFFilter;
 
 public class JavascriptConfiguredAnnotator implements VCFIterator {
 	private VCFIterator variants;
@@ -106,6 +109,24 @@ public class JavascriptConfiguredAnnotator implements VCFIterator {
 			logger.severe("Unable to read file '" + fileName + "':\n" + ioe.toString());
 		}
 		return null;
+	}
+	
+	public ScriptVCFFilter applyFilter(String filename) {
+		try {
+			ScriptVCFFilter filter = new ScriptVCFFilter(variants, new FileReader(filename));
+			variants = filter;
+			return filter;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			logger.severe("Unable to read file '" + e + "', will ignore this filter:\n" + e.toString());
+		}
+		return null;
+	}
+	
+	public JavascriptBooleanVCFFilter jsBoolean(String filter) {
+		JavascriptBooleanVCFFilter f = new JavascriptBooleanVCFFilter(variants, filter);
+		variants = f;
+		return f;
 	}
 
 	@Override
