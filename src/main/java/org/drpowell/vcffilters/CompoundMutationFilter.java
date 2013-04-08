@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.drpowell.util.Grouper;
-import org.drpowell.util.GunzipIfGZipped;
+import org.drpowell.util.FileUtils;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
@@ -185,7 +185,7 @@ public class CompoundMutationFilter implements VCFIterator {
 	}
 	
 	public static void main(String argv[]) throws IOException {
-		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
+		BufferedReader br = FileUtils.filenameToBufferedReader(argv[0]);
 		VCFParser p = new VCFParser(br);
 		VCFHeaders headers = p.getHeaders();
 		headers.addAll(Arrays.asList(ADDITIONAL_HEADERS));

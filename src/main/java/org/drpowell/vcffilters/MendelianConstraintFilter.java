@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.drpowell.util.GunzipIfGZipped;
+import org.drpowell.util.FileUtils;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
@@ -271,7 +271,7 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 	}
 	
 	public static void main(String argv[]) throws IOException {
-		BufferedReader br = GunzipIfGZipped.filenameToBufferedReader(argv[0]);
+		BufferedReader br = FileUtils.filenameToBufferedReader(argv[0]);
 		VCFParser p = new VCFParser(br);
 		VCFHeaders h = p.getHeaders();
 		for (VCFMeta m : ADDITIONAL_HEADERS) { h.add(m); }
