@@ -5,16 +5,17 @@ apply plugin: 'application'
 sourceCompatibility = '1.6'
 targetCompatibility = '1.6'
 
-mainClassName = 'org.drpowell.varitas.Main'
+mainClassName = 'org.drpowell.varitas.Varitas'
 
 repositories {
 	mavenCentral()
+	mavenRepo(url: 'http://jcenter.bintray.com')
 }
 
 dependencies {
 	compile files(file('lib').listFiles())
-	compile 'com.github.spullara.cli-parser:cli-parser:1.1'
 	compile 'org.apache.poi:poi:3.8'
+	compile 'org.drpowell:acCLImate:0.1'
 }
 
 task wrapper(type: Wrapper) {
@@ -23,6 +24,6 @@ task wrapper(type: Wrapper) {
 
 jar {
 	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-	manifest { attributes 'Main-Class': 'org.drpowell.varitas.Main' }
+	manifest { attributes 'Main-Class': mainClassName }
 	destinationDir project.projectDir
 }
