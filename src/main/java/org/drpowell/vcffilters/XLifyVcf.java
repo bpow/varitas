@@ -43,7 +43,7 @@ import org.drpowell.vcf.VCFVariant;
  * @author bpow
  *
  */
-public class XLifyVcf implements VCFIterator {
+public class XLifyVcf implements VariantOutput {
 	public final Workbook workbook;
 	private final VCFIterator variants;
 	private final OutputStream os;
