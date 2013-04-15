@@ -47,4 +47,8 @@ public class FileUtils {
 		// give up
 		return null;
 	}
+	
+	public static URL getJarContainingClass(Class<?> c) {
+		return c.getProtectionDomain().getCodeSource().getLocation();
+	}
 }

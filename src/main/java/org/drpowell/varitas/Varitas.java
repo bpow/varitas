@@ -4,10 +4,11 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -51,35 +52,58 @@ public class Varitas implements Iterable<VCFVariant> {
 	public VCFIterator applyConfig(String filename) {
 		File configFile = new File(filename);
 		configParent = configFile.getParentFile();
+		try {
+			return applyConfig(new FileInputStream(configFile));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return variants;
+	}
+	
+	@Option(name = "-C", aliases = {"--defaultConfig"}, usage = "use default annotation configuration")
+	public VCFIterator applyDefaultConfig() {
+		configParent = new File(FileUtils.getJarContainingClass(this.getClass()).getPath()).getParentFile();
+		InputStream configStream = getClass().getResourceAsStream("/config.js");
+		return applyConfig(configStream);
+	}
+	
+	private VCFIterator applyConfig(InputStream configStream) {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		Scanner s;
 		try {
-			s = new Scanner(new FileReader(configFile));
+			s = new Scanner(configStream);
 			String jsString = s.useDelimiter("\\A").next();
 			s.close();
 			engine.put("__varitas", this);
 			engine.eval("with (__varitas) {" + jsString + "}");
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (ScriptException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return this.variants;
+		return this.variants;		
 	}
 	
 	@Option(name = "-f", aliases = {"--filter"}, usage = "script file(s) by which to filter variants")
-	public ScriptVCFFilter applyFilter(String filename) {
+	public VCFIterator applyFilter(String filename) {
 		try {
-			ScriptVCFFilter filter = new ScriptVCFFilter(variants, new FileReader(filename));
-			variants = filter;
-			return filter;
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			logger.severe("Unable to read file '" + e + "', will ignore this filter:\n" + e.toString());
+			return applyFilter(FileUtils.findExistingFile(filename).openStream());
+		} catch (IOException e) {
+			logger.severe("Error trying to read filter file [ " + filename + " ], will ignore this filter!");
+			logger.severe(e.getMessage());
 		}
-		return null;
+		return variants;
+	}
+	
+	@Option(name = "-F", aliases = {"--defaultFilter"}, usage = "apply default variant filter")
+	public ScriptVCFFilter applyDefaultFilter() {
+		return applyFilter(getClass().getResourceAsStream("/defaultVariantFilter.js"));
+	}
+	
+	private ScriptVCFFilter applyFilter(InputStream filterStream) {
+		ScriptVCFFilter filter = new ScriptVCFFilter(variants, new InputStreamReader(filterStream));
+		variants = filter;
+		return filter;
 	}
 	
 	@Option(name = "-j", aliases = {"--jsBoolean"}, usage = "javascript by which to filter variants (if result is true, the variant passes)")
