@@ -38,6 +38,7 @@ import org.drpowell.vcffilters.CompoundMutationFilter;
 import org.drpowell.vcffilters.JavascriptBooleanVCFFilter;
 import org.drpowell.vcffilters.MendelianConstraintFilter;
 import org.drpowell.vcffilters.ScriptVCFFilter;
+import org.drpowell.vcffilters.TSVWritingFilter;
 import org.drpowell.vcffilters.VCFWritingFilter;
 import org.drpowell.vcffilters.VariantOutput;
 import org.drpowell.vcffilters.XLifyVcf;
@@ -133,7 +134,7 @@ public class Varitas implements Iterable<VCFVariant> {
 		return this;
 	}
 	
-	@Option(name = "-o", aliases = {"--output"}, usage = "output (.vcf) file (if neither -o or -x are provided, will write to stdout)")
+	@Option(name = "-o", aliases = {"--output"}, usage = "output (.vcf) file (if none of -o, -x or -t are provided, will write to stdout)")
 	public VCFIterator addOutput(String output) {
 		PrintWriter writer;
 		if (output == null || "-".equals(output)) {
@@ -157,6 +158,25 @@ public class Varitas implements Iterable<VCFVariant> {
 		try {
 			os = new BufferedOutputStream(new FileOutputStream(output), 1024);
 			variants = new XLifyVcf(variants, os);
+		} catch (FileNotFoundException e) {
+			String message = "Unable to write to output file: " + output;
+			logger.severe(message);
+			e.printStackTrace();
+			// TODO - decide whether to halt execution
+		}
+		return variants;
+	}
+	
+	@Option(name = "-t", aliases = {"--tsvOutput"}, usage = "output (.tsv) file")
+	public VCFIterator addTsvOutput(String output) {
+		OutputStream os;
+		try {
+			if ("-".equals(output)) {
+				os = new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024);
+			} else {
+				os = new BufferedOutputStream(new FileOutputStream(output), 1024);
+			}
+			variants = new TSVWritingFilter(variants, os);
 		} catch (FileNotFoundException e) {
 			String message = "Unable to write to output file: " + output;
 			logger.severe(message);
