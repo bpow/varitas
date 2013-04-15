@@ -1,8 +1,8 @@
 .PHONY: all
 
-.SECONDARY: dbNSFP2.0.zip dbNSFP1.3.zip ESP6500SI.snps_indels.vcf.tar.gz
+.SECONDARY: dbNSFP2.0.zip dbNSFP1.3.zip ESP6500SI-V2.snps_indels.vcf.tar.gz
 
-all: TGwMAF ncbiSNP137 CG54 ESP6500SI dbNSFP2.0
+all: TGwMAF ncbiSNP137 CG54 ESP6500SI-V2 dbNSFP2.0
 	@echo WARNING-- not making target niehs95 because it requires manual downloads
 
 TGwMAF: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.dllog
@@ -57,18 +57,18 @@ niehs.95samples.polymorphic.filtered.indels.vcf.gz niehs.95samples.polymorphic.f
 	@echo --------------------------------------------------------------
 	@exit 1
 
-ESP6500SI: ESP6500SI.vcf.dllog
+ESP6500SI-V2: ESP6500SI-V2.vcf.dllog
 
-ESP6500SI.snps_indels.vcf.tar.gz:
-	$(eval $@_URL:=http://evs.gs.washington.edu/evs_bulk_data/ESP6500SI.snps_indels.vcf.tar.gz)
-	echo "URL: $($@_URL)" >> ESP6500.vcf.dllog
+ESP6500SI-V2.snps_indels.vcf.tar.gz:
+	$(eval $@_URL:=http://evs.gs.washington.edu/evs_bulk_data/ESP6500SI-V2.snps_indels.vcf.tar.gz)
+	echo "URL: $($@_URL)" >> ESP6500SI-V2.vcf.dllog
 	curl -O "$($@_URL)"
 
-ESP6500SI.vcf.gz: ESP6500SI.snps_indels.vcf.tar.gz
+ESP6500SI-V2.vcf.gz: ESP6500SI-V2.snps_indels.vcf.tar.gz
 	TMPDIR=$(shell mktemp -d) && \
-	tar -C $$TMPDIR -xzf ESP6500SI.snps_indels.vcf.tar.gz && \
+	tar -C $$TMPDIR -xzf ESP6500SI-V2.snps_indels.vcf.tar.gz && \
 	for chrom in `seq 1 22` X Y; do \
-		cat "$$TMPDIR/ESP6500SI.chr$${chrom}.snps_indels.vcf"; \
+		cat "$$TMPDIR/ESP6500SI-V2.chr$${chrom}.snps_indels.vcf"; \
 	done | bgzip -c > $@ && \
 	rm -rf $$TMPDIR
 

@@ -11,7 +11,7 @@ vcfAnnotator("data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.g
     "AMR_AF,ASN_AF,AFR_AF,EUR_AF,AF=TGAF")
 vcfAnnotator("data/ncbiSNP137.vcf.gz", 
     "SCS,GMAF,PM,G5A,G5").setCopyID(true)
-vcfAnnotator("data/ESP6500SI.vcf.gz",
+vcfAnnotator("data/ESP6500SI-V2.vcf.gz",
     "MAF=ESPMAF,GTS,EA_GTC,AA_GTC,FG,GM,AA,AAC,PP,CDP,CG,GS,CA,DP=ESPDP,GL=ESPGL")
 vcfAnnotator("data/Complete_Public_Genomes_54genomes_VQHIGH.vcf.gz",
     "AF=CG54AF").setAddChr(true).setRequirePass(true)
