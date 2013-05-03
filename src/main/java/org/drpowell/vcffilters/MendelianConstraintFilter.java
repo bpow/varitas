@@ -19,6 +19,7 @@ import org.drpowell.vcf.VCFVariant;
 public class MendelianConstraintFilter extends VCFFilteringIterator {
 
 	private List<int []> trios;
+	private static final boolean FATHER_ALLELE_FIRST = false;
 	
 	private static VCFMeta[] ADDITIONAL_HEADERS = {
 			new VCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
@@ -111,6 +112,9 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 				} else {
 					// not phaseable
 					phase[0] = phase[1] = phase[2] = 0;
+				}
+				if (!FATHER_ALLELE_FIRST) {
+					phase[0] = -phase[0];
 				}
 			}
 		} else {
