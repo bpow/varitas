@@ -29,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
 import net.sf.samtools.util.BlockCompressedFilePointerUtil;
@@ -36,6 +37,7 @@ import net.sf.samtools.util.BlockCompressedInputStream;
 import net.sf.samtools.util.BlockCompressedOutputStream;
 
 import org.drpowell.tabix.TabixIndex.TabixConfig;
+import org.drpowell.util.LineIterator;
 
 public class TabixBuilder {
 	private final TabixIndex tabix;
@@ -98,12 +100,16 @@ public class TabixBuilder {
 		finishPrevChromosome(tidCurr);
 	}
 	
-	public static TabixIndex buildIndex(BufferedReader reader, String compressedFileName, TabixConfig config) throws IOException {
+	public static TabixIndex buildIndex(BufferedReader reader, String compressedFilename, TabixConfig config) throws IOException {
+		return buildIndex(new LineIterator(reader), compressedFilename, config);
+	}
+	
+	public static TabixIndex buildIndex(Iterator<String> input, String compressedFileName, TabixConfig config) throws IOException {
 		TabixBuilder builder = new TabixBuilder(compressedFileName, config);
 		BlockCompressedOutputStream bcos = new BlockCompressedOutputStream(new File(compressedFileName));
 		long startOffset, endOffset;
-		String line = null;
-		while ((line = reader.readLine()) != null) {
+		while (input.hasNext()) {
+			String line = input.next();
 			if (line.startsWith(config.commentString)) {
 				bcos.write(line.getBytes());
 				bcos.write(LINE_SEPARATOR);
