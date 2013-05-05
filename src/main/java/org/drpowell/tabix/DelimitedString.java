@@ -52,7 +52,12 @@ public class DelimitedString extends AbstractList<String> {
 
 	@Override
 	public String get(int index) {
-		return concatenated.substring(delimiterLocations[index]+1, delimiterLocations[index+1]);
+		try {
+			return concatenated.substring(delimiterLocations[index]+1, delimiterLocations[index+1]);
+		} catch (ArrayIndexOutOfBoundsException aioobe) {
+			System.err.println("Tried to get index " + index + " for string:\n\t" + concatenated);
+			throw aioobe;
+		}
 	}
 
 	@Override
