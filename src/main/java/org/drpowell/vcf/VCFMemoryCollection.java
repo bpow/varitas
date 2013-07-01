@@ -8,11 +8,9 @@ public class VCFMemoryCollection extends AbstractList<VCFVariant> {
 	private final ArrayList<VCFVariant> variants = new ArrayList<VCFVariant>();
 	private VCFHeaders headers;
 	
-	public VCFMemoryCollection(VCFParser parser) {
-		for (VCFVariant v: parser) {
-			variants.add(v);
-		}
-		headers = parser.getHeaders();
+	public VCFMemoryCollection(VCFIterator input) {
+		while (input.hasNext()) variants.add(input.next());
+		headers = input.getHeaders();
 	}
 	
 	public VCFHeaders getHeaders() {
