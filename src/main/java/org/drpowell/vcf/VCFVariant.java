@@ -29,6 +29,8 @@ public class VCFVariant {
 	private volatile double [][] logLikelihoods;
 	private static final String [] FLAG_INFO = new String[0];
 	private static final CustomPercentEncoder INFO_ENCODER = CustomPercentEncoder.allowAsciiPrintable(true).recodeAdditionalCharacters(" ;=".toCharArray());
+	private String [] formatKeys;
+	private String [][] splitCalls;
 	
 	public VCFVariant(String line) {
 		this(line.split("\t", -1));
@@ -39,6 +41,7 @@ public class VCFVariant {
 		start = Integer.parseInt(row[VCFParser.VCFFixedColumns.POS.ordinal()]);
 		end = start + getRef().length() - 1;
 		info = splitInfoField(row[VCFParser.VCFFixedColumns.INFO.ordinal()]);
+		formatKeys = getFormat().split(":");
 	}
 
 	public static Map<String, String[]> splitInfoField(String info) {
@@ -161,9 +164,8 @@ public class VCFVariant {
 	}
 	
 	private final int findFormatItemIndex(String key) {
-		String [] format = getFormat().split(":");
-		for (int i = 0; i < format.length; i++) {
-			if (key.equals(format[i])) return i;
+		for (int i = 0; i < formatKeys.length; i++) {
+			if (key.equals(formatKeys[i])) return i;
 		}
 		return -1;
 	}
@@ -251,6 +253,18 @@ public class VCFVariant {
 		} else {
 			return Arrays.copyOfRange(row, VCFParser.VCFFixedColumns.SIZE, row.length);
 		}
+	}
+	
+	public String getGenotypeValue(int sampleIndex, String key) {
+		if (splitCalls == null) {
+			String [] callStrings = getCalls();
+			String [][] calls = new String[callStrings.length][];
+			for (int i = 0; i < calls.length; i++) {
+				calls[i] = callStrings[i].split(":");
+			}
+			splitCalls = calls;
+		}
+		return splitCalls[sampleIndex][findFormatItemIndex(key)];
 	}
 	
 	public String getGenotype(int sampleIndex) {
