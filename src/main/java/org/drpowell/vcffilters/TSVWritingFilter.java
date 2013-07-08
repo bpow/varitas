@@ -33,7 +33,7 @@ public class TSVWritingFilter implements VariantOutput {
 	// this is really hacky-- most VCF files tend to have the FORMAT header lines in alphabetical
 	// order, which is really obnoxious for viewing. I like this order better...
 	private static final String[] PREFERRED_FORMAT_ORDER = {
-		"GT", "AD", "DP", "RR", "VR", "GQ", "PL", "GL"
+		"GT", "AD", "DP", "DV", "RR", "VR", "GQ", "PL", "GL"
 	};
 	
 	/**

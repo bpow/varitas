@@ -58,13 +58,13 @@ public class XLifyVcf implements VariantOutput {
 	private CellStyle hlink_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
-	private static final int COLUMNS_TO_HIDE[] = {7, 8};
+	private static final String[] COLUMNS_TO_HIDE = "FILTER INFO FORMAT AC AC1 AF AF1 AN CGT UGT CLR FQ G3 HWE INDEL IS PC2 PCHI2 PR QCHI2 VDB".split(" ");
 	private Map<String, String> headerComments;
 
 	// this is really hacky-- most VCF files tend to have the FORMAT header lines in alphabetical
 	// order, which is really obnoxious for viewing. I like this order better...
 	private static final String[] PREFERRED_FORMAT_ORDER = {
-		"GT", "AD", "DP", "RR", "VR", "GQ", "PL", "GL"
+		"GT", "AD", "DP", "DV", "RR", "VR", "GQ", "PL", "GL"
 	};
 		
 	private enum HyperlinkColumn {
@@ -275,8 +275,10 @@ public class XLifyVcf implements VariantOutput {
 		for (int i = 0; i < COLUMNS_TO_AUTO_RESIZE.length; i++) {
 			dataSheet.autoSizeColumn(COLUMNS_TO_AUTO_RESIZE[i]);
 		}
-		for (int i = 0; i < COLUMNS_TO_HIDE.length; i++) {
-			dataSheet.setColumnHidden(COLUMNS_TO_HIDE[i], true);
+		List<String> headerList = Arrays.asList(headers);
+		for (String hideCol : COLUMNS_TO_HIDE) {
+			int i = headerList.indexOf(hideCol);
+			if (i>=0) dataSheet.setColumnHidden(i, true);
 		}
 		workbook.write(os);
 		os.close();
