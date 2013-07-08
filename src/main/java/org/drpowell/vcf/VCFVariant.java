@@ -173,7 +173,11 @@ public class VCFVariant {
 	}
 	
 	public String getFormat() {
-		return row[VCFParser.VCFFixedColumns.FORMAT.ordinal()];		
+		int formatCol = VCFParser.VCFFixedColumns.FORMAT.ordinal();
+		if (row.length > formatCol) {
+			return row[VCFParser.VCFFixedColumns.FORMAT.ordinal()];
+		}
+		return "";
 	}
 	
 	private final int findFormatItemIndex(String key) {
