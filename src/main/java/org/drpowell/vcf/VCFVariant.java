@@ -159,6 +159,19 @@ public class VCFVariant {
 		return row[VCFParser.VCFFixedColumns.FILTER.ordinal()];
 	}
 	
+	public VCFVariant addFilter(String f) {
+		String old = getFilter();
+		if (old.equals("") || old.equals(".") || old.equals("PASS")) {
+			return setFilter(f);
+		}
+		return setFilter(old + "," + f);
+	}
+	
+	private VCFVariant setFilter(String f) {
+		row[VCFParser.VCFFixedColumns.FILTER.ordinal()] = f;
+		return this;
+	}
+	
 	public String getFormat() {
 		return row[VCFParser.VCFFixedColumns.FORMAT.ordinal()];		
 	}
