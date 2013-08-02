@@ -88,30 +88,23 @@ public class Varitas implements Iterable<VCFVariant> {
 	
 	@Option(name = "-f", aliases = {"--filter"}, usage = "script file(s) by which to filter variants")
 	public VCFIterator applyFilter(String filename) {
-		try {
-			return applyFilter(FileUtils.findExistingFile(filename).openStream());
-		} catch (IOException e) {
-			logger.severe("Error trying to read filter file [ " + filename + " ], will ignore this filter!");
-			logger.severe(e.getMessage());
-		}
-		return variants;
+		return applyFilter(FileUtils.findExistingFile(filename));
 	}
 	
 	@Option(name = "-F", aliases = {"--defaultFilter"}, usage = "apply default variant filter")
 	public ScriptVCFFilter applyDefaultFilter() {
-		return applyFilter(getClass().getResourceAsStream("/defaultVariantFilter.js"));
+		return applyFilter(getClass().getResource("/defaultVariantFilter.js"));
 	}
 	
-	private ScriptVCFFilter applyFilter(InputStream filterStream) {
-		ScriptVCFFilter filter = new ScriptVCFFilter(variants, new InputStreamReader(filterStream));
+	private ScriptVCFFilter applyFilter(URL filterURL) {
+		ScriptVCFFilter filter = new ScriptVCFFilter(variants, filterURL, "javascript");
 		variants = filter;
 		return filter;
 	}
 	
 	@Option(name = "-g", aliases = {"--groovyFilter"}, usage = "groovy script file by which to filter variants")
 	public VCFIterator applyGroovyFilter(String filename) {
-		variants = new ScriptGroovyVCFFilter(variants, new File(FileUtils.findExistingFile(filename).getFile()));
-//		variants = new GroovyClassVCFFilter(variants, FileUtils.findExistingFile(filename));
+		variants = new ScriptVCFFilter(variants, FileUtils.findExistingFile(filename), "groovy");
 		return variants;
 	}
 	

@@ -1,6 +1,8 @@
 package org.drpowell.vcffilters;
 
-import java.io.Reader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -19,14 +21,22 @@ public class ScriptVCFFilter extends VCFFilteringIterator {
 	private Invocable invocable;
 	private VCFHeaders headers;
 	
-	private Invocable initializeEngine(Reader script) {
+	private Invocable initializeEngine(URL filterURL, String language) {
 		ScriptEngineManager manager = new ScriptEngineManager();
-		ScriptEngine engine = manager.getEngineByName("JavaScript");
+		ScriptEngine engine = manager.getEngineByName(language);
 		try {
-			engine.eval(script);
+			// FIXME-- why doesn't this work? Can I use a CompilerConfiguration with JSR223?
+//			if ("groovy".equalsIgnoreCase(language)) {
+//				engine.eval("import org.drpowell.vcf.*\nimport org.drpowell.varitas.*\nimport org.drpowell.vcffilters.*\n\n");
+//			}
+			engine.eval(new InputStreamReader(filterURL.openStream()));
 		} catch (ScriptException e) {
-			// TODO Auto-generated catch block
-			System.err.println("Error preparing filter, will pass all variants!\n" + e);
+			Logger.getLogger("VARITAS").severe("Error preparing filter from " +
+					filterURL.toString() + ", will pass all variants!\n" + e);
+			engine = null;
+		} catch (IOException e) {
+			Logger.getLogger("VARITAS").severe("Error reading filter from " +
+					filterURL.toString() + ", will pass all variants!\n" + e);
 			engine = null;
 		}
 		Object moreHeaders = engine.get("headers");
@@ -40,16 +50,16 @@ public class ScriptVCFFilter extends VCFFilteringIterator {
 					headers.add(new VCFMeta(header.toString()));
 				}
 			} else {
-				Logger.getLogger("VARITAS").warning("Unable to add headers for javascript filter");
+				Logger.getLogger("VARITAS").warning("Unable to add headers for script filter");
 			}
 		}
 		return (Invocable) engine;
 	}
 
-	public ScriptVCFFilter(VCFIterator client, Reader fileReader) {
+	public ScriptVCFFilter(VCFIterator client, URL filterURL, String language) {
 		super(client);
 		headers = client.getHeaders();
-		invocable = initializeEngine(fileReader);
+		invocable = initializeEngine(filterURL, language);
 	}
 
 	@Override
