@@ -37,6 +37,7 @@ import org.drpowell.vcf.VCFVariant;
 import org.drpowell.vcffilters.CompoundMutationFilter;
 import org.drpowell.vcffilters.JavascriptBooleanVCFFilter;
 import org.drpowell.vcffilters.MendelianConstraintFilter;
+import org.drpowell.vcffilters.ScriptGroovyVCFFilter;
 import org.drpowell.vcffilters.ScriptVCFFilter;
 import org.drpowell.vcffilters.TSVWritingFilter;
 import org.drpowell.vcffilters.VCFWritingFilter;
@@ -105,6 +106,13 @@ public class Varitas implements Iterable<VCFVariant> {
 		ScriptVCFFilter filter = new ScriptVCFFilter(variants, new InputStreamReader(filterStream));
 		variants = filter;
 		return filter;
+	}
+	
+	@Option(name = "-g", aliases = {"--groovyFilter"}, usage = "groovy script file by which to filter variants")
+	public VCFIterator applyGroovyFilter(String filename) {
+		variants = new ScriptGroovyVCFFilter(variants, new File(FileUtils.findExistingFile(filename).getFile()));
+//		variants = new GroovyClassVCFFilter(variants, FileUtils.findExistingFile(filename));
+		return variants;
 	}
 	
 	@Option(name = "-j", aliases = {"--jsBoolean"}, usage = "javascript by which to filter variants (if result is true, the variant passes)")
