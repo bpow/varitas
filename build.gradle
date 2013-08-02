@@ -16,6 +16,7 @@ dependencies {
 	compile files(file('lib').listFiles())
 	compile 'org.apache.poi:poi:3.8'
 	compile 'org.drpowell:acCLImate:0.1'
+	compile 'org.codehaus.groovy:groovy-jsr223:2.1.6'
 }
 
 task wrapper(type: Wrapper) {
