@@ -159,12 +159,18 @@ public class VCFVariant {
 		return row[VCFParser.VCFFixedColumns.FILTER.ordinal()];
 	}
 	
-	public VCFVariant addFilter(String f) {
+	public VCFVariant addFilter(String newFilter) {
 		String old = getFilter();
 		if (old.equals("") || old.equals(".") || old.equals("PASS")) {
-			return setFilter(f);
+			return setFilter(newFilter);
 		}
-		return setFilter(old + "," + f);
+		// check that the filter is not already present
+		for (String f : old.split(",")) {
+			if (f.equals(newFilter)) {
+				return this;
+			}
+		}
+		return setFilter(old + "," + newFilter);
 	}
 	
 	private VCFVariant setFilter(String f) {
