@@ -56,10 +56,12 @@ public class XLifyVcf implements VariantOutput {
 	private int rowNum = 0;
 	private BitSet numericColumns;
 	private CellStyle hlink_style;
+	private CellStyle wrapped_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
 	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final String[] COLUMNS_TO_HIDE = "FILTER INFO FORMAT AC AC1 AF AF1 AN CGT UGT CLR FQ G3 HWE INDEL IS PC2 PCHI2 PR QCHI2 VDB".split(" ");
 	private Map<String, String> headerComments;
+	private static final boolean SPLIT_INFO_LISTS_ACROSS_LINES = true;
 
 	// this is really hacky-- most VCF files tend to have the FORMAT header lines in alphabetical
 	// order, which is really obnoxious for viewing. I like this order better...
@@ -181,6 +183,9 @@ public class XLifyVcf implements VariantOutput {
 	    hlink_font.setColor(IndexedColors.BLUE.getIndex());
 	    hlink_style.setFont(hlink_font);
 	    
+	    wrapped_style = workbook.createCellStyle();
+	    wrapped_style.setWrapText(true);
+	    
 	    mapHeadersToHyperlinks();
 	    
 	    return data;
@@ -199,10 +204,15 @@ public class XLifyVcf implements VariantOutput {
 		ArrayList<String> data = new ArrayList<String>(headers.length);
 		Row r = dataSheet.createRow(rowNum);
 		data.addAll(Arrays.asList(v.toString().split("\t", -1)));
+		int height = 1; // height in # of lines
 		for (String i : variants.getHeaders().infos().keySet()) {
 			String value = v.getInfoValue(i, true);
 			if ("".equals(value)) {
 				value = i; // flag fields should display as something.
+			}
+			if (SPLIT_INFO_LISTS_ACROSS_LINES && value != null && value.contains(",")) {
+				height = Math.max(height, value.length()-value.replace(",", "").length()+1); 
+				value = value.replace(",", ",\n");
 			}
 			data.add(value);
 		}
@@ -241,8 +251,14 @@ public class XLifyVcf implements VariantOutput {
 					}
 				} else {
 					c.setCellValue(d);
+					if (SPLIT_INFO_LISTS_ACROSS_LINES && d.contains("\n")) {
+						c.setCellStyle(wrapped_style);
+					}
 				}
 			}
+		}
+		if (SPLIT_INFO_LISTS_ACROSS_LINES && height > 1) {
+			r.setHeight((short) (dataSheet.getDefaultRowHeight() * height));
 		}
 		makeHyperlinks(r);
 		return v;
