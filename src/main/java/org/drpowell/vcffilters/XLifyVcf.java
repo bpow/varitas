@@ -57,8 +57,8 @@ public class XLifyVcf implements VariantOutput {
 	private BitSet numericColumns;
 	private CellStyle hlink_style;
 	private CellStyle wrapped_style;
+	private CellStyle header_style;
 	private Map<Integer, HyperlinkColumn> columnsToHyperlink;
-	private static final int COLUMNS_TO_AUTO_RESIZE[] = {0, 1, 2, 9, 10, 11}; // FIXME- should index as string, or be configurable
 	private static final String[] COLUMNS_TO_HIDE = "FILTER INFO FORMAT AC AC1 AF AF1 AN CGT UGT CLR FQ G3 HWE INDEL IS PC2 PCHI2 PR QCHI2 VDB".split(" ");
 	private Map<String, String> headerComments;
 	private static final boolean SPLIT_INFO_LISTS_ACROSS_LINES = true;
@@ -161,6 +161,20 @@ public class XLifyVcf implements VariantOutput {
 		Drawing drawing = data.createDrawingPatriarch();
 		workbook.setActiveSheet(workbook.getSheetIndex(data));
 		data.createFreezePane(5, 1);
+
+		hlink_style = workbook.createCellStyle();
+		Font hlink_font = workbook.createFont();
+		hlink_font.setUnderline(Font.U_SINGLE);
+		hlink_font.setColor(IndexedColors.BLUE.getIndex());
+		hlink_style.setFont(hlink_font);
+	    
+		wrapped_style = workbook.createCellStyle();
+		wrapped_style.setWrapText(true);
+	    
+		header_style = workbook.createCellStyle();
+		header_style.setRotation((short) 60);
+		header_style.setAlignment(CellStyle.ALIGN_LEFT);
+	    
 		Row r = data.createRow(rowNum);
 		for (int c = 0; c < headers.length; c++) {
 			Cell cell = r.createCell(c);
@@ -175,17 +189,10 @@ public class XLifyVcf implements VariantOutput {
 				comment.setString(createHelper.createRichTextString(headerComments.get(headers[c])));
 				cell.setCellComment(comment);
 			}
+			// For some reason, row.setStyle is not working
+			cell.setCellStyle(header_style);
 		}
 		
-		hlink_style = workbook.createCellStyle();
-		Font hlink_font = workbook.createFont();
-	    hlink_font.setUnderline(Font.U_SINGLE);
-	    hlink_font.setColor(IndexedColors.BLUE.getIndex());
-	    hlink_style.setFont(hlink_font);
-	    
-	    wrapped_style = workbook.createCellStyle();
-	    wrapped_style.setWrapText(true);
-	    
 	    mapHeadersToHyperlinks();
 	    
 	    return data;
@@ -288,8 +295,8 @@ public class XLifyVcf implements VariantOutput {
 	
 	private void writeOutput() throws IOException {
 		// FIXME - could consider making this public (would need to allow writing only once)
-		for (int i = 0; i < COLUMNS_TO_AUTO_RESIZE.length; i++) {
-			dataSheet.autoSizeColumn(COLUMNS_TO_AUTO_RESIZE[i]);
+		for (int i = 0; i < headers.length; i++) {
+			dataSheet.autoSizeColumn(i);
 		}
 		List<String> headerList = Arrays.asList(headers);
 		for (String hideCol : COLUMNS_TO_HIDE) {
