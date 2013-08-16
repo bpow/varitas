@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
 	compile files(file('lib').listFiles())
-	compile 'org.apache.poi:poi:3.8'
+	compile 'org.apache.poi:poi:3.9'
 	compile 'org.drpowell:acCLImate:0.1'
 	compile 'org.codehaus.groovy:groovy-jsr223:2.1.6'
 }
