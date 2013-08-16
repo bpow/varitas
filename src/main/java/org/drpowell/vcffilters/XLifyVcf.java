@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.ClientAnchor;
@@ -24,6 +23,7 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.drpowell.vcf.VCFHeaders;
 import org.drpowell.vcf.VCFIterator;
 import org.drpowell.vcf.VCFMeta;
@@ -88,7 +88,7 @@ public class XLifyVcf implements VariantOutput {
 	public XLifyVcf(VCFIterator variants, OutputStream os) {
 		this.variants = variants;
 		this.os = os;
-		workbook = new HSSFWorkbook();
+		workbook = new XSSFWorkbook();
 		createHelper = workbook.getCreationHelper();
 		VCFHeaders vcfHeaders = variants.getHeaders();
 		Map<String, VCFMeta> headerFormats = vcfHeaders.formats();
@@ -182,9 +182,9 @@ public class XLifyVcf implements VariantOutput {
 			if (headerComments.containsKey(headers[c])) {
 				ClientAnchor anchor = createHelper.createClientAnchor();
 				anchor.setCol1(cell.getColumnIndex());
-				anchor.setCol2(cell.getColumnIndex()+5);
+				anchor.setCol2(cell.getColumnIndex()+2);
 				anchor.setRow1(cell.getRowIndex());
-				anchor.setRow2(cell.getRowIndex()+10);
+				anchor.setRow2(cell.getRowIndex()+1);
 				Comment comment = drawing.createCellComment(anchor);
 				comment.setString(createHelper.createRichTextString(headerComments.get(headers[c])));
 				cell.setCellComment(comment);
