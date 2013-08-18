@@ -16,19 +16,34 @@ import org.drpowell.vcf.VCFVariant;
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
 	private final Map<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
+	private final Map<Integer, String> descriptionMap = new LinkedHashMap<Integer, String>();
 	private static Logger logger = Logger.getLogger(TabixTSVAnnotator.class.getCanonicalName());
 	private boolean hasHeader = false;
 	
 	public TabixTSVAnnotator(final TabixReader reader, String columns) {
 		tabix = reader;
 		String [] splitColumns = columns.split(",");
+		Integer inputColumnNumber;
+		String infoKey = null;
+		String description = null;
 		for (String column : splitColumns) {
-			int eq = column.indexOf("=");
+			int eq = column.indexOf('=');
 			if (eq >= 0) {
-				fieldMap.put(Integer.valueOf(column.substring(0, eq))-1, column.substring(eq+1));
+				inputColumnNumber = Integer.valueOf(column.substring(0, eq))-1;
+				column = column.substring(eq+1);
+				int colon = column.indexOf(':');
+				if (colon >= 0) {
+					infoKey = column.substring(0, colon);
+					description = '"' + column.substring(colon+1) + '"';
+				} else {
+					infoKey = column;
+				}
 			} else {
-				fieldMap.put(Integer.valueOf(column)-1, "col" + column);
+				inputColumnNumber = Integer.valueOf(column)-1;
+				infoKey = "col" + column;
 			}
+			fieldMap.put(inputColumnNumber, infoKey);
+			descriptionMap.put(inputColumnNumber, description);
 		}
 	}
 	
@@ -88,7 +103,10 @@ public class TabixTSVAnnotator extends Annotator {
 			infoValues.put("Number", "1");
 			infoValues.put("Type", "String");
 			int colIndex = entry.getKey();
-			if (headers != null && headers.size() >= colIndex) {
+			String description = descriptionMap.get(colIndex);
+			if (description != null) {
+				infoValues.put("Description", description);
+			} else if (headers != null && headers.size() >= colIndex) {
 				infoValues.put("Description", "\"" + headers.get(colIndex) + ", column " + Integer.toString(colIndex + 1) + " from " + tabix.filename + "\"");
 			} else {
 				infoValues.put("Description", "\"Column " + Integer.toString(colIndex + 1) + " from " + tabix.filename + "\"");
