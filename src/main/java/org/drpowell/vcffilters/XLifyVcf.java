@@ -114,16 +114,8 @@ public class XLifyVcf implements VariantOutput {
 		numericColumns.set(1);
 		numericColumns.set(5);
 		headerComments = new HashMap<String, String>();
-		// TODO - add comments to the header fields describing them (from VCFMeta Description)
-		for (VCFMeta m: infos.values()) {
-			if ("1".equals(m.getValue("Number"))) {
-				String type = m.getValue("Type");
-				if ("Integer".equals(type) || "Float".equals(type)) {
-					numericColumns.set(out.size());
-				}
-			}
-			headerComments.put(m.getValue("ID"), m.getValue("Description"));
-			out.add(m.getId());
+		if (infos.containsKey("Gene_name")) {
+			out.add("Gene_name"); // FIXME -- this is sooo hacky-- but I want to get the gene name moved earlier!
 		}
 		for (String s : samples) {
 			for (VCFMeta m: formats.values()) {
@@ -135,6 +127,19 @@ public class XLifyVcf implements VariantOutput {
 				}
 				out.add(s + "_" + m.getId());
 			}
+		}
+		for (VCFMeta m: infos.values()) {
+			if ("Gene-name".equals(m.getValue("ID"))) {
+				continue; // already added it at the beginning
+			}
+			if ("1".equals(m.getValue("Number"))) {
+				String type = m.getValue("Type");
+				if ("Integer".equals(type) || "Float".equals(type)) {
+					numericColumns.set(out.size());
+				}
+			}
+			headerComments.put(m.getValue("ID"), m.getValue("Description"));
+			out.add(m.getId());
 		}
 		return out.toArray(new String[out.size()]);
 	}
@@ -210,19 +215,15 @@ public class XLifyVcf implements VariantOutput {
 		rowNum++;
 		ArrayList<String> data = new ArrayList<String>(headers.length);
 		Row r = dataSheet.createRow(rowNum);
+		// 'fixed' columns
 		data.addAll(Arrays.asList(v.toString().split("\t", -1)));
-		int height = 1; // height in # of lines
-		for (String i : variants.getHeaders().infos().keySet()) {
-			String value = v.getInfoValue(i, true);
-			if ("".equals(value)) {
-				value = i; // flag fields should display as something.
-			}
-			if (SPLIT_INFO_LISTS_ACROSS_LINES && value != null && value.contains(",")) {
-				height = Math.max(height, value.length()-value.replace(",", "").length()+1); 
-				value = value.replace(",", ",\n");
-			}
-			data.add(value);
+		
+		// hacky special-case for 'Gene_name'
+		if (infos.containsKey("Gene_name")) {
+			data.add(v.getInfoValue("Gene_name", true));
 		}
+
+		// genotype columns
 		String [] calls = v.getCalls();
 		String [] callFormat = v.getFormat().split(":", -1);
 		Map<String, Integer> formatIndices = new HashMap<String, Integer>(callFormat.length * 2);
@@ -243,6 +244,20 @@ public class XLifyVcf implements VariantOutput {
 			}
 		} else {
 			throw new RuntimeException("Problem with VCF line: " + v.toString());
+		}
+		
+		// 'INFO' columns
+		int height = 1; // height in # of lines
+		for (String i : variants.getHeaders().infos().keySet()) {
+			String value = v.getInfoValue(i, true);
+			if ("".equals(value)) {
+				value = i; // flag fields should display as something.
+			}
+			if (SPLIT_INFO_LISTS_ACROSS_LINES && value != null && value.contains(",")) {
+				height = Math.max(height, value.length()-value.replace(",", "").length()+1); 
+				value = value.replace(",", ",\n");
+			}
+			data.add(value);
 		}
 		for (int i = 0; i < data.size(); i++) {
 			String d = data.get(i);
