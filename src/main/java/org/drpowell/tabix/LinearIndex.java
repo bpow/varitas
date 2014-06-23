@@ -25,17 +25,17 @@
 
 package org.drpowell.tabix;
 
+import htsjdk.samtools.GenomicIndexUtil;
+
 import java.util.AbstractList;
 import java.util.Arrays;
-
-import net.sf.samtools.AbstractBAMFileIndex;
 
 class LinearIndex extends AbstractList<Long> {
 	public static final int TBX_LIDX_SHIFT = 14;
 	protected long[] index;
 	int size = 0;
 	public LinearIndex() {
-		index = new long[AbstractBAMFileIndex.MAX_LINEAR_INDEX_SIZE];
+		index = new long[GenomicIndexUtil.MAX_LINEAR_INDEX_SIZE];
 	}
 	
 	public LinearIndex(int n_linear) {

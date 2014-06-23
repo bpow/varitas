@@ -26,6 +26,8 @@
 
 package org.drpowell.tabix;
 
+import htsjdk.samtools.util.BlockCompressedInputStream;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,8 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import net.sf.samtools.util.BlockCompressedInputStream;
 
 import org.drpowell.tabix.TabixIndex.Chunk;
 

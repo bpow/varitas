@@ -25,16 +25,16 @@
 
 package org.drpowell.tabix;
 
+import htsjdk.samtools.util.BlockCompressedFilePointerUtil;
+import htsjdk.samtools.util.BlockCompressedInputStream;
+import htsjdk.samtools.util.BlockCompressedOutputStream;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-
-import net.sf.samtools.util.BlockCompressedFilePointerUtil;
-import net.sf.samtools.util.BlockCompressedInputStream;
-import net.sf.samtools.util.BlockCompressedOutputStream;
 
 import org.drpowell.tabix.TabixIndex.TabixConfig;
 import org.drpowell.util.LineIterator;

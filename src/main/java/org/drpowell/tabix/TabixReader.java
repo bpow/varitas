@@ -25,16 +25,16 @@
 */
 
 package org.drpowell.tabix;
+import htsjdk.samtools.util.BinaryCodec;
+import htsjdk.samtools.util.BlockCompressedInputStream;
+import htsjdk.samtools.util.StringUtil;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
-import net.sf.samtools.util.BinaryCodec;
-import net.sf.samtools.util.BlockCompressedInputStream;
-import net.sf.samtools.util.StringUtil;
 
 import org.drpowell.tabix.TabixIndex.TabixConfig;
 
