@@ -76,8 +76,8 @@ public class Varitas implements Iterable<VCFVariant> {
 			s = new Scanner(configStream);
 			String jsString = s.useDelimiter("\\A").next();
 			s.close();
-			engine.put("__varitas", this);
-			engine.eval("with (__varitas) {" + jsString + "}");
+			engine.put("varitas", this);
+			engine.eval(jsString);
 		} catch (ScriptException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
