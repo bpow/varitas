@@ -13,9 +13,8 @@ vcfAnnotator("data/ncbiSNP137.vcf.gz",
     "SCS,GMAF,PM,G5A,G5").setCopyID(true)
 vcfAnnotator("data/ESP6500SI-V2.vcf.gz",
     "MAF=ESPMAF,GTS,EA_GTC,AA_GTC,FG,GM,AA,AAC,PP,CDP,CG,GS,CA,DP=ESPDP,GL=ESPGL")
-vcfAnnotator("data/Complete_Public_Genomes_54genomes_VQHIGH.vcf.gz",
-    "AF=CG54AF").setAddChr(true).setRequirePass(true)
-tsvAnnotator("data/dbNSFP2.0_variant.gz",
-    "22=SIFT,23=HDIV_SCORE,24=HDIV_PRED,25=HVAR_SCORE,26=HVAR_PRED," +
-    "27=LRT_SCORE,28=LRT_PRED,29=MT_SCORE,30=MT_PRED,31=MA_SCORE,32=MA_PRED," +
-    "33=FATHMM_SCORE,34=GERP_NR,35=GERP_RS,36=PHYLOP,39=LRT_OMEGA").useHeader(true).checkRef(3).checkAlt(4)
+tsvAnnotator("data/dbNSFP2.4_variant.gz",
+    "24=SIFT_SCORE,26=SIFT_PRED,27=HDIV_SCORE,29=HDIV_PRED,30=HVAR_SCORE,32=HVAR_PRED," +
+    "33=LRT_SCORE,35=LRT_PRED,36=MT_SCORE,38=MT_PRED,39=MA_SCORE,41=MA_PRED," +
+    "42=FATHMM_SCORE,44=FATHMM_PRED,54=CADD_PHRED," +
+    "55=GERP_NR,56=GERP_RS,58=PHYLOP,73=LRT_OMEGA").useHeader(true).checkRef(3).checkAlt(4)
