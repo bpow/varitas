@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-	compile 'org.apache.poi:poi-ooxml:3.9'
+	compile 'org.apache.poi:poi-ooxml:3.10-FINAL'
 	compile 'org.drpowell:acCLImate:0.1'
 	compile 'org.codehaus.groovy:groovy-jsr223:2.3.3'
 	compile 'net.sf.picard:htsjdk:1.115'
