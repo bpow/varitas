@@ -67,7 +67,7 @@ public class VCFVariant {
 	}
 
 	public static String joinInfo(Map<String, String []> info) {
-		if (info.size() == 0) {
+		if (info.isEmpty()) {
 			return ".";
 		}
 		StringBuilder sb = new StringBuilder();
@@ -97,6 +97,16 @@ public class VCFVariant {
 		info.put(key, values);
 		return this;
 	}
+        
+        public VCFVariant addInfo(String key, String... values) {
+                String [] oldInfo = info.get(key);
+                if (null == oldInfo) {
+                    return putInfo(key, values);
+                }
+                values = encodeInfo(urlEncode, concatArrays(oldInfo, values));
+                info.put(key, values);
+                return this;
+        }
 	
 	public VCFVariant putInfoFlag(String key) {
 		info.put(key, FLAG_INFO);
@@ -389,6 +399,12 @@ public class VCFVariant {
 		}
 		return values;
 	}
+        
+        private static <T> T[] concatArrays(T[] a, T[] b) {
+            T[] out = Arrays.copyOf(a, a.length + b.length);
+            System.arraycopy(b, 0, out, a.length, b.length);
+            return out;
+        }
 
 	private static String join(String sep, String... strings) {
 		if (strings.length == 0) return "";

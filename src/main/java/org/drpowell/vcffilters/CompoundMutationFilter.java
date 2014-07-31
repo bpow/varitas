@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.drpowell.util.FileUtils;
@@ -19,6 +21,17 @@ import org.drpowell.vcf.VCFUtils;
 import org.drpowell.vcf.VCFVariant;
 
 public class CompoundMutationFilter implements VCFIterator {
+    
+        private static LinkedHashMap<String, String> makeHashMap(String... strings) {
+            if (strings.length % 2 != 0) {
+                throw new IllegalArgumentException("makeHashMap called with odd number of arguments");
+            }
+            LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
+            for (int i = 0; i < strings.length; i += 2) {
+                map.put(strings[i], strings[i+1]);
+            }
+            return map;
+        }
 	
 	// This needs some special handling because the exons of gene can rarely
 	// interleave with each other -- so streamed processing would be complicated.
@@ -26,39 +39,50 @@ public class CompoundMutationFilter implements VCFIterator {
 	
 	private VCFMemoryCollection collectedVariants;
 	private Iterator<VCFVariant> filteredVariants;
-	private final int [] trioIndices;
+	private final int [][] allTrioIndices;
 	private int variantIndex = -1;
 	private final VCFHeaders headers;
 	private static final VCFMeta [] ADDITIONAL_HEADERS = {
-		new VCFMeta("##INFO=<ID=COMPOUND,Number=0,Type=Flag,Description=\"Within this gene there is at least one variant not inherited from each parent.\">"),
-		new VCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">"),
-		new VCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
+		new VCFMeta("##INFO=<ID=COMPOUND,Number=.,Type=String,Description=\"Within this gene there is at least one variant not inherited from each parent of the listed individual.\">")
+                , new VCFMeta("##INFO=<ID=DENOVO,Number=.,Type=String,Description=\"This variant is called in a child but not in either parent for the given individual.\">")
+		//, new VCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">")
+		//, new VCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
 	};
 
 	// FIXME - handle multiple trios somehow...
-	public CompoundMutationFilter(VCFIterator delegate, int [] trioIndices) {
-		this.trioIndices = trioIndices;
+	public CompoundMutationFilter(VCFIterator delegate, List<int []> trioIndices) {
+                allTrioIndices = new int[trioIndices.size()][3];
+                int i = 0;
+                for (int [] ti: trioIndices) {
+                    allTrioIndices[i] = ti;
+                    i++;
+                }
 		this.headers = new VCFHeaders(delegate.getHeaders());
 		headers.addAll(Arrays.asList(ADDITIONAL_HEADERS));
 		collectedVariants = new VCFMemoryCollection(delegate);
-		HashMap<String, PhaseGroup> phaseGroups = buildPhaseGroups(collectedVariants);
+		HashMap<String, PhaseGroup[]> phaseGroups = buildPhaseGroups(collectedVariants);
 		assignCompoundGroups(phaseGroups);
 		filteredVariants = collectedVariants.iterator();
 	}
 
-	private PhaseGroup getDefaultPhaseGroup(HashMap<String, PhaseGroup> map, String key) {
-		PhaseGroup pg = map.get(key);
+	private PhaseGroup[] getDefaultPhaseGroup(HashMap<String, PhaseGroup[]> map, String key) {
+		PhaseGroup[] pg = map.get(key);
 		if (pg == null) {
-			pg = new PhaseGroup();
+			pg = new PhaseGroup[allTrioIndices.length];
+                        for (int i = 0; i < pg.length; i++) {
+                            pg[i] = new PhaseGroup();
+                        }
 			map.put(key, pg);
 		}
 		return pg;
 	}
 	
-	private HashMap<String, PhaseGroup> buildPhaseGroups(Iterable<VCFVariant> variants) {
-		HashMap<String, PhaseGroup> phaseGroups = new HashMap<String, PhaseGroup>();
+	private HashMap<String, PhaseGroup[]> buildPhaseGroups(Iterable<VCFVariant> variants) {
+		HashMap<String, PhaseGroup[]> phaseGroups = new HashMap<String, PhaseGroup[]>();
 
 		for (VCFVariant v : variants) {
+                    for (int trio = 0; trio < allTrioIndices.length; trio++) {
+                        int [] trioIndices = allTrioIndices[trio];
 			// FIXME - use predetermined phase information if available
 
 			// weird negative thinking-- these lists keep track of sites that have a variant that _didn't_ come from either dad or mom
@@ -70,7 +94,7 @@ public class CompoundMutationFilter implements VCFIterator {
 				continue;
 				// proband unknown or homozygous reference
 			}
-			PhaseGroup pg = getDefaultPhaseGroup(phaseGroups, v.getInfoValue("Gene_name"));
+			PhaseGroup pg = getDefaultPhaseGroup(phaseGroups, v.getInfoValue("Gene_name"))[trio];
 			int [] fatherCall = splitAlleles(calls[trioIndices[1]]);
 			int [] motherCall = splitAlleles(calls[trioIndices[2]]);
 			if (childCall[0] > 0 && childCall[1] > 0 &&
@@ -95,12 +119,15 @@ public class CompoundMutationFilter implements VCFIterator {
 					}
 				}
 			}
+                    }
 		}
 		return phaseGroups;
 	}
 	
-	private void assignCompoundGroups(Map<String, PhaseGroup> phaseGroups) {
-		for (PhaseGroup pg : phaseGroups.values()) {
+	private void assignCompoundGroups(Map<String, PhaseGroup[]> phaseGroups) {
+		for (PhaseGroup[] pgs : phaseGroups.values()) {
+                    for (int trio = 0; trio < allTrioIndices.length; trio++) {
+                        PhaseGroup pg = pgs[trio];
 			ArrayList<VCFVariant> nonMaternal = pg.nonMaternal;
 			ArrayList<VCFVariant> nonPaternal = pg.nonPaternal;
 			ArrayList<VCFVariant> deNovo = pg.deNovo;
@@ -108,6 +135,7 @@ public class CompoundMutationFilter implements VCFIterator {
 			if ((!nonPaternal.isEmpty() && !pg.nonMaternal.isEmpty()) ||
 					deNovo.size() > 1 || pg.deNovo.size() * (nonMaternal.size() + nonPaternal.size()) > 0) {
 				for (VCFVariant v : deNovo) {
+                                        v.putInfo("DENOVO", headers.getSamples().get(allTrioIndices[trio][0]));
 					ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
 					for (VCFVariant paired_variant : nonPaternal) {
 						indices.add(paired_variant.getInfoValue("Index"));
@@ -119,8 +147,8 @@ public class CompoundMutationFilter implements VCFIterator {
 						if (paired_variant != v) indices.add(paired_variant.getInfoValue("Index"));
 					}
 					if (!indices.isEmpty()) {
-						v.putInfoFlag("COMPOUND");
-						v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
+						v.addInfo("COMPOUND", headers.getSamples().get(allTrioIndices[trio][0]));
+						//v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
 					}
 				}
 				for (VCFVariant v : nonPaternal) {
@@ -132,8 +160,8 @@ public class CompoundMutationFilter implements VCFIterator {
 						indices.add(paired_variant.getInfoValue("Index"));
 					}
 					if (!indices.isEmpty()) {
-						v.putInfoFlag("COMPOUND");
-						v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
+						v.addInfo("COMPOUND", headers.getSamples().get(allTrioIndices[trio][0]));
+						//v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
 					}
 				}
 				for (VCFVariant v : nonMaternal) {
@@ -145,12 +173,12 @@ public class CompoundMutationFilter implements VCFIterator {
 						indices.add(paired_variant.getInfoValue("Index"));
 					}
 					if (!indices.isEmpty()) {
-						v.putInfoFlag("COMPOUND");
-						v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
+						v.addInfo("COMPOUND", headers.getSamples().get(allTrioIndices[trio][0]));
+						//v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
 					}
 				}
 			}
-
+                    }
 		}
 	}
 	
@@ -215,7 +243,7 @@ public class CompoundMutationFilter implements VCFIterator {
 		System.out.println(headers.getColumnHeaderLine());
 		
 		int yes = 0, no = 0;
-		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p, VCFUtils.getTrioIndices(p.getHeaders()).get(0)); cmf.hasNext();) {
+		for (CompoundMutationFilter cmf = new CompoundMutationFilter(p, VCFUtils.getTrioIndices(p.getHeaders())); cmf.hasNext();) {
 			VCFVariant v = cmf.next();
 			if (v.hasInfo("COMPOUND")) {
 				yes++;

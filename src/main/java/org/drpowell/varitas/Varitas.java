@@ -191,7 +191,7 @@ public class Varitas implements Iterable<VCFVariant> {
 		List<int []> trios = VCFUtils.getTrioIndices(variants.getHeaders());
 		// FIXME-- only handles a single trio
 		if (!trios.isEmpty()) {
-			variants = new CompoundMutationFilter(variants, trios.get(0));
+			variants = new CompoundMutationFilter(variants, trios);
 		}
 		return variants;
 	}
