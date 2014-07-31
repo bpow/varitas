@@ -6,7 +6,7 @@ varitas.geneAnnotator("in_genetests", "data/genetestsgenes")
 varitas.geneAnnotator("exclusion", "data/fajardogenes")
 varitas.geneAnnotator("hgnclinks", "data/hgnc.txt").hasHeader(true).setKeyColumn(2).
     setOutputColumns("3=HGNC_NAME")
-varitas.vcfAnnotator("data/niehs95.snps.vcf.gz", "AF=NIEHSAF")
+//varitas.vcfAnnotator("data/niehs95.snps.vcf.gz", "AF=NIEHSAF")
 varitas.vcfAnnotator("data/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz",
     "AMR_AF,ASN_AF,AFR_AF,EUR_AF,AF=TGAF")
 varitas.vcfAnnotator("data/ncbiSNP137.vcf.gz", 
