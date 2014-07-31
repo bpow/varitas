@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -310,13 +311,15 @@ public class XLifyVcf implements VariantOutput {
 	
 	private void writeOutput() throws IOException {
 		// FIXME - could consider making this public (would need to allow writing only once)
-		for (int i = 0; i < headers.length; i++) {
-			dataSheet.autoSizeColumn(i);
-		}
 		List<String> headerList = Arrays.asList(headers);
 		for (String hideCol : COLUMNS_TO_HIDE) {
 			int i = headerList.indexOf(hideCol);
 			if (i>=0) dataSheet.setColumnHidden(i, true);
+		}
+		
+		for (int i = 0; i < headers.length; i++) {
+			// do not bother resizing hidden columns-- saves some time
+			if (!dataSheet.isColumnHidden(i)) dataSheet.autoSizeColumn(i);
 		}
 		workbook.write(os);
 		os.close();
