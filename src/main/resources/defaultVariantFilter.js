@@ -12,7 +12,7 @@ function filter(v) {
 	return null
 }
 
-importClass(java.lang.System)
+//importClass(java.lang.System)
 
 function filterImpact(v) {
 	var impact = v.getInfoValue("IMPACT");
