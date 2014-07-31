@@ -16,7 +16,10 @@ import org.drpowell.vcf.VCFVariant;
  * For version 3.0 and later (so far):
  * Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_change| Amino_Acid_length | Gene_Name | Gene_BioType | Coding | Transcript | Exon [ | ERRORS | WARNINGS ] )
  * 
- * I'm going to default to version 3 for now, but will need to figure out a way to make this configurable
+ * At some point later...
+ * Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_Change| Amino_Acid_length | Gene_Name | Transcript_BioType | Gene_Coding | Transcript_ID | Exon_Rank  | Genotype_Number [ | ERRORS | WARNINGS ] )
+ *
+ * I'm going to default to the newest for now, but will need to figure out a way to make this configurable
  * @author Bradford Powell
  *
  */
@@ -39,13 +42,13 @@ public class SnpEffAnnotationSplitter extends Annotator {
 	public enum Effect {
 		// HIGH
 		SPLICE_SITE_ACCEPTOR, SPLICE_SITE_DONOR, START_LOST, EXON_DELETED, FRAME_SHIFT,
-		STOP_GAINED, STOP_LOST,	RARE_AMINO_ACID,
+		STOP_GAINED, STOP_LOST,	RARE_AMINO_ACID, CHROMOSOME_LARGE_DELETION,
 		// MODERATE
 		NON_SYNONYMOUS_CODING, CODON_CHANGE, CODON_INSERTION, CODON_CHANGE_PLUS_CODON_INSERTION,
-		CODON_DELETION, CODON_CHANGE_PLUS_CODON_DELETION, UTR_5_DELETED, UTR_3_DELETED,
+		CODON_DELETION, CODON_CHANGE_PLUS_CODON_DELETION, SPLICE_SITE_BRANCH_U12, UTR_5_DELETED, UTR_3_DELETED,
 		// LOW
 		SYNONYMOUS_START, NON_SYNONYMOUS_START, START_GAINED, SYNONYMOUS_CODING,
-		SYNONYMOUS_STOP, NON_SYNONYMOUS_STOP,
+		SYNONYMOUS_STOP, NON_SYNONYMOUS_STOP, SPLICE_SITE_BRANCH, SPLICE_SITE_REGION,
 		// MODIFIER
 		UTR_5_PRIME, UTR_3_PRIME, REGULATION, UPSTREAM, DOWNSTREAM, GENE, TRANSCRIPT, EXON,
 		INTRON_CONSERVED, INTRON, INTRAGENIC, INTERGENIC, INTERGENIC_CONSERVED,
