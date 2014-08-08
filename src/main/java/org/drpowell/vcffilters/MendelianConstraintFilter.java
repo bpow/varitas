@@ -22,11 +22,11 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 	private static final boolean FATHER_ALLELE_FIRST = false;
 	
 	private static VCFMeta[] ADDITIONAL_HEADERS = {
-			new VCFMeta("##INFO=<ID=MVCLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype\">"),
-			new VCFMeta("##INFO=<ID=MENDELLR,Number=1,Type=Float,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes\">"),
-			new VCFMeta("##INFO=<ID=UNCGT,Number=1,Type=String,Description=\"Most likely unconstrained trio genotypes\">"),
-			new VCFMeta("##INFO=<ID=CONGT,Number=1,Type=String,Description=\"Most likely genotypes under mendelian constraints\">"),
-			new VCFMeta("##INFO=<ID=TMV,Number=0,Type=Flag,Description=\"The most-likely individual calls show a mendelian violation among a trio.\">")
+			new VCFMeta("##INFO=<ID=MVCLR,Number=.,Type=String,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype.\">"),
+			new VCFMeta("##INFO=<ID=MENDELLR,Number=.,Type=String,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes.\">"),
+			new VCFMeta("##INFO=<ID=UNCGT,Number=.,Type=String,Description=\"Trios of most likely unconstrained trio genotypes (in same order as TMV).\">"),
+			new VCFMeta("##INFO=<ID=CONGT,Number=.,Type=String,Description=\"Trios of most likely genotypes under mendelian constraints (in same order as TMV).\">"),
+			new VCFMeta("##INFO=<ID=TMV,Number=.,Type=String,Description=\"The most-likely individual calls show a mendelian violation among a trio.\">")
 	};
 	
 	/**
@@ -149,7 +149,7 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 											  variant.getGenotype(trio[1]),
 											  variant.getGenotype(trio[2]));
 					if (phases == null) {
-						variant.putInfoFlag("TMV");
+						variant.addInfo("TMV", originalHeaders.getSamples().get(trio[0]));
 					} else {
 						variant.setPhases(trio, phases);
 					}
@@ -196,12 +196,13 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 			}
 			// FIXME - need to handle multiple trios better
 			if (maxConstrained < maxUnconstrained) {
-				variant.putInfo("MVCLR", String.format("%.3g", maxUnconstrained - maxConstrained));
+				String child = originalHeaders.getSamples().get(trio[0]);
+				variant.addInfo("MVCLR", String.format("%s:%.3g", child, maxUnconstrained - maxConstrained));
 				// FIXME-- this is not doing what I think it should...
-				variant.putInfo("MENDELLR", String.format("%.3g", calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
-				variant.putInfo("UNCGT", getGenotypes(gtUnconstrained, null));
-				variant.putInfo("CONGT", getGenotypes(gtConstrained, phase));
-				variant.putInfoFlag("TMV");
+				variant.addInfo("MENDELLR", String.format("%s:%.3g", child, calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
+				variant.addInfo("UNCGT", getGenotypes(gtUnconstrained, null));
+				variant.addInfo("CONGT", getGenotypes(gtConstrained, phase));
+				variant.addInfo("TMV", child);
 			} else {
 				variant = variant.setPhases(trio, phase);
 			}

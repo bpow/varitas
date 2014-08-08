@@ -44,9 +44,8 @@ public class CompoundMutationFilter implements VCFIterator {
 	private final VCFHeaders headers;
 	private static final VCFMeta [] ADDITIONAL_HEADERS = {
 		new VCFMeta("##INFO=<ID=COMPOUND,Number=.,Type=String,Description=\"Within this gene there is at least one variant not inherited from each parent of the listed individual.\">")
-                , new VCFMeta("##INFO=<ID=DENOVO,Number=.,Type=String,Description=\"This variant is called in a child but not in either parent for the given individual.\">")
-		//, new VCFMeta("##INFO=<ID=Index,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">")
-		//, new VCFMeta("##INFO=<ID=MendHetRec,Number=.,Type=Integer,Description=\"Comma-separated list of indices participating in compound recessive grouping.\">")
+		, new VCFMeta("##INFO=<ID=RecessiveIndex,Number=1,Type=Integer,Description=\"Index of the variant within this file (used to refer between variants).\">")
+		, new VCFMeta("##INFO=<ID=RecessivePartners,Number=.,Type=String,Description=\"List of indices participating in compound recessive grouping, formatted like: SAMPLE:id0|id2|id2.\">")
 	};
 
 	// FIXME - handle multiple trios somehow...
@@ -126,59 +125,67 @@ public class CompoundMutationFilter implements VCFIterator {
 	
 	private void assignCompoundGroups(Map<String, PhaseGroup[]> phaseGroups) {
 		for (PhaseGroup[] pgs : phaseGroups.values()) {
-                    for (int trio = 0; trio < allTrioIndices.length; trio++) {
-                        PhaseGroup pg = pgs[trio];
-			ArrayList<VCFVariant> nonMaternal = pg.nonMaternal;
-			ArrayList<VCFVariant> nonPaternal = pg.nonPaternal;
-			ArrayList<VCFVariant> deNovo = pg.deNovo;
-			
-			if ((!nonPaternal.isEmpty() && !pg.nonMaternal.isEmpty()) ||
-					deNovo.size() > 1 || pg.deNovo.size() * (nonMaternal.size() + nonPaternal.size()) > 0) {
-				for (VCFVariant v : deNovo) {
-                                        v.putInfo("DENOVO", headers.getSamples().get(allTrioIndices[trio][0]));
-					ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
-					for (VCFVariant paired_variant : nonPaternal) {
-						indices.add(paired_variant.getInfoValue("Index"));
+			for (int trio = 0; trio < allTrioIndices.length; trio++) {
+				String childName = headers.getSamples().get(allTrioIndices[trio][0]);
+				PhaseGroup pg = pgs[trio];
+				ArrayList<VCFVariant> nonMaternal = pg.nonMaternal;
+				ArrayList<VCFVariant> nonPaternal = pg.nonPaternal;
+				ArrayList<VCFVariant> deNovo = pg.deNovo;
+
+				if ((!nonPaternal.isEmpty() && !pg.nonMaternal.isEmpty())
+						|| deNovo.size() > 1
+						|| pg.deNovo.size() * (nonMaternal.size() + nonPaternal.size()) > 0) {
+					for (VCFVariant v : deNovo) {
+						ArrayList<String> indices = new ArrayList<String>(); // TODO - initial size
+						for (VCFVariant paired_variant : nonPaternal) {
+							indices.add(paired_variant.getInfoValue("Index"));
+						}
+						for (VCFVariant paired_variant : nonMaternal) {
+							indices.add(paired_variant.getInfoValue("Index"));
+						}
+						for (VCFVariant paired_variant : deNovo) {
+							if (paired_variant != v)
+								indices.add(paired_variant
+										.getInfoValue("Index"));
+						}
+						if (!indices.isEmpty()) {
+							v.addInfo("COMPOUND", childName);
+							v.putInfo("RecessivePartners",
+									String.format("%s:%s", childName, join("|", indices.toArray(new String[indices.size()]))));
+						}
 					}
-					for (VCFVariant paired_variant : nonMaternal) {
-						indices.add(paired_variant.getInfoValue("Index"));
+					for (VCFVariant v : nonPaternal) {
+						ArrayList<String> indices = new ArrayList<String>(); // TODO - initial size
+						for (VCFVariant paired_variant : nonMaternal) {
+							indices.add(paired_variant.getInfoValue("Index"));
+						}
+						for (VCFVariant paired_variant : deNovo) {
+							indices.add(paired_variant.getInfoValue("Index"));
+						}
+						if (!indices.isEmpty()) {
+							v.addInfo("COMPOUND", childName);
+							v.putInfo("RecessivePartners",
+									String.format("%s:%s", childName, join("|", indices.toArray(new String[indices.size()]))));
+						}
 					}
-					for (VCFVariant paired_variant : deNovo) {
-						if (paired_variant != v) indices.add(paired_variant.getInfoValue("Index"));
-					}
-					if (!indices.isEmpty()) {
-						v.addInfo("COMPOUND", headers.getSamples().get(allTrioIndices[trio][0]));
-						//v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
-					}
-				}
-				for (VCFVariant v : nonPaternal) {
-					ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
-					for (VCFVariant paired_variant : nonMaternal) {
-						indices.add(paired_variant.getInfoValue("Index"));
-					}
-					for (VCFVariant paired_variant : deNovo) {
-						indices.add(paired_variant.getInfoValue("Index"));
-					}
-					if (!indices.isEmpty()) {
-						v.addInfo("COMPOUND", headers.getSamples().get(allTrioIndices[trio][0]));
-						//v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
-					}
-				}
-				for (VCFVariant v : nonMaternal) {
-					ArrayList<String> indices = new ArrayList<String>(); // TODO -initial size
-					for (VCFVariant paired_variant : nonPaternal) {
-						indices.add(paired_variant.getInfoValue("Index"));
-					}
-					for (VCFVariant paired_variant : deNovo) {
-						indices.add(paired_variant.getInfoValue("Index"));
-					}
-					if (!indices.isEmpty()) {
-						v.addInfo("COMPOUND", headers.getSamples().get(allTrioIndices[trio][0]));
-						//v.putInfo("MendHetRec", indices.toArray(new String[indices.size()]));
+					for (VCFVariant v : nonMaternal) {
+						ArrayList<String> indices = new ArrayList<String>(); // TODO
+																				// -initial
+																				// size
+						for (VCFVariant paired_variant : nonPaternal) {
+							indices.add(paired_variant.getInfoValue("Index"));
+						}
+						for (VCFVariant paired_variant : deNovo) {
+							indices.add(paired_variant.getInfoValue("Index"));
+						}
+						if (!indices.isEmpty()) {
+							v.addInfo("COMPOUND", childName);
+							v.putInfo("RecessivePartners",
+									String.format("%s:%s", childName, join("|", indices.toArray(new String[indices.size()]))));
+						}
 					}
 				}
 			}
-                    }
 		}
 	}
 	
@@ -260,6 +267,17 @@ public class CompoundMutationFilter implements VCFIterator {
 		ArrayList<VCFVariant> nonPaternal = new ArrayList<VCFVariant>();
 		ArrayList<VCFVariant> nonMaternal = new ArrayList<VCFVariant>();
 		ArrayList<VCFVariant> deNovo = new ArrayList<VCFVariant>();
+	}
+
+	private static String join(String sep, String... strings) {
+		// again?!?
+		if (strings.length == 0) return "";
+		if (strings.length == 1) return strings[0];
+		StringBuilder sb = new StringBuilder();
+		for (String s: strings) {
+			sb.append(",").append(s);
+		}
+		return sb.substring(1);
 	}
 
 }
