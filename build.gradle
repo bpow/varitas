@@ -10,14 +10,13 @@ mainClassName = 'org.drpowell.varitas.Varitas'
 repositories {
 	mavenCentral()
 	maven { url 'http://jcenter.bintray.com' }
-	maven { url 'http://dl.bintray.com/bpow/picard-testing' }
 }
 
 dependencies {
-	compile 'org.apache.poi:poi-ooxml:3.10-FINAL'
+	compile 'org.apache.poi:poi-ooxml:3.12'
 	compile 'org.drpowell:acCLImate:0.1'
-	compile 'org.codehaus.groovy:groovy-jsr223:2.3.3'
-	compile 'net.sf.picard:htsjdk:1.115'
+	compile 'org.codehaus.groovy:groovy-jsr223:2.4.4'
+	compile 'com.github.samtools:htsjdk:1.138'
 }
 
 jar {
