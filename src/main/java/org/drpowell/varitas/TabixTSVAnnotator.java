@@ -1,17 +1,14 @@
 package org.drpowell.varitas;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.VCFHeaderLineType;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.drpowell.tabix.TabixReader;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFVariant;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.logging.Logger;
 
 public class TabixTSVAnnotator extends Annotator {
 	private final TabixReader tabix;
@@ -53,16 +50,16 @@ public class TabixTSVAnnotator extends Annotator {
 	}
 	
 	@Override
-	public VCFVariant annotate(VCFVariant variant) {
-		String chromosome = variant.getSequence();
+	public VariantContext annotate(VariantContext variant) {
+		String chromosome = variant.getContig();
 		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
 		if (tid == null) {
 			logger.info(prefix + chromosome + " is not found in file " + tabix.filename);
 			return variant;
 		}
 		String [] row;
-		String ref = variant.getRef();
-		String alt = variant.getAlt();
+		String ref = variant.getReference().getBaseString();
+		String alt = variant.getAltAlleleWithHighestAlleleCount().getBaseString(); // FIXME - get additional alleles...
 		// when using this query form, tabix expects space-based (0-based) coordinates
 		Iterator<String []> iterator = tabix.getIndex().query(tid, variant.getStart()-1, variant.getEnd());
 		while ((row = iterator.next()) != null) {
@@ -70,11 +67,12 @@ public class TabixTSVAnnotator extends Annotator {
 			if ((refColumn < 0 || row[refColumn].equals(ref)) &&
 				(altColumn < 0 || row[altColumn].equals(alt))) {
 				// we have a match!
+				VariantContextBuilder builder = new VariantContextBuilder(variant);
 				for (Map.Entry<Integer, String> entry: fieldMap.entrySet()) {
 					String value = row[entry.getKey()];
 					if (! ("".equals(value) || ".".equals(value)) ) {
 						// FIXME -- "." is frequently used to represent missing data, but consider whether I should pass it along
-						variant.putInfo(entry.getValue(), value);
+						builder.attribute(entry.getValue(), value);
 					}
 				}
 			}
@@ -84,8 +82,8 @@ public class TabixTSVAnnotator extends Annotator {
 	}
 
 	@Override
-	public Iterable<String> infoLines() {
-		ArrayList<String> infos = new ArrayList<String>();
+	public Iterable<VCFInfoHeaderLine> infoLines() {
+		ArrayList<VCFInfoHeaderLine> infos = new ArrayList<VCFInfoHeaderLine>();
 		List<String> headers = null;
 		if (hasHeader) {
 			try {
@@ -104,15 +102,15 @@ public class TabixTSVAnnotator extends Annotator {
 			infoValues.put("Type", "String");
 			int colIndex = entry.getKey();
 			String description = descriptionMap.get(colIndex);
-			if (description != null) {
-				infoValues.put("Description", description);
-			} else if (headers != null && headers.size() >= colIndex) {
-				infoValues.put("Description", "\"" + headers.get(colIndex) + ", column " + Integer.toString(colIndex + 1) + " from " + tabix.filename + "\"");
-			} else {
-				infoValues.put("Description", "\"Column " + Integer.toString(colIndex + 1) + " from " + tabix.filename + "\"");
+			if (description == null) {
+				if (headers != null && headers.size() >= colIndex) {
+					description = headers.get(colIndex) + ", column " + Integer.toString(colIndex + 1) + " from " + tabix.filename;
+				} else {
+					description = "Column " + Integer.toString(colIndex + 1) + " from " + tabix.filename;
+				}
 			}
 			// FIXME - can do better with the descriptions!
-			infos.add(new VCFMeta("INFO", infoValues).toString());
+			infos.add(new VCFInfoHeaderLine(entry.getValue(), 1, VCFHeaderLineType.String, description));
 		}
 		return infos;
 	}

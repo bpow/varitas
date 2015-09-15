@@ -1,56 +1,39 @@
 package org.drpowell.varitas;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFFileReader;
+import htsjdk.variant.vcf.VCFHeader;
+import htsjdk.variant.vcf.VCFHeaderLine;
+import htsjdk.variant.vcf.VCFHeaderVersion;
+import org.drpowell.acclimate.CLIParser;
+import org.drpowell.acclimate.Option;
+import org.drpowell.tabix.TabixReader;
+import org.drpowell.util.FileUtils;
+import org.drpowell.util.VCFHeaderLineParser;
+import org.drpowell.vcf.*;
+import org.drpowell.vcffilters.*;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 
-import org.drpowell.acclimate.CLIParser;
-import org.drpowell.acclimate.Option;
-import org.drpowell.tabix.TabixReader;
-import org.drpowell.util.FileUtils;
-import org.drpowell.vcf.VCFHeaders;
-import org.drpowell.vcf.VCFIterator;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFParser;
-import org.drpowell.vcf.VCFUtils;
-import org.drpowell.vcf.VCFVariant;
-import org.drpowell.vcffilters.CompoundMutationFilter;
-import org.drpowell.vcffilters.JavascriptBooleanVCFFilter;
-import org.drpowell.vcffilters.MendelianConstraintFilter;
-import org.drpowell.vcffilters.ScriptVCFFilter;
-import org.drpowell.vcffilters.TSVWritingFilter;
-import org.drpowell.vcffilters.VCFWritingFilter;
-import org.drpowell.vcffilters.VariantOutput;
-import org.drpowell.vcffilters.XLifyVcf;
-
-
-public class Varitas implements Iterable<VCFVariant> {
-	private VCFIterator variants = null;
+public class Varitas implements Iterable<VariantContext> {
+	private VariantContextIterator variants = null;
 	private static Logger logger = Logger.getLogger("Varitas");
 	private File configParent;
 
 	@Option(name = "-c", aliases = {"--config"}, usage = "configuration file (.js) for variant annotation")
-	public VCFIterator applyConfig(String filename) {
+	public VariantContextIterator applyConfig(String filename) {
 		File configFile = new File(filename);
 		configParent = configFile.getParentFile();
 		try {
@@ -63,13 +46,13 @@ public class Varitas implements Iterable<VCFVariant> {
 	}
 	
 	@Option(name = "-C", aliases = {"--defaultConfig"}, usage = "use default annotation configuration")
-	public VCFIterator applyDefaultConfig() {
+	public VariantContextIterator applyDefaultConfig() {
 		configParent = new File(FileUtils.getJarContainingClass(this.getClass()).getPath()).getParentFile();
 		InputStream configStream = getClass().getResourceAsStream("/config.js");
 		return applyConfig(configStream);
 	}
 	
-	private VCFIterator applyConfig(InputStream configStream) {
+	private VariantContextIterator applyConfig(InputStream configStream) {
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 		Scanner s;
 		try {
@@ -86,74 +69,67 @@ public class Varitas implements Iterable<VCFVariant> {
 	}
 	
 	@Option(name = "-f", aliases = {"--filter"}, usage = "script file(s) by which to filter variants")
-	public VCFIterator applyFilter(String filename) {
+	public VariantContextIterator applyFilter(String filename) {
 		return applyFilter(FileUtils.findExistingFile(filename));
 	}
 	
 	@Option(name = "-F", aliases = {"--defaultFilter"}, usage = "apply default variant filter")
-	public ScriptVCFFilter applyDefaultFilter() {
+	public ScriptVariantContextFilter applyDefaultFilter() {
 		return applyFilter(getClass().getResource("/defaultVariantFilter.js"));
 	}
 	
-	private ScriptVCFFilter applyFilter(URL filterURL) {
-		ScriptVCFFilter filter = new ScriptVCFFilter(variants, filterURL, "javascript");
+	private ScriptVariantContextFilter applyFilter(URL filterURL) {
+		ScriptVariantContextFilter filter = new ScriptVariantContextFilter(variants, filterURL, "javascript");
 		variants = filter;
 		return filter;
 	}
 	
 	@Option(name = "-g", aliases = {"--groovyFilter"}, usage = "groovy script file by which to filter variants")
-	public VCFIterator applyGroovyFilter(String filename) {
-		variants = new ScriptVCFFilter(variants, FileUtils.findExistingFile(filename), "groovy");
+	public VariantContextIterator applyGroovyFilter(String filename) {
+		variants = new ScriptVariantContextFilter(variants, FileUtils.findExistingFile(filename), "groovy");
 		return variants;
 	}
 	
 	@Option(name = "-j", aliases = {"--jsBoolean"}, usage = "javascript by which to filter variants (if result is true, the variant passes)")
-	public JavascriptBooleanVCFFilter jsBoolean(String filter) {
-		JavascriptBooleanVCFFilter f = new JavascriptBooleanVCFFilter(variants, filter);
+	public JavascriptBooleanVariantContextFilter jsBoolean(String filter) {
+		JavascriptBooleanVariantContextFilter f = new JavascriptBooleanVariantContextFilter(variants, filter);
 		variants = f;
 		return f;
 	}
 	
 	@Option(name = "-i", aliases = {"--input"}, usage = "input file of variants (VCF format, provide '-' to read from stdin)", required = true, defaultArguments = {"-"}, priority = -1)
 	public Varitas setInput(String input) {
-		try {
-			if (variants != null) {
-				String message = "Attempted to set input file more than once (or after filter(s) applied): \n" + input;
-				logger.severe(message);
-				throw new RuntimeException(message);
-			}
-			if ("-".equals(input)) {
-				variants = new VCFParser(new BufferedReader(new InputStreamReader(System.in)));
-			} else {
-				variants = new VCFParser(FileUtils.filenameToBufferedReader(input));
-			}
-		} catch (IOException e) {
-			logger.severe("Error reading input file (" + input + "): " + e.getMessage());
-			throw new RuntimeException("IO Error reading input file", e);
+		if (variants != null) {
+			String message = "Attempted to set input file more than once (or after filter(s) applied): \n" + input;
+			logger.severe(message);
+			throw new RuntimeException(message);
 		}
+		// FIXME - htsjdk does not seem to have an wasy way to read VCFs from stdin...
+		VCFFileReader reader = new VCFFileReader(new File(input));
+		variants = new VariantContextReaderIterator(reader);
 		return this;
 	}
 	
 	@Option(name = "-o", aliases = {"--output"}, usage = "output (.vcf) file (if none of -o, -x or -t are provided, will write to stdout)")
-	public VCFIterator addOutput(String output) {
-		PrintWriter writer;
+	public VariantContextIterator addOutput(String output) {
+		OutputStream writer;
 		if (output == null || "-".equals(output)) {
-			writer = new PrintWriter(new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 1024));
+			writer = new FileOutputStream(FileDescriptor.out);
 		} else {
 			try {
-				writer = new PrintWriter(new BufferedOutputStream(new FileOutputStream(output), 1024));
+				writer = new FileOutputStream(output);
 			} catch (FileNotFoundException e) {
 				String message = "Unable to write to output file: " + output;
 				logger.severe(message);
 				throw new RuntimeException(message, e);
 			}
 		}
-		variants = new VCFWritingFilter(variants, writer);
+		variants = new VariantContextWritingFilter(variants, writer);
 		return variants;
 	}
 	
 	@Option(name = "-x", aliases = {"--xlsOutput"}, usage = "output (.xls) file")
-	public VCFIterator addXlsOutput(String output) {
+	public VariantContextIterator addXlsOutput(String output) {
 		OutputStream os;
 		try {
 			os = new BufferedOutputStream(new FileOutputStream(output), 1024);
@@ -168,7 +144,7 @@ public class Varitas implements Iterable<VCFVariant> {
 	}
 	
 	@Option(name = "-t", aliases = {"--tsvOutput"}, usage = "output (.tsv) file")
-	public VCFIterator addTsvOutput(String output) {
+	public VariantContextIterator addTsvOutput(String output) {
 		OutputStream os;
 		try {
 			if ("-".equals(output)) {
@@ -187,30 +163,33 @@ public class Varitas implements Iterable<VCFVariant> {
 	}
 	
 	@Option(name = "-b", aliases = {"--biallelic"}, usage = "apply biallelic filter")
-	public VCFIterator applyBiallelicFilter() {
-		List<int []> trios = VCFUtils.getTrioIndices(variants.getHeaders());
+	public VariantContextIterator applyBiallelicFilter() {
+		throw new UnsupportedOperationException("Need to revamp trio handling");
+		//List<int []> trios = VCFUtils.getTrioIndices(variants.getHeader());
 		// FIXME-- only handles a single trio
-		if (!trios.isEmpty()) {
-			variants = new CompoundMutationFilter(variants, trios);
-		}
-		return variants;
+		//if (!trios.isEmpty()) {
+		//	variants = new CompoundMutationFilter(variants, trios);
+		//}
+		//return variants;
 	}
 	
 	@Option(name = "-m", aliases = {"--mendelianContstraint"}, usage = "apply mendelian constraint filter")
-	public VCFIterator applyMendelianConstraintFilter() {
+	public VariantContextIterator applyMendelianConstraintFilter() {
 		variants = new MendelianConstraintFilter(variants);
 		return variants;
 	}
 	
 	@Option(name = "-a", aliases = {"--addHeaders"}, usage = "file with additional headers to add to input vcf file")
 	public void addHeadersFromFile(String filename) {
-		VCFHeaders vcfHeaders = variants.getHeaders(); // FIXME-- this will only work if -a is first option!
+		VCFHeader oldHeader = variants.getHeader(); // FIXME-- this will only work if -a is first option!
+		Set<VCFHeaderLine> headerLines = oldHeader.getMetaDataInInputOrder();
+		VCFHeaderLineParser headerParser = new VCFHeaderLineParser(VCFHeaderVersion.VCF4_2);
 		URL url = FileUtils.findExistingFile(filename);
 		try {
 			BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
 			String line = null;
 			while ((line = br.readLine()) != null) {
-				vcfHeaders.add(new VCFMeta(line));
+				headerLines.add(headerParser.headerFromString(line));
 			}
 			br.close();
 		} catch (IOException ioe) {
@@ -244,15 +223,9 @@ public class Varitas implements Iterable<VCFVariant> {
 			logger.severe("Unable to read file '" + fileName + "'");
 			return null;
 		}
-		try {
-			TabixVCFAnnotator annotator = new TabixVCFAnnotator(new TabixReader(url.getFile()), fieldString);
-			variants = new AnnotatingIterator(variants, annotator);
-			return annotator;
-		} catch (IOException e) {
-			e.printStackTrace();
-			logger.severe("Unable to read file '" + fileName + "':\n" + e.toString());
-		}
-		return null;
+		TabixVCFAnnotator annotator = new TabixVCFAnnotator(new VCFFileReader(new File(url.getFile())), fieldString);
+		variants = new AnnotatingIterator(variants, annotator);
+		return annotator;
 	}
 
 	public TabixTSVAnnotator tsvAnnotator(String fileName, String fieldString) {
@@ -273,7 +246,7 @@ public class Varitas implements Iterable<VCFVariant> {
 	}
 	
 	@Override
-	public Iterator<VCFVariant> iterator() {
+	public Iterator<VariantContext> iterator() {
 		return variants;
 	}
 	
@@ -285,7 +258,7 @@ public class Varitas implements Iterable<VCFVariant> {
 			System.exit(-1);
 		}
 		cli.apply();
-		Iterator<VCFVariant> variants = varitas.iterator();
+		Iterator<VariantContext> variants = varitas.iterator();
 		if (!(variants instanceof VariantOutput)) {
 			logger.info("The last element of the filter chain does not produce any output, will write to stdout");
 			variants = varitas.addOutput(null);

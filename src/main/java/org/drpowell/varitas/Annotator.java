@@ -1,6 +1,7 @@
 package org.drpowell.varitas;
 
-import org.drpowell.vcf.VCFVariant;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
 
 
 public abstract class Annotator {
@@ -47,8 +48,8 @@ public abstract class Annotator {
 		return this;
 	}
 
-	public abstract VCFVariant annotate(VCFVariant var);
+	public abstract VariantContext annotate(VariantContext var);
 
-	public abstract Iterable<String> infoLines();
+	public abstract Iterable<VCFInfoHeaderLine> infoLines();
 
 }

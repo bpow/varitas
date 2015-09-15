@@ -1,24 +1,27 @@
 package org.drpowell.vcf;
 
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFHeader;
+
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class VCFMemoryCollection extends AbstractList<VCFVariant> {
-	private final ArrayList<VCFVariant> variants = new ArrayList<VCFVariant>();
-	private VCFHeaders headers;
+public class VCFMemoryCollection extends AbstractList<VariantContext> {
+	private final ArrayList<VariantContext> variants = new ArrayList<VariantContext>();
+	private VCFHeader headers;
 	
-	public VCFMemoryCollection(VCFIterator input) {
+	public VCFMemoryCollection(VariantContextIterator input) {
 		while (input.hasNext()) variants.add(input.next());
-		headers = input.getHeaders();
+		headers = input.getHeader();
 	}
 	
-	public VCFHeaders getHeaders() {
+	public VCFHeader getHeaders() {
 		return headers;
 	}
 
 	@Override
-	public Iterator<VCFVariant> iterator() {
+	public Iterator<VariantContext> iterator() {
 		return variants.iterator();
 	}
 
@@ -28,7 +31,7 @@ public class VCFMemoryCollection extends AbstractList<VCFVariant> {
 	}
 
 	@Override
-	public VCFVariant get(int index) {
+	public VariantContext get(int index) {
 		return variants.get(index);
 	}
 

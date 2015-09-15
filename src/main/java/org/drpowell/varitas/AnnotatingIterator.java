@@ -1,15 +1,15 @@
 package org.drpowell.varitas;
 
-import org.drpowell.vcf.VCFHeaders;
-import org.drpowell.vcf.VCFIterator;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFVariant;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFHeader;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
+import org.drpowell.vcf.VariantContextIterator;
 
-public class AnnotatingIterator implements VCFIterator {
+public class AnnotatingIterator implements VariantContextIterator {
 	private final Annotator annotator;
-	private final VCFIterator client;
+	private final VariantContextIterator client;
 	
-	public AnnotatingIterator(VCFIterator client, Annotator annotator) {
+	public AnnotatingIterator(VariantContextIterator client, Annotator annotator) {
 		this.annotator = annotator;
 		this.client = client;
 	}
@@ -20,7 +20,7 @@ public class AnnotatingIterator implements VCFIterator {
 	}
 
 	@Override
-	public VCFVariant next() {
+	public VariantContext next() {
 		return annotator.annotate(client.next());
 	}
 
@@ -30,12 +30,16 @@ public class AnnotatingIterator implements VCFIterator {
 	}
 
 	@Override
-	public VCFHeaders getHeaders() {
-		VCFHeaders headers = new VCFHeaders(client.getHeaders());
-		for (String info : annotator.infoLines()) {
-			headers.add(new VCFMeta(info));
+	public VCFHeader getHeader() {
+		VCFHeader headers = new VCFHeader(client.getHeader());
+		for (VCFInfoHeaderLine info : annotator.infoLines()) {
+			headers.addMetaDataLine(info);
 		}
 		return headers;
 	}
 
+	@Override
+	public void close() {
+		client.close();
+	}
 }

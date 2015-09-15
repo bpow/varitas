@@ -10,13 +10,16 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.VCFHeaderLineType;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.drpowell.util.FixedKeysMapFactory;
-import org.drpowell.vcf.VCFVariant;
 
 public class GeneAnnotator extends Annotator {
 	public final URL fileURL;
 	public final String annotatorName;
-	private final HashMap<String, Map<String, String> > data = new HashMap<String, Map<String, String> >();
+	private final HashMap<String, Map<String, Object> > data = new HashMap<String, Map<String, Object> >();
 	private int keyColumn = 0;
 	private LinkedHashMap<Integer, String> fieldMap = new LinkedHashMap<Integer, String>();
 	private boolean initialized = false;
@@ -40,7 +43,7 @@ public class GeneAnnotator extends Annotator {
 			if (fieldMap.size() == 0) {
 				fieldMap.put(keyColumn, annotatorName);
 			}
-			FixedKeysMapFactory<String, String> mapFactory = new FixedKeysMapFactory<String, String>(fieldMap.values());
+			FixedKeysMapFactory<String, Object> mapFactory = new FixedKeysMapFactory<String, Object>(fieldMap.values());
 			try {
 				BufferedReader reader = new BufferedReader(new InputStreamReader(fileURL.openStream()));
 				String line = null;
@@ -52,7 +55,7 @@ public class GeneAnnotator extends Annotator {
 				while ((line = reader.readLine()) != null) {
 					String [] row = line.split("\\t", -1);
 					// FIXME - use apache CSV or something else to allow for more than just tsv files
-					Map<String, String> map = mapFactory.newMap();
+					Map<String, Object> map = mapFactory.newMap();
 					for (Entry<Integer, String> field : fieldMap.entrySet()) {
 						map.put(field.getValue(), row[field.getKey()]);
 					}
@@ -96,34 +99,33 @@ public class GeneAnnotator extends Annotator {
 	// FIXME - allow a different Gene_name title
 	
 	@Override
-	public VCFVariant annotate(VCFVariant variant) {
-		String varGenes = variant.getInfoValue("Gene_name");
+	public VariantContext annotate(VariantContext variant) {
+		String varGenes = variant.getAttributeAsString("Gene_name", null);
 		if (varGenes != null) {
+			VariantContextBuilder builder = new VariantContextBuilder(variant);
 			for (String vg: varGenes.split(",")) {
 				if (data.containsKey(vg)) {
 					// FIXME - handle multiple matches
-					for (Entry<String, String> entry : data.get(vg).entrySet()) {
-						variant.putInfo(entry.getKey(), entry.getValue());
-					}
+					builder.attributes(data.get(vg));
 				}
 			}
+			variant = builder.make();
 		}
 		return variant;
 	}
 
 	@Override
-	public Iterable<String> infoLines() {
+	public Iterable<VCFInfoHeaderLine> infoLines() {
 		ensureFileRead();
-		LinkedList<String> l = new LinkedList<String>();
+		LinkedList<VCFInfoHeaderLine> l = new LinkedList<VCFInfoHeaderLine>();
 		for (Entry<Integer, String> field : fieldMap.entrySet()) {
+			StringBuilder sb = new StringBuilder();
 			int colIndex = field.getKey();
-			StringBuilder sb = new StringBuilder(100);
-			sb.append("##INFO=<ID=").append(field.getValue()).append(",Number=1,Type=String,Description=\"");
 			if (headers != null && headers.length >= colIndex) {
 				sb.append(headers[colIndex]).append(", ");
 			}
-			sb.append("column ").append(field.getKey()+1).append(" from ").append(fileURL.getFile()).append("\">");
-			l.add(sb.toString());
+			sb.append("column ").append(field.getKey()+1).append(" from ").append(fileURL.getFile());
+			l.add(new VCFInfoHeaderLine(field.getValue(), 1, VCFHeaderLineType.String, sb.toString()));
 		}
 		return l;
 	}

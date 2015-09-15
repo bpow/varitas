@@ -1,41 +1,23 @@
 package org.drpowell.vcffilters;
 
+import htsjdk.variant.variantcontext.Genotype;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.drpowell.vcf.VariantContextIterator;
+
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.ClientAnchor;
-import org.apache.poi.ss.usermodel.Comment;
-import org.apache.poi.ss.usermodel.CreationHelper;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.Drawing;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.Hyperlink;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.drpowell.vcf.VCFHeaders;
-import org.drpowell.vcf.VCFIterator;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFVariant;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * A file that wraps a VCFIterator to write the variants to a .XLS file.
+ * A file that wraps a VariantContextIterator to write the variants to a .XLS file.
  * 
- * XLifyVcf itself implements VCFIterator, so it can be used as part of a chain of filters.
+ * XLifyVcf itself implements VariantContextIterator, so it can be used as part of a chain of filters.
 
- * The constructor is given a VCFIterator to wrap, and an OutputStream to which the output should be written.
+ * The constructor is given a VariantContextIterator to wrap, and an OutputStream to which the output should be written.
  * As each variant is processed (with each call of this.next()), the internal representation of the .XLS
  * file is made. When the client iterator is depleted (when hasNext() returns false), the file is written.
  * Because of this behavior, it is important to process through all of the values of the iterator if you
@@ -46,11 +28,11 @@ import org.drpowell.vcf.VCFVariant;
  */
 public class XLifyVcf implements VariantOutput {
 	public final Workbook workbook;
-	private final VCFIterator variants;
+	private final VariantContextIterator variants;
 	private final OutputStream os;
 	private final CreationHelper createHelper;
-	private Map<String, VCFMeta> infos;
-	private Map<String, VCFMeta> formats;
+	private Map<String, VCFInfoHeaderLine> infos;
+	private Map<String, VCFFormatHeaderLine> formats;
 	private List<String> samples;
 	private String [] headers;
 	private Sheet dataSheet;
@@ -69,7 +51,12 @@ public class XLifyVcf implements VariantOutput {
 	private static final String[] PREFERRED_FORMAT_ORDER = {
 		"GT", "AD", "DP", "DV", "RR", "VR", "GQ", "PL", "GL"
 	};
-		
+
+	@Override
+	public void close() {
+		// FIXME -- what to do here?
+	}
+
 	private enum HyperlinkColumn {
 		GENE("http://www.ncbi.nlm.nih.gov/gene?term=%s"),
 		SNP("http://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=%s"),
@@ -81,29 +68,35 @@ public class XLifyVcf implements VariantOutput {
 	}
 	
 	/**
-	 * Wrap the variants VCFIterator, planning to write output to the specified OutputStream
+	 * Wrap the variants VariantContextIterator, planning to write output to the specified OutputStream
 	 * 
 	 * @param variants
 	 * @param os
 	 */
-	public XLifyVcf(VCFIterator variants, OutputStream os) {
+	public XLifyVcf(VariantContextIterator variants, OutputStream os) {
 		this.variants = variants;
 		this.os = os;
 		workbook = new XSSFWorkbook();
 		createHelper = workbook.getCreationHelper();
-		VCFHeaders vcfHeaders = variants.getHeaders();
-		Map<String, VCFMeta> headerFormats = vcfHeaders.formats();
+		VCFHeader vcfHeader = variants.getHeader();
+		Collection<VCFFormatHeaderLine> headerFormats = vcfHeader.getFormatHeaderLines();
+		Set<String> headerNamesInFile = headerFormats.stream().map(h -> h.getID()).collect(Collectors.toSet());
 		// make the formats LinkedHashMap in a special order
-		formats = new LinkedHashMap<String, VCFMeta>(headerFormats.size()*3/2, 0.75f);
+		formats = new LinkedHashMap<String, VCFFormatHeaderLine>(headerFormats.size()*3/2, 0.75f);
 		for (String fkey : PREFERRED_FORMAT_ORDER) {
-			VCFMeta tmpMeta;
-			if ((tmpMeta = headerFormats.get(fkey)) != null) {
-				formats.put(fkey, tmpMeta);
+			VCFFormatHeaderLine tmpLine;
+			if ((tmpLine = vcfHeader.getFormatHeaderLine(fkey)) != null) {
+				formats.put(fkey, tmpLine);
 			}
 		}
-		formats.putAll(headerFormats);
-		infos = vcfHeaders.infos();
-		samples = vcfHeaders.getSamples();
+		for (VCFFormatHeaderLine tmpLine : headerFormats) {
+			formats.put(tmpLine.getID(), tmpLine);
+		}
+		infos = new LinkedHashMap<String, VCFInfoHeaderLine>();
+		for (VCFInfoHeaderLine infoLine : vcfHeader.getInfoHeaderLines()) {
+			infos.put(infoLine.getID(), infoLine);
+		}
+		samples = vcfHeader.getSampleNamesInOrder();
 		headers = makeHeaders();
 		makeMetaSheet();
 		dataSheet = setupDataSheet();
@@ -111,7 +104,9 @@ public class XLifyVcf implements VariantOutput {
 	
 	private String [] makeHeaders() {
 		numericColumns = new BitSet();
-		ArrayList<String> out = new ArrayList<String>(Arrays.asList(variants.getHeaders().getColumnHeaderLine().split("\t", -1)));
+
+		ArrayList<String> out = new ArrayList<String>(Arrays.asList("CHROM POS ID REF ALT QUAL FILTER INFO".split(" ")));
+		out.addAll(variants.getHeader().getSampleNamesInOrder());
 		numericColumns.set(1);
 		numericColumns.set(5);
 		headerComments = new HashMap<String, String>();
@@ -119,28 +114,28 @@ public class XLifyVcf implements VariantOutput {
 			out.add("Gene_name"); // FIXME -- this is sooo hacky-- but I want to get the gene name moved earlier!
 		}
 		for (String s : samples) {
-			for (VCFMeta m: formats.values()) {
-				if ("1".equals(m.getValue("Number"))) {
-					String type = m.getValue("Type");
-					if ("Integer".equals(type) || "Float".equals(type)) {
+			for (VCFFormatHeaderLine fhl: formats.values()) {
+				if (1 == fhl.getCount()) {
+					VCFHeaderLineType type = fhl.getType();
+					if (type == VCFHeaderLineType.Integer || type == VCFHeaderLineType.Float) {
 						numericColumns.set(out.size());
 					}
 				}
-				out.add(s + "_" + m.getId());
+				out.add(s + "_" + fhl.getID());
 			}
 		}
-		for (VCFMeta m: infos.values()) {
-			if ("Gene-name".equals(m.getValue("ID"))) {
+		for (VCFInfoHeaderLine ihl: infos.values()) {
+			if ("Gene_name".equals(ihl.getID())) {
 				continue; // already added it at the beginning
 			}
-			if ("1".equals(m.getValue("Number"))) {
-				String type = m.getValue("Type");
-				if ("Integer".equals(type) || "Float".equals(type)) {
+			if (ihl.getCount() == 1) {
+				VCFHeaderLineType type = ihl.getType();
+				if (type == VCFHeaderLineType.Integer || type == VCFHeaderLineType.Float) {
 					numericColumns.set(out.size());
 				}
 			}
-			headerComments.put(m.getValue("ID"), m.getValue("Description"));
-			out.add(m.getId());
+			headerComments.put(ihl.getID(), ihl.getDescription());
+			out.add(ihl.getID());
 		}
 		return out.toArray(new String[out.size()]);
 	}
@@ -206,13 +201,14 @@ public class XLifyVcf implements VariantOutput {
 	
 	private void makeMetaSheet() {
 		Sheet metaSheet = workbook.createSheet("metadata");
-		List<VCFMeta> headers = variants.getHeaders();
-		for (int i = 0; i < headers.size(); i++) {
-			metaSheet.createRow(i).createCell(0).setCellValue(headers.get(i).toString());
+		int i = 0;
+		for (VCFHeaderLine header : variants.getHeader().getMetaDataInInputOrder()) {
+			metaSheet.createRow(i).createCell(0).setCellValue(header.toString());
+			i++;
 		}
 	}
 	
-	private VCFVariant writeRow(VCFVariant v) {
+	private VariantContext writeRow(VariantContext v) {
 		rowNum++;
 		ArrayList<String> data = new ArrayList<String>(headers.length);
 		Row r = dataSheet.createRow(rowNum);
@@ -221,44 +217,36 @@ public class XLifyVcf implements VariantOutput {
 		
 		// hacky special-case for 'Gene_name'
 		if (infos.containsKey("Gene_name")) {
-			data.add(v.getInfoValue("Gene_name", true));
+			data.add(v.getAttributeAsString("Gene_name", ""));
 		}
 
 		// genotype columns
-		String [] calls = v.getCalls();
-		String [] callFormat = v.getFormat().split(":", -1);
-		Map<String, Integer> formatIndices = new HashMap<String, Integer>(callFormat.length * 2);
-		for (int i = 0; i < callFormat.length; i++) {
-			formatIndices.put(callFormat[i], i);
-		}
-		if (calls.length == samples.size()) {
-			for (String call: calls) {
-				String [] subfields = call.split(":");
-				for (String k: formats.keySet()) {
-					Integer i = formatIndices.get(k);
-					if (i == null || i >= subfields.length) {
-						data.add("");
-					} else {
-						data.add(subfields[i]);
-					}
-				}
+		for (Genotype gt : v.getGenotypesOrderedByName()) {
+			data.add(gt.getGenotypeString());
+			for (String fkey : formats.keySet()) {
+				Object val = gt.getAnyAttribute(fkey);
+				data.add(val == null ? "" : val.toString());
 			}
-		} else {
-			throw new RuntimeException("Problem with VCF line: " + v.toString());
 		}
-		
+
 		// 'INFO' columns
 		int height = 1; // height in # of lines
-		for (String i : variants.getHeaders().infos().keySet()) {
-			String value = v.getInfoValue(i, true);
-			if ("".equals(value)) {
+		for (String i : infos.keySet()) {
+			Object value = v.getAttribute(i);
+			if (value == null) {
+				value = "";
+			}
+			else if ("".equals(value)) {
 				value = i; // flag fields should display as something.
 			}
-			if (SPLIT_INFO_LISTS_ACROSS_LINES && value != null && value.contains(",")) {
-				height = Math.max(height, value.length()-value.replace(",", "").length()+1); 
-				value = value.replace(",", ",\n");
+			else {
+				String vString = value.toString();
+				if (SPLIT_INFO_LISTS_ACROSS_LINES && vString.contains(",")) {
+					height = Math.max(height, vString.length()-vString.replace(",", "").length()+1);
+					value = vString.replace(",", ",\n");
+				}
 			}
-			data.add(value);
+			data.add(value.toString());
 		}
 		for (int i = 0; i < data.size(); i++) {
 			String d = data.get(i);
@@ -339,7 +327,7 @@ public class XLifyVcf implements VariantOutput {
 	}
 
 	@Override
-	public VCFVariant next() {
+	public VariantContext next() {
 		return writeRow(variants.next());
 	}
 
@@ -349,8 +337,8 @@ public class XLifyVcf implements VariantOutput {
 	}
 
 	@Override
-	public VCFHeaders getHeaders() {
-		return variants.getHeaders();
+	public VCFHeader getHeader() {
+		return variants.getHeader();
 	}
 
 }

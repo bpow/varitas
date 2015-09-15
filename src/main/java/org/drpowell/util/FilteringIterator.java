@@ -1,13 +1,13 @@
 package org.drpowell.util;
 
-import java.util.Iterator;
+import htsjdk.samtools.util.CloseableIterator;
 
 public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
-	protected final Iterator<E> delegate;
+	protected final CloseableIterator<E> delegate;
 	
 	public abstract E filter(E element);
 	
-	public FilteringIterator(Iterator<E> client) {
+	public FilteringIterator(CloseableIterator<E> client) {
 		delegate = client;
 	}
 
@@ -17,6 +17,10 @@ public abstract class FilteringIterator<E> extends AbstractPeekableIterator<E> {
 			if (filter(nextValue) != null) return nextValue;
 		}
 		return endOfData();
+	}
+
+	public void close() {
+		delegate.close();
 	}
 
 }

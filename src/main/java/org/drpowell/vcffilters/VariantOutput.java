@@ -1,6 +1,6 @@
 package org.drpowell.vcffilters;
 
-import org.drpowell.vcf.VCFIterator;
+import org.drpowell.vcf.VariantContextIterator;
 
 
 /**
@@ -13,5 +13,5 @@ import org.drpowell.vcf.VCFIterator;
  * @author bpow
  *
  */
-public interface VariantOutput extends VCFIterator {
+public interface VariantOutput extends VariantContextIterator {
 }

@@ -1,19 +1,19 @@
 package org.drpowell.varitas;
 
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.VCFFileReader;
+import htsjdk.variant.vcf.VCFHeader;
+import htsjdk.variant.vcf.VCFHeaderLine;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
-import org.drpowell.tabix.TabixReader;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFVariant;
-
 public class TabixVCFAnnotator extends Annotator {
-	private final TabixReader tabix;
+	private final VCFFileReader reader;
 	private final Map<String, String> fieldMap = new LinkedHashMap<String, String>();
 	private boolean requirePass;
 	private boolean copyID = false;
@@ -26,13 +26,13 @@ public class TabixVCFAnnotator extends Annotator {
 		return sb.substring(0, sb.length() - delimiter.length());
 	}
 	
-	public TabixVCFAnnotator(final TabixReader reader, final Map<String, String> fields) {
-		tabix = reader;
+	public TabixVCFAnnotator(final VCFFileReader reader, final Map<String, String> fields) {
+		this.reader = reader;
 		fieldMap.putAll(fields);
 	}
 	
-	public TabixVCFAnnotator(final TabixReader reader, String fieldString) {
-		this.tabix = reader;
+	public TabixVCFAnnotator(final VCFFileReader reader, String fieldString) {
+		this.reader = reader;
 		String [] fields = fieldString.split(",");
 		for (String field : fields) {
 			int eq = field.indexOf("=");
@@ -45,43 +45,37 @@ public class TabixVCFAnnotator extends Annotator {
 	}
 		
 	@Override
-	public VCFVariant annotate(VCFVariant variant) {
-		String chromosome = variant.getSequence();
-		Integer tid = tabix.getIdForChromosome(prefix + chromosome);
-		if (tid == null) {
-			// may want to log this...
-			return variant;
-		}
-		String [] resultRow;
+	public VariantContext annotate(VariantContext variant) {
 		int start = variant.getStart();
 		int end = variant.getEnd();
-		String ref = variant.getRef();
-		String alt = variant.getAlt();
-		// when using this query form, tabix expects space-based (0-based) coordinates
-		Iterator<String []> iterator = tabix.getIndex().query(tid, start-1, end);
-		while ((resultRow = iterator.next()) != null) {
-			VCFVariant target = new VCFVariant(resultRow);
-			// check on position (1), ref (3) and alt (4)
+		Allele ref = variant.getReference();
+		Allele alt = variant.getAltAlleleWithHighestAlleleCount(); // FIXME -- handle multiple alleles
+		VariantContext target;
+		Iterator<VariantContext> iterator = reader.query(variant.getContig(), start, end);
+		while ((target = iterator.next()) != null) {
 			if (target.getStart() == start &&
-				target.getRef().equals(ref) &&
-				target.getAlt().equals(alt)) {
+					target.getReference().equals(ref) &&
+					target.getAltAlleleWithHighestAlleleCount().equals(alt)) {
 				// FIXME - some target files will have more than one variant per line
-				if (requirePass && !target.getFilter().equals("PASS")) {
+				if (requirePass && !target.getFilters().isEmpty()) {
 					continue;
 				}
 				// found a match!
-				for (Entry<String, String> e: fieldMap.entrySet()) {
-					if (target.hasInfo(e.getKey())) {
+				VariantContextBuilder builder = new VariantContextBuilder(variant);
+				for (Entry<String, String> e : fieldMap.entrySet()) {
+					if (target.hasAttribute(e.getKey())) {
 						// FIXME- should check to prevent duplicates being overwritten
-						variant.putInfo(e.getValue(), target.getInfoValue(e.getKey()));
+						builder.attribute(e.getValue(), target.getAttribute(e.getKey()));
 					}
+					if (copyID) {
+						if (variant.emptyID() && !target.emptyID())
+							builder.id(target.getID());
+					}
+					variant = builder.make();
+					break;
 				}
-				if (copyID) {
-					variant.mergeID(target.getID());
-				}
-				break;
 			}
-		}		
+		}
 		return variant;
 	}
 	
@@ -96,35 +90,21 @@ public class TabixVCFAnnotator extends Annotator {
 	}
 
 	@Override
-	public Iterable<String> infoLines() {
-		ArrayList<String> infos = new ArrayList<String>();
+	public Iterable<VCFInfoHeaderLine> infoLines() {
+		ArrayList<VCFInfoHeaderLine> infos = new ArrayList<VCFInfoHeaderLine>();
 		HashMap<String, String> newInfos = new HashMap<String, String>();
-		try {
-			for (String metaLine : tabix.readHeaders()) {
-				String newId = null;
-				VCFMeta meta = new VCFMeta(metaLine);
-				if ("INFO".equals(meta.getMetaKey())) {
-					String oldId = meta.getValue("ID");
-					if ((newId = fieldMap.get(oldId)) != null) {
-						meta = meta.cloneExcept("ID", newId);
-						newInfos.put(newId, meta.toString());
-					}
-				}
+		VCFHeader readerHeader = reader.getFileHeader();
+		String newId = null;
+		for (VCFInfoHeaderLine headerLine : readerHeader.getInfoHeaderLines()) {
+			String oldId = headerLine.getID();
+			if ((newId = fieldMap.get(oldId)) != null) {
+				infos.add(newId == oldId ? headerLine :
+								new VCFInfoHeaderLine(newId, headerLine.getCountType(),
+										headerLine.getType(), headerLine.getDescription())
+				);
 			}
-			// looping twice so we can iterate through the LinkedHashMap in its order
-			for (String newId : fieldMap.values()) {
-				String info = newInfos.get(newId);
-				if (info != null) infos.add(info);
-			}
-		} catch (IOException e) {
-			// FIXME should probably log this
-			e.printStackTrace();
 		}
 		return infos;
 	}
 
-	@Override
-	public String toString() {
-		return "TabixVCFAnnotator: " + tabix.filename;
-	}
 }

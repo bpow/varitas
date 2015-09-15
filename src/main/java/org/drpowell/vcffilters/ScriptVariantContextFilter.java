@@ -1,25 +1,25 @@
 package org.drpowell.vcffilters;
 
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFHeader;
+import htsjdk.variant.vcf.VCFHeaderVersion;
+import org.drpowell.util.VCFHeaderLineParser;
+import org.drpowell.vcf.VariantContextIterator;
+
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.List;
 import java.util.logging.Logger;
 
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import org.drpowell.vcf.VCFHeaders;
-import org.drpowell.vcf.VCFIterator;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFVariant;
-
-public class ScriptVCFFilter extends VCFFilteringIterator {
+public class ScriptVariantContextFilter extends VariantContextFilteringIterator {
 
 	private Invocable invocable;
-	private VCFHeaders headers;
+	private VCFHeader header;
 	
 	private Invocable initializeEngine(URL filterURL, String language) {
 		ScriptEngineManager manager = new ScriptEngineManager();
@@ -41,32 +41,33 @@ public class ScriptVCFFilter extends VCFFilteringIterator {
 		}
 		Object moreHeaders = engine.get("headers");
 		if (moreHeaders != null) {
+			VCFHeaderLineParser hlp = new VCFHeaderLineParser(VCFHeaderVersion.VCF4_2);
 			if (moreHeaders instanceof String) {
 				for (String header : ((String) moreHeaders).split("\n")) {
-					headers.add(new VCFMeta(header));
+					this.header.addMetaDataLine(hlp.headerFromString(header));
 				}
 			} else if (moreHeaders instanceof List) {
 				for (Object header : (List) moreHeaders) {
-					headers.add(new VCFMeta(header.toString()));
+					this.header.addMetaDataLine(hlp.headerFromString(header.toString()));
 				}
 			} else {
-				Logger.getLogger("VARITAS").warning("Unable to add headers for script filter");
+				Logger.getLogger("VARITAS").warning("Unable to add header for script filter");
 			}
 		}
 		return (Invocable) engine;
 	}
 
-	public ScriptVCFFilter(VCFIterator client, URL filterURL, String language) {
+	public ScriptVariantContextFilter(VariantContextIterator client, URL filterURL, String language) {
 		super(client);
-		headers = client.getHeaders();
+		header = client.getHeader();
 		invocable = initializeEngine(filterURL, language);
 	}
 
 	@Override
-	public VCFVariant filter(VCFVariant variant) {
+	public VariantContext filter(VariantContext variant) {
 		if (invocable == null) return variant;
 		try {
-			return (VCFVariant) invocable.invokeFunction("filter", variant);
+			return (VariantContext) invocable.invokeFunction("filter", variant);
 		} catch (NoSuchMethodException e) {
 			e.printStackTrace();
 			return variant;

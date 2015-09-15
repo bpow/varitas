@@ -1,19 +1,22 @@
 package org.drpowell.varitas;
 
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.VCFHeaderLineType;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
-import java.util.LinkedList;
-
-import org.drpowell.vcf.VCFVariant;
 
 public class GenePresenceAnnotator extends Annotator {
 	public final String fileName;
 	public final String annotatorName;
 	private final HashSet<String> geneNames = new HashSet<String>();
-	public final String infoLine;
+	public final VCFInfoHeaderLine infoLine;
 	
 	// FIXME - handle multiple columns
 	
@@ -29,31 +32,31 @@ public class GenePresenceAnnotator extends Annotator {
 		}
 		br.close();
 		String basename = new File(inputFile).getName();
-		infoLine = "##INFO=<ID=" + annotatorName + ",Number=1,Type=String,Description=\"Gene present in the file " + basename + "\">";
+		infoLine = new VCFInfoHeaderLine(annotatorName, 1, VCFHeaderLineType.String, "Gene present in the file " + basename);
 	}
 	
 	
 	// FIXME - allow a different Gene_name title
 	
 	@Override
-	public VCFVariant annotate(VCFVariant variant) {
-		String varGenes = variant.getInfoValue("Gene_name");
+	public VariantContext annotate(VariantContext variant) {
+		String varGenes = variant.getAttributeAsString("Gene_name", null);
 		if (varGenes != null) {
+			VariantContextBuilder builder = new VariantContextBuilder(variant);
 			for (String vg: varGenes.split(",")) {
 				if (geneNames.contains(vg)) {
 					// FIXME - handle multiple matches
-					variant.putInfo(annotatorName, vg);
+					builder.attribute(annotatorName, vg);
 				}
 			}
+			variant = builder.make();
 		}
 		return variant;
 	}
 
 	@Override
-	public Iterable<String> infoLines() {
-		LinkedList<String> l = new LinkedList<String>();
-		l.add(infoLine);
-		return l;
+	public Iterable<VCFInfoHeaderLine> infoLines() {
+		return Arrays.asList(infoLine);
 	}
 	
 	@Override

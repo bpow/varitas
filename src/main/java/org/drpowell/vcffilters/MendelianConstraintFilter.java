@@ -1,34 +1,32 @@
 package org.drpowell.vcffilters;
 
-import java.io.BufferedReader;
+import htsjdk.variant.variantcontext.GenotypesContext;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.*;
+import org.drpowell.vcf.VariantContextIterator;
+import org.drpowell.vcf.VariantContextReaderIterator;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.drpowell.util.FileUtils;
-import org.drpowell.vcf.VCFHeaders;
-import org.drpowell.vcf.VCFIterator;
-import org.drpowell.vcf.VCFMeta;
-import org.drpowell.vcf.VCFParser;
-import org.drpowell.vcf.VCFUtils;
-import org.drpowell.vcf.VCFVariant;
-
-public class MendelianConstraintFilter extends VCFFilteringIterator {
+public class MendelianConstraintFilter extends VariantContextFilteringIterator {
 
 	private List<int []> trios;
 	private static final boolean FATHER_ALLELE_FIRST = false;
-	
-	private static VCFMeta[] ADDITIONAL_HEADERS = {
-			new VCFMeta("##INFO=<ID=MVCLR,Number=.,Type=String,Description=\"Log-likelihood ratio of most likely unconstrained to constrained genotype.\">"),
-			new VCFMeta("##INFO=<ID=MENDELLR,Number=.,Type=String,Description=\"Log-likelihood ratio of unconstrained to constrained genotypes.\">"),
-			new VCFMeta("##INFO=<ID=UNCGT,Number=.,Type=String,Description=\"Trios of most likely unconstrained trio genotypes (in same order as TMV).\">"),
-			new VCFMeta("##INFO=<ID=CONGT,Number=.,Type=String,Description=\"Trios of most likely genotypes under mendelian constraints (in same order as TMV).\">"),
-			new VCFMeta("##INFO=<ID=TMV,Number=.,Type=String,Description=\"The most-likely individual calls show a mendelian violation among a trio.\">")
+
+	private static VCFInfoHeaderLine [] ADDITIONAL_HEADERS = {
+		new VCFInfoHeaderLine("MVCLR", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Log-likelihood ratio of most likely unconstrained to constrained genotype.")
+		, new VCFInfoHeaderLine("MENDELLR", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Log-likelihood ratio of unconstrained to constrained genotypes.")
+		, new VCFInfoHeaderLine("UNCGT", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Trios of most likely unconstrained trio genotypes (in same order as TMV).")
+		, new VCFInfoHeaderLine("CONGT", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Trios of most likely genotypes under mendelian constraints (in same order as TMV).")
+		, new VCFInfoHeaderLine("TMV", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "The most-likely individual calls show a mendelian violation among a trio.")
 	};
-	
+
 	/**
 	 * PL and GL fields in VCF/BCF are defined to have ordering:
 	 * AA,
@@ -58,15 +56,17 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 		32800, 32832, 32896, 33024, 33280, 33792, 34816, 36864, 40960,
 		49152, 32768 };
 
-	public MendelianConstraintFilter(VCFIterator client) {
+	public MendelianConstraintFilter(VariantContextIterator client) {
 		super(client);
-		trios = VCFUtils.getTrioIndices(client.getHeaders());
+		trios = VCFUtils.getTrioIndices(client.getHeader());
 	}
 	
 	@Override
-	public VCFHeaders getHeaders() {
-		VCFHeaders newHeaders = new VCFHeaders(originalHeaders); // FIXME - possibly store as lazy loaded
-		newHeaders.addAll(Arrays.asList(ADDITIONAL_HEADERS));
+	public VCFHeader getHeader() {
+		VCFHeader newHeaders = new VCFHeader(originalHeader); // FIXME - possibly store as lazy loaded
+		for (VCFInfoHeaderLine headerLine : ADDITIONAL_HEADERS) {
+			newHeaders.addMetaDataLine(headerLine);
+		}
 		return newHeaders;
 	}
 	
@@ -130,9 +130,14 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 	 * @return
 	 */
 	@Override
-	public VCFVariant filter(VCFVariant variant) {
+	public VariantContext filter(VariantContext variant) {
 		// FIXME - have option to only return variants with at least one MV
-		double [][] logLikelihoods = variant.getGenotypeLikelihoods();
+		VariantContextBuilder builder = new VariantContextBuilder(variant);
+		GenotypesContext genotypes = variant.getGenotypes();
+		double [][] logLikelihoods = new double[genotypes.size()][];
+		for (int  i = 0; i < logLikelihoods.length; i++) {
+			logLikelihoods[i] = genotypes.get(i).getLikelihoods().getAsVector();
+		}
 		TRIO:
 		for (int [] trio : trios) {
 			// FIXME - can sometimes phase when a member of trio is missing
@@ -145,13 +150,14 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 				if (null == logLikelihoods || trio[i] >= logLikelihoods.length || (trioLL[i] = logLikelihoods[trio[i]]) == null) {
 					// no likelihood data for this sample
 					// let's try to phase anyway...
-					int [] phases = phaseTrio(variant.getGenotype(trio[0]),
-											  variant.getGenotype(trio[1]),
-											  variant.getGenotype(trio[2]));
+					int [] phases = phaseTrio(variant.getGenotype(trio[0]).getGenotypeString(),
+											  variant.getGenotype(trio[1]).getGenotypeString(),
+											  variant.getGenotype(trio[2]).getGenotypeString());
 					if (phases == null) {
-						variant.addInfo("TMV", originalHeaders.getSamples().get(trio[0]));
+						builder.attribute("TMV", originalHeader.getSampleNamesInOrder().get(trio[0]));
 					} else {
-						variant.setPhases(trio, phases);
+						// FIXME! need to set phases!
+						// variant.setPhases(trio, phases);
 					}
 					continue TRIO;
 				}
@@ -196,15 +202,16 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 			}
 			// FIXME - need to handle multiple trios better
 			if (maxConstrained < maxUnconstrained) {
-				String child = originalHeaders.getSamples().get(trio[0]);
-				variant.addInfo("MVCLR", String.format("%s:%.3g", child, maxUnconstrained - maxConstrained));
+				String child = originalHeader.getSampleNamesInOrder().get(trio[0]);
+				builder.attribute("MVCLR", String.format("%s:%.3g", child, maxUnconstrained - maxConstrained));
 				// FIXME-- this is not doing what I think it should...
-				variant.addInfo("MENDELLR", String.format("%s:%.3g", child, calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
-				variant.addInfo("UNCGT", getGenotypes(gtUnconstrained, null));
-				variant.addInfo("CONGT", getGenotypes(gtConstrained, phase));
-				variant.addInfo("TMV", child);
+				builder.attribute("MENDELLR", String.format("%s:%.3g", child, calcLogLikelihoodRatio(constrainedLikelihoods, unconstrainedLikelihoods)));
+				builder.attribute("UNCGT", getGenotypes(gtUnconstrained, null));
+				builder.attribute("CONGT", getGenotypes(gtConstrained, phase));
+				builder.attribute("TMV", child);
 			} else {
-				variant = variant.setPhases(trio, phase);
+				// FIXME-- need to set phases!
+				// variant = variant.setPhases(trio, phase);
 			}
 		}
 		return variant; // FIXME - just returning all variants for now, consider returning only phased or MV
@@ -276,18 +283,14 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 	}
 	
 	public static void main(String argv[]) throws IOException {
-		BufferedReader br = FileUtils.filenameToBufferedReader(argv[0]);
-		VCFParser p = new VCFParser(br);
-		VCFHeaders h = p.getHeaders();
-		for (VCFMeta m : ADDITIONAL_HEADERS) { h.add(m); }
-		System.out.print(h.toString());
-		System.out.println(h.getColumnHeaderLine());
-		
+		VariantContextReaderIterator reader = new VariantContextReaderIterator(
+				new VCFFileReader(new File(argv[0])));
+
 		int yes = 0, no = 0;
-		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(p);
+		for (MendelianConstraintFilter mcf = new MendelianConstraintFilter(reader);
 				mcf.hasNext();) {
-			VCFVariant v = mcf.next();
-			if (v.hasInfo("MENDELLR")) {
+			VariantContext v = mcf.next();
+			if (v.hasAttribute("MENDELLR")) {
 				System.out.println(v);
 				yes++;
 			} else {
@@ -295,7 +298,6 @@ public class MendelianConstraintFilter extends VCFFilteringIterator {
 				no++;
 			}
 		}
-		br.close();
 		System.err.println(String.format("%d mendelian violations,  %d otherwise", yes, no));
 	}
 

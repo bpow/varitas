@@ -1,11 +1,15 @@
 package org.drpowell.varitas;
 
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.VCFHeaderLineCount;
+import htsjdk.variant.vcf.VCFHeaderLineType;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.regex.Pattern;
-
-import org.drpowell.vcf.VCFVariant;
 
 /**
  * An annotator that splits out the info as provided by snpeff (http://snpeff.sourceforge.net).
@@ -27,12 +31,12 @@ public class SnpEffAnnotationSplitter extends Annotator {
 	
 	public static final String SNPEFF_INFO_TAG = "EFF";
 	public static final String SNPEFF_FIELD_DELIMITER = "|";
-	public static final String [] EXTRA_HEADERS = {
-		"##INFO=<ID=EFFECT,Number=.,Type=String,Description=\"Effect type of the change (from SnpEffect)\">",
-		"##INFO=<ID=Gene_name,Number=.,Type=String,Description=\"Name of affected gene (from SnpEffect)\">",
-		"##INFO=<ID=IMPACT,Number=.,Type=String,Description=\"Impact of change (HIGH|MODERATE|LOW|MODIFIER)\">"
+	public static final VCFInfoHeaderLine[] EXTRA_HEADERS = {
+			new VCFInfoHeaderLine("EFFECT", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Effect type of the change (from SnpEff)")
+			, new VCFInfoHeaderLine("Gene_name", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Name of affected gene (from SnpEff)")
+			, new VCFInfoHeaderLine("IMPACT", VCFHeaderLineCount.UNBOUNDED, VCFHeaderLineType.String, "Impact of change (HIGH|MODERATE|LOW|MODIFIER)")
 	};
-	
+
 	/**
 	 * The effect types produced by SnpEff.
 	 * 
@@ -113,24 +117,25 @@ public class SnpEffAnnotationSplitter extends Annotator {
 	}
 
 	@Override
-	public VCFVariant annotate(VCFVariant variant) {
-		String effects = variant.getInfoValue(SNPEFF_INFO_TAG);
+	public VariantContext annotate(VariantContext variant) {
+		String effects = variant.getAttributeAsString(SNPEFF_INFO_TAG, null);
 		if (effects != null) {
+			VariantContextBuilder builder = new VariantContextBuilder(variant);
 			ArrayList<SNPEffectVCFInfo> effList = new ArrayList<SNPEffectVCFInfo>();
 			for (String s: effects.split(",")) {
 				effList.add(new SNPEffectVCFInfo(s));
 			}
 			Collections.sort(effList);
-			variant.putInfo("EFFECT", effList.get(0).effect.toString());
-			variant.putInfo("Gene_name", effList.get(0).get(SnpEffAnnotationField.GENE_NAME));
-			variant.putInfo("IMPACT", effList.get(0).get(SnpEffAnnotationField.IMPACT));
+			builder.attribute("EFFECT", effList.get(0).effect.toString());
+			builder.attribute("Gene_name", effList.get(0).get(SnpEffAnnotationField.GENE_NAME));
+			builder.attribute("IMPACT", effList.get(0).get(SnpEffAnnotationField.IMPACT));
 			// FIXME = include others in addition to the first...
 		}
 		return variant;
 	}
 
 	@Override
-	public Iterable<String> infoLines() {
+	public Iterable<VCFInfoHeaderLine> infoLines() {
 		return Arrays.asList(EXTRA_HEADERS);
 	}
 	

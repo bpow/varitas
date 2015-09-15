@@ -1,18 +1,12 @@
 package org.drpowell.vcffilters;
 
+import htsjdk.variant.variantcontext.VariantContext;
+import org.drpowell.vcf.VariantContextIterator;
+
+import javax.script.*;
 import java.util.logging.Logger;
 
-import javax.script.Compilable;
-import javax.script.CompiledScript;
-import javax.script.ScriptContext;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import org.drpowell.vcf.VCFIterator;
-import org.drpowell.vcf.VCFVariant;
-
-public class JavascriptBooleanVCFFilter extends VCFFilteringIterator {
+public class JavascriptBooleanVariantContextFilter extends VariantContextFilteringIterator {
 
 	private final CompiledScript script;
 	private final String filter;
@@ -30,14 +24,14 @@ public class JavascriptBooleanVCFFilter extends VCFFilteringIterator {
 		return cs;
 	}
 
-	public JavascriptBooleanVCFFilter(VCFIterator client, String filter) {
+	public JavascriptBooleanVariantContextFilter(VariantContextIterator client, String filter) {
 		super(client);
 		this.filter = filter;
 		script = initializeEngine(filter);
 	}
 
 	@Override
-	public VCFVariant filter(VCFVariant variant) {
+	public VariantContext filter(VariantContext variant) {
 		if (script == null) return variant;
 		script.getEngine().getBindings(ScriptContext.ENGINE_SCOPE).put("variant", variant);
 		Object o;
